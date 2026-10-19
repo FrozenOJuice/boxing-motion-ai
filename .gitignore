@@ -218,3 +218,40 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Boxing Motion AI: private datasets and generated artifacts
+/data/raw/
+/data/processed/
+/reports/
+/poses/
+/weights/
+*.mp4
+*.MP4
+*.mov
+*.MOV
+*.mkv
+*.avi
+*.webm
+*.m4v
+*.mpeg
+*.mpg
+*.mts
+*.pt
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.parquet
+*.MKV
+*.AVI
+*.WEBM
+*.M4V
+*.MPEG
+*.MPG
+*.MTS
+*.keras
+*.tflite
