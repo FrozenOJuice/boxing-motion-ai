@@ -71,3 +71,25 @@ Original alternatives for a later dataset decision:
 [BoxingWeb](https://github.com/gouba2333/BoxingWeb),
 [Punch_DL](https://github.com/balezz/Punch_DL). Their availability, contents and rights are not
 verified here, and no adapters/downloads were added for them.
+
+## V5 pose investigation authorized — 2026-10-19
+
+The project lead authorized an initial Phase 1 pose-quality investigation using **V5 raw A/B
+frame numbers provisionally against decoded source indices**, without applying the `−24` helper
+rebase. This does not resolve author indexing, source end convention, FPS or trim provenance.
+Rows 272, 323, 442 and 536 remain questionable; no corrections or canonical class mappings
+were adopted. Unlabeled footage remains unknown. Split and rights verification are still pending.
+
+The [pose extraction contract and reproduction guide](POSE_EXTRACTION.md) documents the modular
+MediaPipe/PyAV implementation, exact PTS preservation, missing masks and local visual samples.
+Generated measurements/media live under ignored `data/processed/` and `reports/` directories.
+This authorization covers pose investigation only; it does not approve model training.
+
+## Full V5 extraction and preparation — 2026-10-20
+
+Full-frame independent pose extraction and provisional candidate preparation are implemented;
+see [the preparation guide](DATASET_PREPARATION.md). Confirmed cut boundaries are recorded,
+all missing/unreliable observations retain masks, and suspect annotations remain excluded.
+The generated report distinguishes annotation-eligible from strict pose-clean examples. Empty
+pose-clean classes and single-video split limitations remain explicit training-readiness blockers;
+no classes, thresholds, source frame coordinates or annotations were silently changed.

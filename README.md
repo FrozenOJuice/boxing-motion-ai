@@ -1,8 +1,9 @@
 # Boxing Motion AI
 
-Computer vision and ML for punch recognition and early detection. **Phase 0 only is implemented:**
-local dataset discovery, annotation contracts, defensive BoxingVI XLSX inspection, validation and
-JSON/Markdown audit reports. Level 2 is the core target; Level 2.5 analytics follows the core.
+Computer vision and ML for punch recognition and early detection. Phase 0 provides local dataset
+discovery, annotation contracts, defensive BoxingVI XLSX inspection, validation and JSON/Markdown
+audit reports. The initial Phase 1 slice adds **V5-only pretrained pose extraction**, retaining
+provisional annotation alignment. Level 2 is the core target; Level 2.5 analytics follows the core.
 See [the project specification](docs/PROJECT_SPEC.md).
 
 ## Setup and checks
@@ -78,4 +79,19 @@ manual verification. Even structurally consistent files yield `needs_review` and
 Phase 0 tool cannot certify licensing, footage continuity, identity independence or visual label
 alignment. `structural_checks_passed` describes only automated checks, and `phase_0_gate` stays
 `not_verified`. Review the [status note](docs/DATASET_AUDIT.md) before approving any modeling work.
-No models, pose pipeline, training, inference server, UI or round analytics are implemented.
+No punch models, training, inference server or round analytics are implemented.
+
+## V5 pose-quality investigation
+
+See [pose extraction](docs/POSE_EXTRACTION.md) for the optional `pose` dependencies, reproducible
+YAML configuration, CLI, versioned keypoint/timestamp contract and private skeleton overlays.
+V5 raw annotation frame numbers are an explicitly provisional correspondence; questionable
+rows remain flagged. Pose extraction does not approve annotation accuracy or dataset readiness.
+
+Full V5 extraction and provisional punch candidates are documented in
+[dataset preparation](docs/DATASET_PREPARATION.md), including per-class quality counts, confirmed
+scene boundaries and explicit unknown footage. No model training or independent split is performed.
+
+[Partial-pose quality assessment](docs/MASK_AWARE_POSES.md) compares six retention policies,
+per-joint score failures and mask/class association without training. The recommended development
+selection preserves original masks and coordinates; retained low-confidence joints are not promoted.

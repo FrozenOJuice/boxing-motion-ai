@@ -1,0 +1,9 @@
+# Independent-frame inference prevents pose tracking/smoothing across ALL scene edits.
+pose_mode: image
+max_width: 960
+confidence: 0.5
+ranges: []
+# Confirmed first post-cut frame; this is NOT an exhaustive inventory of V5 edits.
+scene_cuts: [10679]
+overlay_limit: 24
+overlay_frames: [24, 244, 486, 1362, 1926, 5432, 6258, 6481, 6527, 6576, 6929, 7604, 10045, 10678, 10679, 10680, 10723, 12561, 12567, 13697, 13893, 14023, 15133, 15153]

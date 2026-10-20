@@ -1,12 +1,21 @@
 [project]
 name = "boxing-motion-ai"
 version = "0.1.0"
-description = "Local dataset auditing for Boxing Motion AI"
+description = "Local dataset auditing and pose extraction for Boxing Motion AI"
 requires-python = ">=3.11,<3.12"
 dependencies = ["typer>=0.16,<1", "openpyxl>=3.1,<4", "pydantic>=2.11,<3"]
 
 [project.scripts]
 boxing-motion-ai = "boxing_motion_ai.cli:app"
+
+[project.optional-dependencies]
+pose = [
+    "av>=16,<19",
+    "mediapipe>=0.10.30,<0.11",
+    "numpy>=2,<3",
+    "pillow>=12,<14",
+    "pyyaml>=6,<7",
+]
 
 [build-system]
 requires = ["hatchling>=1.27,<2"]

@@ -1,0 +1,25 @@
+# Extraction windows, NOT claims about annotation intervals or label accuracy.
+# Includes 18 reviewed source rows, six classes, defects and segment transition 10679.
+pose_mode: video  # Prototype comparison only; use v5_pose_full.yaml for preparation.
+max_width: 960
+confidence: 0.5
+overlay_every: 20
+overlay_limit: 80
+ranges:
+  - '0:60'
+  - '224:260'
+  - '466:505'
+  - '1342:1379'
+  - '1906:1949'
+  - '5417:5483'
+  - '6243:6278'
+  - '6466:6592'
+  - '6914:6949'
+  - '7589:7625'
+  - '10030:10075'
+  - '10664:10739'
+  - '12546:12583'
+  - '13677:13717'
+  - '13873:13916'
+  - '14003:14039'
+  - '15113:15180'
