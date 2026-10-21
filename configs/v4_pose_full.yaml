@@ -1,0 +1,10 @@
+# Configuration for a future full run, NOT evidence that full V4 was extracted.
+pose_mode: image
+max_width: 960
+confidence: 0.5
+ranges: []
+# No V4 cuts have been certified. Empty does NOT assert an unedited recording.
+# IMAGE mode has no temporal estimator state, smoothing or interpolation.
+scene_cuts: []
+overlay_limit: 18
+overlay_frames: [6437, 6456, 6466, 7135, 8207, 8392, 10407, 13545, 14425, 14776, 16377, 18493, 18664, 20484, 21545, 24605, 24671, 24728]

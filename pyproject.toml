@@ -16,6 +16,12 @@ pose = [
     "pillow>=12,<14",
     "pyyaml>=6,<7",
 ]
+train = [
+    "matplotlib>=3.10,<4",
+    "numpy>=2,<3",
+    "pyyaml>=6,<7",
+    "torch>=2.6,<3",
+]
 
 [build-system]
 requires = ["hatchling>=1.27,<2"]

@@ -131,13 +131,16 @@ def _quantiles(values):
     return np.quantile(finite, [0.1, 0.5, 0.9]).tolist() if len(finite) else [None] * 3
 
 
-def analyze_arrays(arrays, candidates, permutations=499):
+def analyze_arrays(arrays, candidates, permutations=499, required_classes=None):
     import numpy as np
 
     valid, xyz, confidence = arrays["valid_mask"], arrays["coordinates"], arrays["confidence"]
     if not np.array_equal(valid, score_validity(xyz, confidence, 0.5)):
         raise ValueError("Saved masks do not match the fixed source confidence policy (0.5)")
-    eligible = [c for c in candidates if c["annotation_eligible"]]
+    required = set(CLASS_MAP.values()) if required_classes is None else set(required_classes)
+    eligible = [
+        c for c in candidates if c["annotation_eligible"] and c.get("quality_assessable", True)
+    ]
     if not eligible:
         raise ValueError("No annotation-eligible candidates")
     eligible.sort(key=lambda c: c["source_row"])
@@ -167,7 +170,26 @@ def analyze_arrays(arrays, candidates, permutations=499):
         indices = np.flatnonzero(labels == label)
         rows = [eligible[i] for i in indices]
         if not rows:
-            raise ValueError(f"Missing source class {label}; no class may silently disappear")
+            if label in required:
+                raise ValueError(f"Missing source class {label}; no class may silently disappear")
+            by_class[label] = {
+                "eligible": 0,
+                "event_frame_count": 0,
+                "coverage_status": "no_assessed_candidates",
+                "retention": {name: 0 for name in POLICIES},
+                "strict_body_sensitivity": {str(t): 0 for t in [0.3, 0.5, 0.7]},
+                "joints": {
+                    JOINTS[j]: {
+                        "invalid_frame_fraction": None,
+                        "mean_candidate_invalid_fraction": None,
+                        "failure_reason_fractions": {},
+                        "visibility_q10_q50_q90": [None] * 3,
+                        "presence_q10_q50_q90": [None] * 3,
+                    }
+                    for j in BODY_JOINTS
+                },
+            }
+            continue
         frames = np.concatenate([np.arange(*c["array_slice_half_open"]) for c in rows])
         x, conf = xyz[frames], confidence[frames]
         finite_xyz = np.isfinite(x).all(axis=-1)
@@ -226,7 +248,10 @@ def analyze_arrays(arrays, candidates, permutations=499):
                     "source_row": c["source_row"],
                     "class": label,
                     "rank": rank,
-                    "frames": sorted(set([a, (a + stop - 1) // 2, stop - 1])),
+                    "frames": [
+                        int(arrays["frame_index"][n])
+                        for n in sorted(set([a, (a + stop - 1) // 2, stop - 1]))
+                    ],
                 }
             )
     # A predeclared interpretable mask cue, not a fitted predictor.
@@ -239,7 +264,7 @@ def analyze_arrays(arrays, candidates, permutations=499):
         for label in CLASS_MAP.values()
     }
     return {
-        "schema_version": "v5-pose-quality-1.0",
+        "schema_version": "recording-pose-quality-1.1",
         "policies": POLICIES,
         "recommended_policy": RECOMMENDED,
         "source_mask_threshold": 0.5,
@@ -277,7 +302,18 @@ def assess_quality(dataset, output, permutations=499):
         json.loads(line) for line in (dataset / "candidates.jsonl").read_text().splitlines()
     ]
     with np.load(dataset / "poses.npz", allow_pickle=False) as arrays:
-        result = analyze_arrays(arrays, candidates, permutations)
+        result = analyze_arrays(arrays, candidates, permutations, required_classes=())
+    result["source_classes_present"] = sorted(set(manifest.get("class_map", CLASS_MAP).values()))
+    result["source_classes_absent"] = sorted(
+        set(CLASS_MAP.values()) - set(result["source_classes_present"])
+    )
+    result["classes_without_assessed_candidates"] = [
+        k for k, v in result["by_class"].items() if not v["eligible"]
+    ]
+    result["video_id"] = manifest.get("video_id", "V5")
+    result["recording_id"] = manifest.get("recording_id", result["video_id"])
+    result["boxer_id"] = manifest.get("boxer_id")
+    result["scope"] = manifest.get("scope", "full_video")
     result["inputs"] = {
         name: sha256(dataset / name)
         for name in ["preparation.json", "poses.npz", "candidates.jsonl"]
@@ -301,7 +337,10 @@ def assess_quality(dataset, output, permutations=499):
     write_json(
         output / "policy-index.json",
         {
-            "schema_version": "v5-mask-policy-index-1.0",
+            "schema_version": "recording-mask-policy-index-1.1",
+            "video_id": result["video_id"],
+            "recording_id": result["recording_id"],
+            "boxer_id": result["boxer_id"],
             "inputs": result["inputs"],
             "policy": RECOMMENDED,
             "definition": POLICIES[RECOMMENDED],
@@ -321,7 +360,7 @@ def assess_quality(dataset, output, permutations=499):
         },
     )
     lines = [
-        "# V5 partial-pose policy comparison",
+        f"# {manifest.get('video_id', 'V5')} partial-pose policy comparison",
         "",
         "All counts use annotation-eligible candidates and original masks at 0.5. No training.",
         "",

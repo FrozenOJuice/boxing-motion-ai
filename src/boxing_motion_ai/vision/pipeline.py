@@ -3,17 +3,19 @@
 import hashlib
 import importlib.metadata
 import json
+import os
 import platform
 import subprocess
 from bisect import bisect_right
 from collections import Counter
 from pathlib import Path
 
-from .annotations import read_v5_annotations
+from .annotations import read_annotations
 from .contracts import BODY_JOINTS, JOINTS, pose_record
 from .decoder import decode_video
 from .mediapipe_pose import MediaPipePose
 from .overlay import contact_sheet, save_overlay
+from .recording import v5_recording
 
 
 def sha256(path):
@@ -66,7 +68,7 @@ def code_provenance():
     return result
 
 
-def extract_v5(
+def _extract_recording(
     video,
     workbook,
     model,
@@ -82,15 +84,16 @@ def extract_v5(
     pose_mode="image",
     scene_cuts=(),
     overlay_frames=(),
+    recording=None,
+    resume=False,
 ):
+    recording = recording or v5_recording()
     video, workbook, model, output = map(Path, (video, workbook, model, output))
     if not all(p.is_file() for p in (video, workbook, model)):
         raise ValueError("Video, V5 workbook and local pretrained model must all exist")
-    if video.stem.casefold() != "v5" or workbook.stem.casefold() != "v5":
-        raise ValueError(
-            "This initial pipeline supports only explicitly named V5 video/workbook inputs"
-        )
-    if output.exists():
+    if any(p.stem.casefold() != recording.video_id.casefold() for p in (video, workbook)):
+        raise ValueError("Video/workbook filenames must match the configured recording ID")
+    if output.exists() and not resume:
         raise ValueError("Output already exists; choose a new directory to preserve prior runs")
     if any(output.resolve().is_relative_to(p.resolve().parent) for p in (video, workbook, model)):
         raise ValueError("Output must be outside source video, workbook and model directories")
@@ -106,7 +109,7 @@ def extract_v5(
     if any(type(n) is not int or n < 0 for n in overlay_frames):
         raise ValueError("Overlay frames must be nonnegative decoded indices")
     ranges = frame_ranges([f"{a}:{b}" for a, b in ranges])
-    annotations = read_v5_annotations(workbook)
+    annotations = read_annotations(workbook, recording)
     versions = {}
     for name in ("av", "mediapipe", "numpy", "pillow"):
         try:
@@ -115,8 +118,13 @@ def extract_v5(
             versions[name] = None
     manifest = {
         "schema_version": "pose-run-1.1",
+        "resume_unit": "complete newline JSONL record; IMAGE only; replay decode verifies timing",
         "status": "running",
-        "video_id": "V5",
+        "video_id": recording.video_id,
+        "recording_id": recording.video_id,
+        "boxer_id": recording.boxer_id,
+        "session_id": recording.session_id,
+        "recording_config": recording.model_dump(),
         "inputs": {
             name: {"filename": path.name, "sha256": sha256(path)}
             for name, path in [("video", video), ("workbook", workbook), ("model", model)]
@@ -126,7 +134,7 @@ def extract_v5(
         "packages": versions,
         "code": code_provenance(),
         "config": {
-            "ranges_half_open": ranges,
+            "ranges_half_open": [list(pair) for pair in ranges],
             "pose_mode": pose_mode,
             "scene_cuts": cuts,
             "overlay_frames": list(overlay_frames),
@@ -163,18 +171,40 @@ def extract_v5(
         "processed_frame_count": 0,
         "source_frame_count": None,
     }
-    output.mkdir(parents=True)
-    (output / "overlays").mkdir()
+    cached, counts, joint_valid = [], Counter(), [0] * 33
+    overlays = []
+    if output.exists():
+        from .resume import compatible, recover_prefix
+
+        previous = json.loads((output / "manifest.json").read_text())
+        compatible(previous, manifest)
+        if previous["status"] == "complete":
+            if sha256(output / "poses.jsonl") != previous.get("poses_sha256"):
+                raise ValueError("Completed pose file hash differs or predates resumable format")
+            return previous
+        partial = output / "poses.jsonl.partial"
+        # Native exit between rename and manifest completion: recover the completed journal.
+        if not partial.exists() and (output / "poses.jsonl").exists():
+            (output / "poses.jsonl").replace(partial)
+        if not partial.exists():
+            raise ValueError("No resumable pose journal found")
+        cached, counts, joint_valid = recover_prefix(partial, manifest)
+        manifest["resume_history"] = previous.get("resume_history", []) + [
+            {"reused_records": len(cached), "prior_status": previous["status"]}
+        ]
+        overlays = sorted((output / "overlays").glob("frame_*.jpg"))
+    else:
+        output.mkdir(parents=True)
+        (output / "overlays").mkdir()
     write_json(output / "annotations.provisional.json", annotations)
     write_json(output / "manifest.json", manifest)
-    counts, joint_valid = Counter(), [0] * 33
-    overlays, backend, segment, origin, previous_ms = [], None, None, None, None
-    decoded_count, processed, last_time = 0, 0, None
-    active_key, segment_number = None, -1
+    backend, segment, origin, previous_ms = None, None, None, None
+    decoded_count, processed, last_time = 0, len(cached), None
+    active_key, segment_number, replayed = None, -1, 0
     frames = None
     try:
         frames = decoder(video, max_width)
-        with (output / "poses.jsonl.partial").open("w") as stream:
+        with (output / "poses.jsonl.partial").open("a") as stream:
             for frame in frames:
                 if frame.index != decoded_count:
                     raise ValueError("Decoder returned non-sequential frame indices")
@@ -190,11 +220,10 @@ def extract_v5(
                 current = current if ranges else 0
                 scene_id = bisect_right(cuts, frame.index)
                 key = (current, scene_id)
-                if backend is None or key != active_key:
+                if key != active_key:
                     if backend is not None:
                         backend.close()
                         backend = None
-                    backend = backend_factory(model, confidence, mode=pose_mode)
                     active_key = key
                     segment_number += 1
                     segment, origin, previous_ms = segment_number, frame.time, None
@@ -204,10 +233,38 @@ def extract_v5(
                         "PTS cannot be represented as increasing estimator milliseconds"
                     )
                 previous_ms = ms
+                if replayed < len(cached):
+                    expected = cached[replayed]
+                    observed = {
+                        "frame_index": frame.index,
+                        "pts": frame.pts,
+                        "time_base": str(frame.time_base),
+                        "scene_id": scene_id,
+                        "segment_id": segment,
+                        "scene_cut_before": frame.index in cuts,
+                        "estimator_timestamp_ms": ms,
+                        "source_width": frame.source_width,
+                        "source_height": frame.source_height,
+                        "input_width": frame.rgb.shape[1],
+                        "input_height": frame.rgb.shape[0],
+                        "recording_id": recording.video_id,
+                        "boxer_id": recording.boxer_id,
+                        "session_id": recording.session_id,
+                    }
+                    if expected != observed:
+                        raise ValueError(f"Resume replay mismatch at source frame {frame.index}")
+                    replayed += 1
+                    continue
+                if backend is None:
+                    backend = backend_factory(model, confidence, mode=pose_mode)
                 landmarks = backend.detect(frame.rgb, ms)
                 record = pose_record(frame, landmarks, ms, confidence)
                 record.update(
                     schema_version="pose-1.1",
+                    video_id=recording.video_id,
+                    recording_id=recording.video_id,
+                    boxer_id=recording.boxer_id,
+                    session_id=recording.session_id,
                     segment_id=segment,
                     scene_id=scene_id,
                     scene_cut_before=frame.index in cuts,
@@ -232,15 +289,24 @@ def extract_v5(
                     save_overlay(frame, record, path, annotations["rows"])
                     overlays.append(path)
                 if processed % 100 == 0:
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                    manifest["processed_frame_count"] = processed
+                    write_json(output / "manifest.json", manifest)
                     progress(processed)
+            if replayed != len(cached):
+                raise ValueError("Decoder ended before the cached resume prefix")
+            stream.flush()
+            os.fsync(stream.fileno())
             if not processed:
                 raise ValueError("No requested frames decoded")
             if ranges and decoded_count < ranges[-1][1]:
                 raise ValueError("Requested extraction range extends beyond decoded video")
         if cuts and cuts[-1] >= decoded_count and not ranges:
             raise ValueError("Scene cut exceeds decoded video bounds")
-        backend.close()
-        backend = None
+        if backend is not None:
+            backend.close()
+            backend = None
         if not ranges:
             manifest["source_frame_count"] = decoded_count
             for row in annotations["rows"]:
@@ -253,6 +319,7 @@ def extract_v5(
         if overlays:
             contact_sheet(overlays, output / "skeleton-contact-sheet.jpg")
         (output / "poses.jsonl.partial").replace(output / "poses.jsonl")
+        manifest["poses_sha256"] = sha256(output / "poses.jsonl")
         manifest["status"] = "complete"
         manifest["scope"] = "selected_windows" if ranges else "full_video"
     except Exception as exc:
@@ -277,3 +344,32 @@ def extract_v5(
         manifest["overlay_files"] = [p.relative_to(output).as_posix() for p in overlays]
         write_json(output / "manifest.json", manifest)
     return manifest
+
+
+def extract_recording(video, workbook, model, output, *args, **kwargs):
+    """Prevent two writers to one journal; OS releases the lock after native crashes."""
+    import fcntl
+
+    output = Path(output)
+    sources = [Path(p) for p in (video, workbook, model)]
+    if not all(p.is_file() for p in sources):
+        raise ValueError("Video, workbook and local pretrained model must all exist")
+    if any(output.resolve().is_relative_to(p.resolve().parent) for p in sources) or any(
+        p.name == "raw" for p in output.resolve().parents
+    ):
+        raise ValueError("Output must be outside source directories and outside raw directories")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with (output.parent / f".{output.name}.lock").open("a") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise ValueError("Another extraction is already writing this output") from exc
+        try:
+            return _extract_recording(video, workbook, model, output, *args, **kwargs)
+        finally:
+            fcntl.flock(lock, fcntl.LOCK_UN)
+
+
+def extract_v5(*args, **kwargs):
+    """Compatibility entry point for the original V5 prototype."""
+    return extract_recording(*args, **kwargs, recording=v5_recording())

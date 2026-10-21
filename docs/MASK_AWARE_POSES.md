@@ -109,3 +109,10 @@ Annotation alignment, identity/session grouping, independent evaluation and righ
 
 Sources: [MediaPipe landmark score definitions](https://ai.google.dev/edge/api/mediapipe/python/mp/tasks/components/containers/NormalizedLandmark),
 [Pose Landmarker overview](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker).
+
+## Multi-recording expansion
+
+The V5 prototype and original policy remain documented above. Current per-recording layouts,
+sparse/full preparation and restart guarantees are in [EXTRACTION_RESUME.md](EXTRACTION_RESUME.md).
+See [BASELINE_READINESS.md](BASELINE_READINESS.md) for recording-specific alignment gates and
+the proposed leakage-resistant baseline path. No model training was performed.

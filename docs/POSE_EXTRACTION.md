@@ -132,3 +132,10 @@ Use `configs/v5_pose_full.yaml` for the full run: independent IMAGE inference, c
 metadata and explicitly selected review frames. New runs use pose schema 1.1 and default to
 IMAGE mode; the earlier VIDEO sample remains reproducible through its explicit review config.
 Preparation accepts only complete IMAGE runs, preventing temporal pose state across unlisted cuts.
+
+## Multi-recording expansion
+
+The V5 prototype and original policy remain documented above. Current per-recording layouts,
+sparse/full preparation and restart guarantees are in [EXTRACTION_RESUME.md](EXTRACTION_RESUME.md).
+See [BASELINE_READINESS.md](BASELINE_READINESS.md) for recording-specific alignment gates and
+the proposed leakage-resistant baseline path. No model training was performed.

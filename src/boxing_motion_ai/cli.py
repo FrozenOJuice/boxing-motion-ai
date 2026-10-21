@@ -9,7 +9,8 @@ import typer
 from .audit import run_audit, write_report
 
 app = typer.Typer(
-    no_args_is_help=True, help="Boxing Motion AI: local dataset auditing and V5 pose extraction."
+    no_args_is_help=True,
+    help="Boxing Motion AI: local dataset auditing and per-recording pose extraction.",
 )
 
 
@@ -60,10 +61,18 @@ def audit(
 
 @app.command("extract-poses")
 def extract_poses(
-    video: Annotated[Path, typer.Option(help="Local V5 video; never downloaded by this command.")],
-    workbook: Annotated[Path, typer.Option(help="Original V5.xlsx; read only.")],
+    video: Annotated[
+        Path, typer.Option(help="Local V1–V10 video; never downloaded by this command.")
+    ],
+    workbook: Annotated[Path, typer.Option(help="Original matching workbook; read only.")],
     model: Annotated[Path, typer.Option(help="Local MediaPipe Pose Landmarker .task model.")],
     output: Annotated[Path, typer.Option(help="New output directory outside original dataset.")],
+    resume: Annotated[
+        bool, typer.Option(help="Reuse validated completed IMAGE frames after interruption.")
+    ] = False,
+    recording: Annotated[
+        Path | None, typer.Option(help="Explicit inspected recording YAML. Required beyond V5.")
+    ] = None,
     ranges: Annotated[
         list[str] | None,
         typer.Option(
@@ -88,9 +97,11 @@ def extract_poses(
         int | None, typer.Option(min=0, help="Maximum review JPEGs; zero disables.")
     ] = None,
 ):
-    """Extract V5 poses with provisional raw-index annotation provenance; no training."""
+    """Extract poses using explicit recording settings; no training."""
     from .vision.config import load_config
-    from .vision.pipeline import extract_v5, frame_ranges
+    from .vision.pipeline import extract_recording, frame_ranges
+    from .vision.recording import load_recording, v5_recording
+    from .vision.sparse_decoder import choose_decoder
 
     try:
         settings = load_config(
@@ -101,7 +112,11 @@ def extract_poses(
             overlay_every=overlay_every,
             overlay_limit=overlay_limit,
         )
-        manifest = extract_v5(
+        if not all(p.is_file() for p in (video, workbook, model)):
+            raise ValueError("Video, workbook and model must all exist")
+        if recording is None and video.stem.upper() != "V5":
+            raise ValueError("--recording is required beyond V5; no timing/layout inheritance")
+        manifest = extract_recording(
             video,
             workbook,
             model,
@@ -115,6 +130,9 @@ def extract_poses(
             pose_mode=settings.pose_mode,
             scene_cuts=settings.scene_cuts,
             overlay_frames=settings.overlay_frames,
+            recording=load_recording(recording) if recording else v5_recording(),
+            resume=resume,
+            decoder=choose_decoder(output, frame_ranges(settings.ranges)),
         )
     except ImportError as exc:
         typer.echo("Pose dependencies missing: run uv sync --extra pose --locked", err=True)
@@ -152,7 +170,7 @@ def prepare_v5_command(
 
 @app.command("assess-pose-quality")
 def assess_pose_quality(
-    dataset: Annotated[Path, typer.Option(help="Immutable prepared V5 dataset directory.")],
+    dataset: Annotated[Path, typer.Option(help="Immutable prepared recording dataset directory.")],
     output: Annotated[Path, typer.Option(help="New read-only-analysis report directory.")],
     video: Annotated[
         Path | None, typer.Option(help="Optional original video for diagnostic sheets.")
@@ -175,3 +193,161 @@ def assess_pose_quality(
         raise typer.Exit(1) from exc
     typer.echo(f"Compared {len(result['policies'])} policies across six classes. Reports: {output}")
     typer.echo("Descriptive diagnostics only; no classifier trained or original data modified.")
+
+
+@app.command("prepare-recording")
+def prepare_recording_command(
+    pose_run: Annotated[Path, typer.Option(help="Completed IMAGE pose run.")],
+    workbook: Annotated[Path, typer.Option(help="Original matching workbook, read only.")],
+    output: Annotated[Path, typer.Option(help="New generated directory outside raw data.")],
+    allow_sample: Annotated[
+        bool, typer.Option(help="Allow partial extraction; unextracted is unassessed.")
+    ] = False,
+):
+    """Prepare one recording, preserving source indices, identities and sample coverage."""
+    from .data.preparation import prepare_recording
+
+    try:
+        report = prepare_recording(pose_run, workbook, output, allow_sample=allow_sample)
+    except Exception as exc:
+        typer.echo(f"Preparation failed: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(
+        f"{report['video_id']}: {report['extracted_frame_count']} extracted frames; {output}"
+    )
+
+
+@app.command("plan-pose-sample")
+def plan_pose_sample(
+    workbook: Annotated[Path, typer.Option(help="Read-only original workbook.")],
+    recording: Annotated[Path, typer.Option(help="Explicit inspected recording YAML.")],
+    output: Annotated[Path, typer.Option(help="New generated sample-plan directory.")],
+    per_class: Annotated[int, typer.Option(min=2, help="Time-spread samples per class.")] = 5,
+):
+    """Select a reproducible sample before seeing estimator confidence or masks."""
+    from .vision.recording import load_recording
+    from .vision.sampling import plan_sample
+
+    try:
+        plan = plan_sample(workbook, load_recording(recording), output, per_class)
+    except Exception as exc:
+        typer.echo(f"Sample planning failed: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"Selected {len(plan['selected_rows'])} rows; config: {output / 'pose-config.json'}")
+
+
+@app.command("compare-pose-quality")
+def compare_pose_quality(
+    dataset: Annotated[list[Path], typer.Option(help="Repeat for distinct recording datasets.")],
+    output: Annotated[Path, typer.Option(help="New comparison report directory.")],
+    per_class: Annotated[int, typer.Option(min=2, help="Time-spread candidates per class.")] = 5,
+):
+    """Compare fixed-policy retention and joint visibility using balanced samples."""
+    from .data.comparison import compare_recordings
+
+    try:
+        result = compare_recordings(dataset, output, per_class)
+    except Exception as exc:
+        typer.echo(f"Comparison failed: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"Compared {len(result['recordings'])} recordings; {output / 'comparison.md'}")
+
+
+@app.command("validate-pose-samples")
+def validate_pose_samples(
+    root: Annotated[Path, typer.Option(help="Existing BoxingVI raw root; read only.")],
+    processed: Annotated[Path, typer.Option(help="Ignored processed-data root, outside raw data.")],
+    output: Annotated[Path, typer.Option(help="Ignored batch report root; rerun to resume.")],
+    model: Annotated[Path, typer.Option(help="Existing local MediaPipe model; never downloaded.")],
+    recording: Annotated[list[Path], typer.Option(help="Repeat explicit recording YAML paths.")],
+    per_class: Annotated[
+        int, typer.Option(min=2, help="Time-spread samples per available class.")
+    ] = 5,
+):
+    """Resume a batch of IMAGE samples, prepare candidates and assess unchanged masks."""
+    from .data.validation import validate_samples
+
+    try:
+        state = validate_samples(root, processed, output, model, recording, per_class, typer.echo)
+    except Exception as exc:
+        typer.echo(f"Sample validation failed: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    if any(e["status"] != "complete" for e in state["recordings"].values()):
+        raise typer.Exit(1)
+
+
+@app.command("diagnose-alignment")
+def diagnose_alignment_command(
+    root: Annotated[Path, typer.Option(help="Existing raw BoxingVI root.")],
+    evidence: Annotated[
+        Path, typer.Option(help="Prior source manifest and exact ffprobe frame inventory.")
+    ],
+    output: Annotated[Path, typer.Option(help="New ignored diagnostic report directory.")],
+    recording: Annotated[list[Path], typer.Option(help="Repeat inspected recording YAML paths.")],
+    plans: Annotated[Path | None, typer.Option(help="Optional existing sample plans root.")] = None,
+):
+    """Compare raw-index and rate hypotheses against cached, hash-matched source timing."""
+    from .data.alignment import diagnose_alignment
+
+    try:
+        result = diagnose_alignment(root, evidence, output, recording, plans)
+    except Exception as exc:
+        typer.echo(f"Alignment diagnostics failed: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"{len(result['recordings'])} recordings; no automatic corrections: {output}")
+
+
+@app.command("summarize-datasets")
+def summarize_datasets_command(
+    dataset: Annotated[list[Path], typer.Option(help="Repeat prepared recording directories.")],
+    quality: Annotated[list[Path], typer.Option(help="Repeat corresponding quality.json reports.")],
+    alignment: Annotated[Path, typer.Option(help="Hash-matched dataset-wide alignment JSON.")],
+    output: Annotated[Path, typer.Option(help="New ignored summary directory.")],
+    review: Annotated[
+        Path | None, typer.Option(help="Explicit provisional visual-review decisions JSON.")
+    ] = None,
+):
+    """Summarize source counts, sample coverage and readiness without inferring alignment."""
+    from .data.summary import summarize_datasets
+
+    try:
+        result = summarize_datasets(dataset, quality, alignment, output, review)
+    except Exception as exc:
+        typer.echo(f"Dataset summary failed: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"{len(result['recordings'])} recordings; no training: {output / 'dataset.md'}")
+
+
+@app.command("review-pose-sample")
+def review_pose_sample(
+    pose_run: Annotated[Path, typer.Option(help="Completed sampled pose extraction.")],
+    plan: Annotated[Path, typer.Option(help="Matching sample-plan directory.")],
+    output: Annotated[Path, typer.Option(help="New ignored visual-review directory.")],
+):
+    """Make per-class sheets from existing overlays, without decoding again."""
+    from .data.sample_review import render_sample_review
+
+    try:
+        render_sample_review(pose_run, plan, output)
+    except Exception as exc:
+        typer.echo(f"Visual review failed: {type(exc).__name__}: {exc}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"Review index: {output / 'review.md'}")
+
+
+@app.command('train-level1')
+def train_level1(
+    config: Annotated[Path, typer.Option(help='Versioned V4-train / V5-development YAML.')],
+    output: Annotated[Path, typer.Option(help='New ignored directory below reports/.')],
+):
+    """Train static/causal TCN baselines and matched mask-only ablations (CPU)."""
+    try:
+        from .training.experiment import run_experiment
+
+        run_experiment(config, output, typer.echo)
+    except ImportError as exc:
+        typer.echo('Training dependencies missing: uv sync --extra train --extra pose', err=True)
+        raise typer.Exit(1) from exc
+    except Exception as exc:
+        typer.echo(f'Experiment failed: {type(exc).__name__}: {exc}', err=True)
+        raise typer.Exit(1) from exc

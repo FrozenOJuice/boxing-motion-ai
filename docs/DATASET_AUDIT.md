@@ -93,3 +93,44 @@ all missing/unreliable observations retain masks, and suspect annotations remain
 The generated report distinguishes annotation-eligible from strict pose-clean examples. Empty
 pose-clean classes and single-video split limitations remain explicit training-readiness blockers;
 no classes, thresholds, source frame coordinates or annotations were silently changed.
+
+## V4 second-recording sample (2026-10-20)
+
+Inspected the distinct V4 header/helper layout; selected 30 source events across six classes
+and extracted 229 exact-index/PTS frames. The unchanged provisional mask-aware policy retains
+28/30, compared with 1/30 strict all-body retention. V4's dominant failure is the right arm,
+while V5's was the left; pose confidence does not establish coordinate correctness. Full V4
+extraction is a reasonable next validation step, with raw-index mapping still provisional.
+See [V4_POSE_VALIDATION.md](V4_POSE_VALIDATION.md) for evidence, exclusions, comparison limits
+and manual review priorities. Boxer/session identity, author timing conventions and licensing
+remain unverified. No training or full V4 extraction was performed in this step.
+
+## V1–V10 pose-validation expansion (2026-10-20)
+
+Full V4 extraction is complete: 35,363 source frames, exact PTS matched to the prior source
+inventory; 527/554 structurally eligible positives retained under the unchanged mask-aware70
+policy (strict all-body: 69/554). Retained counts by class are jab 117, cross 39, lead hook
+140, rear hook 73, lead uppercut 71, rear uppercut 87. V5 remains unchanged at 583/584,
+providing a combined **1,110 provisional positives** across all six classes.
+
+V1–V3 and V6–V10 samples cover 211 selected annotations and 2,507 exact-index/PTS frames;
+206 events are structurally assessable, of which 184 pass the same mask-aware policy.
+Five V7 rear-uppercut samples remain annotation-flagged and diagnostic only. No source
+rear hooks exist in V2/V8; V6 contains no jab/cross labels. Total actual event rows: 5,451.
+
+New visual comparisons confirm mislabeled-context concerns in raw-index V1/V2/V3 hypotheses
+(slipping/title cards, rest/sit-ups, warm-up/rest respectively). V6 retains all 20 assessed
+poses but needs class/phase and overlap review. V9 is the strongest next full-extraction
+candidate; V7/V8 need boundary/visibility review, and V10 needs mixed-exercise segment review.
+All author FPS/base/end/trim conventions and boxer/session identities remain unverified.
+
+Interrupted IMAGE extraction now validates/reuses completed pose records; synthetic VFR/cut
+restart tests match uninterrupted output exactly. The completed V4 resume and eight-recording
+batch rerun reused existing artifacts without inference. Decode replay is still required for
+interrupted prefixes. Original media/workbooks/metadata/archive, V5 poses and weights are
+unchanged. Generated media/reports and datasets remain ignored; no model training occurred.
+
+See [EXTRACTION_RESUME.md](EXTRACTION_RESUME.md) for commands and
+[BASELINE_READINESS.md](BASELINE_READINESS.md) for source gates, manual checks and the proposed
+recording/publisher-group split strategy. The authoritative local result index is
+`reports/boxingvi/expansion/README.md`; no final train/validation/test split is assigned.

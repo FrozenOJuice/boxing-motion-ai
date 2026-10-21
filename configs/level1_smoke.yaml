@@ -1,0 +1,21 @@
+schema_version: level1-experiment-1.0
+seed: 20261021
+epochs: 2
+batch_size: 32
+learning_rate: 0.001
+weight_decay: 0.001
+hidden: 32
+dropout: 0.1
+threads: 2
+limit_per_class: 2
+train:
+  recording: V4
+  dataset: data/processed/boxingvi/V4/candidates-full-v1
+  policy: reports/boxingvi/expansion/quality/V4/policy-index.json
+  pose_run: data/processed/boxingvi/V4/pose-full-image-v1
+development:
+  recording: V5
+  dataset: data/processed/boxingvi/V5/candidates-full-v1
+  policy: reports/boxingvi/expansion/quality/V5/policy-index.json
+  pose_run: data/processed/boxingvi/V5/pose-full-image-v1
+runs: [static, tcn, static_mask_only, tcn_mask_only]

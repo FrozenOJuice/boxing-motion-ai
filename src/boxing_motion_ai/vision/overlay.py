@@ -36,13 +36,13 @@ def save_overlay(frame, record, destination, annotation_rows):
     ]
     draw.text(
         (8, 5),
-        f"V5 n={frame.index} PTS={record['timestamp_seconds']:.3f}s "
+        f"{record['video_id']} n={frame.index} PTS={record['timestamp_seconds']:.3f}s "
         f"{record['status']} body={record['valid_body_joint_count']}/22",
         fill="white",
     )
     draw.text(
         (8, 23),
-        "Raw-index candidates (UNVERIFIED): "
+        "Configured-index candidates (UNVERIFIED): "
         + (", ".join(candidates) if candidates else "none; action unknown"),
         fill="#f5cf84",
     )

@@ -8,9 +8,10 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from ..vision.annotations import read_v5_annotations
+from ..vision.annotations import read_annotations
 from ..vision.contracts import BODY_JOINTS, JOINTS
 from ..vision.pipeline import code_provenance, sha256, write_json
+from ..vision.recording import v5_recording
 
 # Literal source names only; no stance/hand inference or numeric class guessing.
 CLASS_MAP = {
@@ -21,6 +22,7 @@ CLASS_MAP = {
     "Lead Uppercut": "lead_uppercut",
     "Rear Uppercut": "rear_uppercut",
 }
+SOURCE_LABELS = tuple(CLASS_MAP.values())
 GLOBAL_UNCERTAINTIES = {"provisional_mapping", "class_unverified", "boundaries_unverified"}
 
 
@@ -34,14 +36,25 @@ def _load_poses(pose_run, manifest):
     """One JSONL pass, bounded arrays. Null becomes NaN, never an invented coordinate."""
     import numpy as np
 
-    n = manifest["source_frame_count"]
-    if type(n) is not int or n <= 0 or n != manifest["processed_frame_count"]:
+    full = manifest.get("scope") == "full_video"
+    n = manifest["processed_frame_count"]
+    if type(n) is not int or n <= 0 or (full and n != manifest["source_frame_count"]):
         raise ValueError("Inconsistent complete source frame count")
+    video_id = manifest.get("video_id", "V5")
+    expected_indices = (
+        list(range(n))
+        if full
+        else [i for a, b in manifest["config"]["ranges_half_open"] for i in range(a, b)]
+    )
+    if len(expected_indices) != n or expected_indices != sorted(set(expected_indices)):
+        raise ValueError("Pose ranges disagree with processed frame count")
     config = manifest["config"]
     if config.get("pose_mode") != "image":
         raise ValueError("Preparation requires independent IMAGE poses to prevent cross-cut state")
     cuts = config.get("scene_cuts", [])
-    if cuts != sorted(set(cuts)) or any(type(c) is not int or not 0 < c < n for c in cuts):
+    if cuts != sorted(set(cuts)) or any(
+        type(c) is not int or not 0 < c or (full and c >= n) for c in cuts
+    ):
         raise ValueError("Invalid scene cut inventory")
     xyz = np.full((n, 33, 3), np.nan, dtype=np.float64)
     confidence = np.full((n, 33, 2), np.nan, dtype=np.float64)
@@ -56,12 +69,22 @@ def _load_poses(pose_run, manifest):
     with (pose_run / "poses.jsonl").open() as stream:
         for i, line in enumerate(stream):
             record = json.loads(line)
-            if i >= n or type(record["frame_index"]) is not int or record["frame_index"] != i:
+            if (
+                i >= n
+                or type(record["frame_index"]) is not int
+                or record["frame_index"] != expected_indices[i]
+            ):
                 raise ValueError(
                     "Pose records must contain every decoded frame exactly once in order"
                 )
-            if record["schema_version"] != "pose-1.1" or record["video_id"] != "V5":
-                raise ValueError("Expected V5 pose-1.1 records")
+            if record["schema_version"] != "pose-1.1" or record["video_id"] != video_id:
+                raise ValueError("Expected matching recording pose-1.1 records")
+            if "recording_config" in manifest and (
+                record.get("recording_id") != video_id
+                or record.get("boxer_id") != manifest.get("boxer_id")
+                or record.get("session_id") != manifest.get("session_id")
+            ):
+                raise ValueError("Pose recording/boxer/session identity disagrees with manifest")
             base = Fraction(record["time_base"])
             if type(record["pts"]) is not int or base <= 0:
                 raise ValueError("Invalid exact pose timing")
@@ -69,12 +92,19 @@ def _load_poses(pose_run, manifest):
             if previous_time is not None and time <= previous_time:
                 raise ValueError("Non-increasing pose timestamps")
             previous_time = time
-            sid = bisect_right(cuts, i)
-            if record["scene_id"] != sid or record["scene_cut_before"] != (i in cuts):
+            source_index = expected_indices[i]
+            gap = i > 0 and source_index != expected_indices[i - 1] + 1
+            sid = bisect_right(cuts, source_index)
+            if record["scene_id"] != sid or record["scene_cut_before"] != (source_index in cuts):
                 raise ValueError("Pose scene metadata disagrees with cut configuration")
-            if i in cuts and record["segment_id"] == previous_segment:
+            if (source_index in cuts or gap) and record["segment_id"] == previous_segment:
                 raise ValueError("Pose estimator segment did not reset at the scene cut")
-            if i and i not in cuts and record["segment_id"] != previous_segment:
+            if (
+                i
+                and source_index not in cuts
+                and not gap
+                and record["segment_id"] != previous_segment
+            ):
                 raise ValueError("Unexpected full-video estimator segment change")
             previous_segment = record["segment_id"]
             points, valid = record["landmarks"], record["valid_mask"]
@@ -116,7 +146,7 @@ def _load_poses(pose_run, manifest):
     if count != n:
         raise ValueError("Truncated pose sequence")
     return {
-        "frame_index": np.arange(n, dtype=np.int64),
+        "frame_index": np.array(expected_indices, dtype=np.int64),
         "pts": pts,
         "time_base_num": num,
         "time_base_den": den,
@@ -145,67 +175,101 @@ def _unknown_intervals(intervals, n):
     return result
 
 
-def _candidates(annotations, arrays, config):
-    n = len(arrays["pts"])
+def _candidates(annotations, arrays, config, source_frame_count=None, scene_cuts=None):
+    import numpy as np
+
+    frame_ids = arrays["frame_index"]
+    n = source_frame_count
+    prefix_stop = int(frame_ids[-1]) + 1
+    recording = annotations.get("recording_config", v5_recording().model_dump())
+    video_id = annotations["video_id"]
+    class_map = recording["class_map"]
     # Derive confirmed boundaries from scene IDs, not nominal FPS or video timestamps.
-    boundaries = [i for i in range(1, n) if arrays["scene_id"][i] != arrays["scene_id"][i - 1]]
+    boundaries = [
+        int(frame_ids[i])
+        for i in range(1, len(frame_ids))
+        if arrays["scene_id"][i] != arrays["scene_id"][i - 1]
+    ]
+    if scene_cuts is not None:
+        boundaries = scene_cuts
     candidates, plausible = [], []
     for row in annotations["rows"]:
         a, end = row["candidate_start_index"], row["candidate_end_index"]
         reasons = sorted(set(row["flags"]) - GLOBAL_UNCERTAINTIES)
         if row["source_row"] in config.excluded_source_rows:
             reasons.append("known_questionable_source_row")
-        label = CLASS_MAP.get(row["source_class"])
+        label = class_map.get(row["source_class"])
         if label is None:
             reasons.append("no_exact_class_mapping")
-        stop = end + 1 if end is not None else None
-        bounds_ok = a is not None and stop is not None and 0 <= a < stop <= n
+        stop = end + int(recording["end_assumption"] == "inclusive") if end is not None else None
+        bounds_ok = (
+            a is not None and stop is not None and 0 <= a < stop and (n is None or stop <= n)
+        )
         if not bounds_ok:
             reasons.append("invalid_or_out_of_bounds_interval")
         quality = None
+        array_slice = None
+        sampled = False
         if bounds_ok:
-            plausible.append((a, stop))
+            if a < prefix_stop:
+                plausible.append((a, min(stop, prefix_stop)))
             if any(a < cut < stop for cut in boundaries):
                 reasons.append("crosses_confirmed_scene_cut")
             guard = config.scene_guard_frames
             if any(a < cut + guard and stop > cut - guard for cut in boundaries):
                 reasons.append("near_confirmed_scene_cut")
-            values = arrays["pose_status"][a:stop]
+            lo, hi = np.searchsorted(frame_ids, [a, stop]).tolist()
+            sampled = np.array_equal(frame_ids[lo:hi], np.arange(a, stop))
+            array_slice = [lo, hi] if sampled else None
+            values = arrays["pose_status"][lo:hi] if sampled else []
             counts = Counter(int(v) for v in values)
             quality = {
                 "frame_count": stop - a,
                 "ok_frames": counts[0],
                 "unreliable_frames": counts[1],
                 "missing_frames": counts[2],
-                "invalid_body_joint_entries": int((~arrays["valid_mask"][a:stop, 11:]).sum()),
+                "invalid_body_joint_entries": int((~arrays["valid_mask"][lo:hi, 11:]).sum()),
             }
+            if not sampled:
+                quality = None
         eligible = not reasons
-        clean = eligible and quality["unreliable_frames"] == 0 and quality["missing_frames"] == 0
+        clean = (
+            eligible
+            and sampled
+            and quality["unreliable_frames"] == 0
+            and quality["missing_frames"] == 0
+        )
         candidates.append(
             {
                 **row,
-                "schema_version": "v5-candidate-1.0",
-                "video_id": "V5",
+                "schema_version": "recording-candidate-1.1",
+                "video_id": video_id,
+                "recording_id": video_id,
+                "boxer_id": recording["boxer_id"],
+                "session_id": recording["session_id"],
                 "punch_type_provisional": label,
                 "review_status": "unreviewed",
-                "split_group": "V5",
+                "split_group": video_id,
                 "split": None,
-                "array_slice_half_open": [a, stop] if bounds_ok else None,
-                "annotation_end_assumption": "inclusive assumption; author convention unverified",
+                "source_interval_half_open": [a, stop] if bounds_ok else None,
+                "array_slice_half_open": array_slice,
+                "quality_assessable": eligible and sampled,
+                "pose_coverage": "complete" if sampled else "not_fully_extracted",
+                "annotation_end_assumption": recording["end_assumption"]
+                + "; author convention unverified",
                 "exclusion_reasons": sorted(set(reasons)),
                 "annotation_eligible": eligible,
                 "pose_clean_candidate": clean,
                 "pose_quality": quality,
             }
         )
-    return candidates, _unknown_intervals(plausible, n)
+    return candidates, _unknown_intervals(plausible, prefix_stop)
 
 
-def prepare_v5(pose_run, workbook, output, config=None):
+def prepare_recording(pose_run, workbook, output, config=None, allow_sample=False):
     import numpy as np
 
     pose_run, workbook, output = map(Path, (pose_run, workbook, output))
-    config = config or PreparationConfig()
     if output.exists():
         raise ValueError("Output already exists; choose a new preparation directory")
     if (
@@ -217,23 +281,40 @@ def prepare_v5(pose_run, workbook, output, config=None):
             "Preparation output must be outside pose inputs and raw dataset directories"
         )
     manifest = json.loads((pose_run / "manifest.json").read_text())
-    if manifest["status"] != "complete" or manifest.get("scope") != "full_video":
+    if manifest["status"] != "complete" or (
+        not allow_sample and manifest.get("scope") != "full_video"
+    ):
         raise ValueError("Preparation requires a complete full-video pose run")
     if manifest["inputs"]["workbook"]["sha256"] != sha256(workbook):
         raise ValueError(
             "Workbook hash differs from the pose run; no implicit annotation update allowed"
         )
-    annotations = read_v5_annotations(workbook)
+    from ..vision.recording import RecordingConfig
+
+    recording = (
+        RecordingConfig.model_validate(manifest["recording_config"])
+        if "recording_config" in manifest
+        else v5_recording()
+    )
+    video_id = recording.video_id
+    if manifest.get("video_id", "V5") != video_id:
+        raise ValueError("Recording configuration and manifest video IDs disagree")
+    config = config or PreparationConfig(excluded_source_rows=recording.excluded_source_rows)
+    annotations = read_annotations(workbook, recording)
     arrays = _load_poses(pose_run, manifest)
-    candidates, unknown = _candidates(annotations, arrays, config)
+    source_count = manifest.get("source_frame_count")
+    candidates, unknown = _candidates(
+        annotations, arrays, config, source_count, manifest["config"]["scene_cuts"]
+    )
     balance = {}
-    for label in [*CLASS_MAP.values(), "unmapped"]:
+    for label in [*SOURCE_LABELS, "unmapped"]:
         subset = [c for c in candidates if (c["punch_type_provisional"] or "unmapped") == label]
         eligible = [c for c in subset if c["annotation_eligible"]]
+        assessed = [c for c in eligible if c["quality_assessable"]]
         invalid_counts = np.zeros(33, dtype=np.int64)
         event_frames = 0
         arms_clean = 0
-        for candidate in eligible:
+        for candidate in assessed:
             a, stop = candidate["array_slice_half_open"]
             valid = arrays["valid_mask"][a:stop]
             invalid_counts += (~valid).sum(axis=0)
@@ -247,19 +328,20 @@ def prepare_v5(pose_run, workbook, output, config=None):
                 for i in worst
                 if event_frames
             ],
+            "quality_assessable": len(assessed),
             "source_rows": len(subset),
             "annotation_eligible": len(eligible),
             "excluded_annotation_rows": len(subset) - len(eligible),
             "eligible_with_unreliable_pose": sum(
-                c["pose_quality"]["unreliable_frames"] > 0 for c in eligible
+                c["pose_quality"]["unreliable_frames"] > 0 for c in assessed
             ),
             "eligible_with_missing_pose": sum(
-                c["pose_quality"]["missing_frames"] > 0 for c in eligible
+                c["pose_quality"]["missing_frames"] > 0 for c in assessed
             ),
             "eligible_with_any_pose_issue": sum(
                 c["pose_quality"]["unreliable_frames"] > 0
                 or c["pose_quality"]["missing_frames"] > 0
-                for c in eligible
+                for c in assessed
             ),
             "pose_clean_candidates": sum(c["pose_clean_candidate"] for c in eligible),
         }
@@ -268,11 +350,15 @@ def prepare_v5(pose_run, workbook, output, config=None):
     ]
     output.mkdir(parents=True)
     report = {
-        "schema_version": "v5-preparation-1.0",
+        "schema_version": "recording-preparation-1.1",
         "status": "writing",
-        "video_id": "V5",
+        "video_id": video_id,
+        "recording_id": video_id,
+        "boxer_id": recording.boxer_id,
+        "session_id": recording.session_id,
+        "scope": manifest.get("scope"),
         "config": config.model_dump(),
-        "class_map": CLASS_MAP,
+        "class_map": recording.class_map,
         "class_counts": balance,
         "inputs": {
             "pose_manifest_sha256": sha256(pose_run / "manifest.json"),
@@ -281,7 +367,11 @@ def prepare_v5(pose_run, workbook, output, config=None):
             "video_sha256": manifest["inputs"]["video"]["sha256"],
         },
         "code": code_provenance(),
-        "source_frame_count": len(arrays["pts"]),
+        "source_frame_count": manifest.get("source_frame_count"),
+        "extracted_frame_count": len(arrays["pts"]),
+        "unknown_inventory_scope": (
+            "full_video" if manifest.get("scope") == "full_video" else "decoded prefix only"
+        ),
         "pose_contract": {
             "joint_order": JOINTS,
             "coordinates": "raw image x/y and hip-relative z",
@@ -299,11 +389,16 @@ def prepare_v5(pose_run, workbook, output, config=None):
             u["frame_stop_exclusive"] - u["frame_start"] for u in unknown
         ),
         "mapping_uncertainty": {k: v for k, v in annotations.items() if k != "rows"},
-        "sequence_policy": "raw bounds, provisional inclusive end; no resampling or imputation",
+        "sequence_policy": (
+            f"raw bounds + {recording.frame_offset}; provisional "
+            f"{recording.end_assumption} end; no resampling or imputation"
+        ),
         "pose_clean_definition": "annotation eligible; all body joints valid on every event frame",
         "uncertainty": "clean is structural/pose quality only, never verified annotation truth",
         "scene_inventory": "confirmed listed cuts only; IMAGE inference has no cross-frame state",
-        "split_status": "one source group V5; no independent train/validation/test split assigned",
+        "split_status": (
+            f"recording group {video_id}; boxer/session identities separate; splits unassigned"
+        ),
         "classes_without_pose_clean_candidates": no_clean,
         "training_readiness": (
             "needs_pose_quality_review_and_independent_split"
@@ -343,33 +438,36 @@ def prepare_v5(pose_run, workbook, output, config=None):
 
 def _write_markdown(report, output):
     lines = [
-        "# V5 provisional candidate dataset",
+        f"# {report['video_id']} provisional candidate dataset",
         "",
         "No training was performed. All labels and boundaries remain provisional.",
         "",
-        "| Class | Source rows | Annotation eligible | With unreliable pose "
+        "| Class | Source rows | Annotation eligible | Assessed | With unreliable pose "
         "| With missing pose | Pose-clean |",
-        "| --- | ---: | ---: | ---: | ---: | ---: |",
+        "| --- | ---: | ---: | ---: | ---: | ---: | ---: |",
     ]
     for label, count in report["class_counts"].items():
         lines.append(
             f"| {label} | {count['source_rows']} | {count['annotation_eligible']} | "
+            f"{count['quality_assessable']} | "
             f"{count['eligible_with_unreliable_pose']} | {count['eligible_with_missing_pose']} | "
             f"{count['pose_clean_candidates']} |"
         )
     lines += [
         "",
-        "Pose issue counts apply to annotation-eligible rows and may overlap. Clean means all",
+        "Pose issue counts apply only to assessed eligible rows and may overlap. Clean means all",
         "22 body joints valid for every event frame, not certified anatomical/label accuracy.",
         "",
-        f"Unknown outside source bounds: {report['unknown_outside_annotation_bounds_frames']}; "
+        f"Unknown outside source bounds ({report['unknown_inventory_scope']}): "
+        f"{report['unknown_outside_annotation_bounds_frames']}; "
         "state remains unknown.",
         "",
         "Classes without strict pose-clean candidates: "
         + ", ".join(report["classes_without_pose_clean_candidates"]),
         "No class is automatically dropped and no confidence threshold is relaxed.",
         "",
-        "All examples belong to V5; splits are unassigned. No independent held-out evaluation",
+        f"All examples belong to {report['video_id']}; splits are unassigned. "
+        "No independent held-out evaluation",
         "is possible from this single source group. See preparation.json for assumptions, source",
         "hashes and exact policies; candidates.jsonl retains every excluded row and its reasons.",
         "",
@@ -379,3 +477,10 @@ def _write_markdown(report, output):
         "",
     ]
     (output / "preparation.md").write_text("\n".join(lines))
+
+
+def prepare_v5(pose_run, workbook, output, config=None):
+    """Compatibility entry point, still requires full extraction."""
+    if Path(workbook).stem.upper() != "V5":
+        raise ValueError("prepare-v5 requires V5; use prepare-recording for other recordings")
+    return prepare_recording(pose_run, workbook, output, config)

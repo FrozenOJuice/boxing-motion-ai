@@ -41,6 +41,7 @@ def quality_inputs():
         )
     valid = score_validity(xyz, conf, 0.5)
     arrays = {
+        "frame_index": np.arange(24),
         "coordinates": xyz,
         "confidence": conf,
         "valid_mask": valid,
@@ -189,7 +190,10 @@ def test_cli_help_and_missing_inputs(tmp_path):
     assert not (tmp_path / "output").exists()
 
 
-def test_renderer_uses_exact_frames_and_rejects_wrong_source(quality_inputs, tmp_path, monkeypatch):
+@pytest.mark.parametrize("source_offset", [0, 100])
+def test_renderer_uses_exact_frames_and_rejects_wrong_source(
+    quality_inputs, tmp_path, monkeypatch, source_offset
+):
     from fractions import Fraction
 
     np = pytest.importorskip("numpy")
@@ -198,8 +202,11 @@ def test_renderer_uses_exact_frames_and_rejects_wrong_source(quality_inputs, tmp
     from boxing_motion_ai.vision.contracts import DecodedFrame
 
     arrays, rows = quality_inputs
+    arrays["frame_index"] += source_offset
     arrays.update(
-        pts=np.arange(24) * 33, time_base_num=np.ones(24, int), time_base_den=np.full(24, 1000)
+        pts=arrays["frame_index"] * 33,
+        time_base_num=np.ones(24, int),
+        time_base_den=np.full(24, 1000),
     )
     dataset = tmp_path / "dataset"
     dataset.mkdir()
@@ -214,7 +221,7 @@ def test_renderer_uses_exact_frames_and_rejects_wrong_source(quality_inputs, tmp
     (output / "quality.json").write_text(json.dumps(analyze_arrays(arrays, rows, 2)))
 
     def decoder(path, width):
-        for i in range(24):
+        for i in range(source_offset + 24):
             yield DecodedFrame(
                 i, i * 33, Fraction(1, 1000), 64, 36, np.zeros((36, 64, 3), np.uint8)
             )
@@ -230,3 +237,58 @@ def test_renderer_uses_exact_frames_and_rejects_wrong_source(quality_inputs, tmp
     video.write_bytes(b"wrong source")
     with pytest.raises(ValueError, match="hash"):
         quality_review.render_quality_review(dataset, video, output)
+
+
+def test_comparison_balances_before_quality_and_preserves_inputs(quality_inputs, tmp_path):
+    from boxing_motion_ai.data.comparison import compare_recordings
+
+    np = pytest.importorskip("numpy")
+    arrays, rows = quality_inputs
+    for i, row in enumerate(rows):
+        row.update(
+            source_class=list(CLASS_MAP)[i],
+            flags=[],
+            candidate_start_index=i * 4,
+            candidate_end_index=i * 4 + 3,
+        )
+    datasets = []
+    for video_id in ["V4", "V5"]:
+        folder = tmp_path / video_id
+        folder.mkdir()
+        np.savez_compressed(folder / "poses.npz", **arrays)
+        (folder / "candidates.jsonl").write_text("".join(json.dumps(r) + "\n" for r in rows))
+        (folder / "preparation.json").write_text(
+            json.dumps(
+                {
+                    "status": "complete",
+                    "video_id": video_id,
+                    "boxer_id": None,
+                    "scope": "selected_windows",
+                    "class_map": CLASS_MAP,
+                    "npz_sha256": sha256(folder / "poses.npz"),
+                }
+            )
+        )
+        datasets.append(folder)
+    hashes = [{p.name: sha256(p) for p in d.iterdir()} for d in datasets]
+    result = compare_recordings(datasets, tmp_path / "comparison", 2)
+    assert set(result["recordings"]) == {"V4", "V5"}
+    assert (tmp_path / "comparison" / "comparison.md").is_file()
+    assert result["recordings"]["V4"]["selected_source_rows"] == list(range(2, 8))
+    assert all(
+        v["retention"]["mask_aware70"] == 1
+        for v in result["recordings"]["V4"]["quality"]["by_class"].values()
+    )
+    assert hashes == [{p.name: sha256(p) for p in d.iterdir()} for d in datasets]
+    with pytest.raises(ValueError, match="distinct"):
+        compare_recordings([datasets[0], datasets[0]], tmp_path / "duplicate", 2)
+
+
+def test_absent_classes_explicit_zero_without_fake_joint_statistics(quality_inputs):
+    arrays, rows = quality_inputs
+    report = analyze_arrays(arrays, rows[:1], permutations=2, required_classes=())
+    assert report["by_class"]["jab"]["eligible"] == 1
+    cross = report["by_class"]["cross"]
+    assert cross["eligible"] == 0 and cross["retention"]["mask_aware70"] == 0
+    assert cross["joints"]["left_elbow"]["invalid_frame_fraction"] is None
+    assert len(report["candidate_decisions"]) == 1

@@ -137,3 +137,10 @@ MediaPipe mode/API reference: [official Python guide](https://ai.google.dev/edge
 coverage policies. Its proposed development index is separate from `pose_clean_candidate`:
 it never relabels an unreliable point as valid or changes the original preparation report.
 Retained partial sequences still require masked features and independent shortcut evaluation.
+
+## Multi-recording expansion
+
+The V5 prototype and original policy remain documented above. Current per-recording layouts,
+sparse/full preparation and restart guarantees are in [EXTRACTION_RESUME.md](EXTRACTION_RESUME.md).
+See [BASELINE_READINESS.md](BASELINE_READINESS.md) for recording-specific alignment gates and
+the proposed leakage-resistant baseline path. No model training was performed.

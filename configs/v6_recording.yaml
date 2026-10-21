@@ -1,0 +1,32 @@
+# Individually inspected layout; raw decoded-index hypothesis ONLY, not certified timing.
+video_id: V6
+source_url: https://www.youtube.com/watch?v=cQW-h8yGbRc
+header:
+- start
+- end
+- class
+- null
+- null
+- null
+- null
+- null
+columns:
+  start: A
+  end: B
+  class: C
+helper_formulas:
+  D: =B{row}-A{row}
+  E: =A{row}-157
+  F: =B{row}-157
+mirrored_columns: {}
+class_map:
+  Lead Uppercut: lead_uppercut
+  Lead Hook: lead_hook
+  Rear Hook: rear_hook
+  Rear Uppercut: rear_uppercut
+frame_offset: 0
+end_assumption: inclusive
+boxer_id: null
+session_id: null
+mapping_status: provisional
+excluded_source_rows: []

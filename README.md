@@ -2,8 +2,8 @@
 
 Computer vision and ML for punch recognition and early detection. Phase 0 provides local dataset
 discovery, annotation contracts, defensive BoxingVI XLSX inspection, validation and JSON/Markdown
-audit reports. The initial Phase 1 slice adds **V5-only pretrained pose extraction**, retaining
-provisional annotation alignment. Level 2 is the core target; Level 2.5 analytics follows the core.
+audit reports. Phase 1 adds recording-aware pose extraction and provisional clip preparation.
+The first Level 1 experiment uses V4 for training and V5 for development validation. Level 2 is the core target; Level 2.5 analytics follows the core.
 See [the project specification](docs/PROJECT_SPEC.md).
 
 ## Setup and checks
@@ -79,7 +79,8 @@ manual verification. Even structurally consistent files yield `needs_review` and
 Phase 0 tool cannot certify licensing, footage continuity, identity independence or visual label
 alignment. `structural_checks_passed` describes only automated checks, and `phase_0_gate` stays
 `not_verified`. Review the [status note](docs/DATASET_AUDIT.md) before approving any modeling work.
-No punch models, training, inference server or round analytics are implemented.
+The audit itself never trains models. The opt-in Level 1 experiment is documented below;
+no inference server or round analytics are implemented.
 
 ## V5 pose-quality investigation
 
@@ -95,3 +96,33 @@ scene boundaries and explicit unknown footage. No model training or independent 
 [Partial-pose quality assessment](docs/MASK_AWARE_POSES.md) compares six retention policies,
 per-joint score failures and mask/class association without training. The recommended development
 selection preserves original masks and coordinates; retained low-confidence joints are not promoted.
+
+For the second-recording validation, explicit V4/V5 timing and layout configurations,
+class-balanced sampling and cross-recording comparison commands, see
+[the per-recording pipeline guide](docs/RECORDING_PIPELINE.md).
+
+Full V4 extraction, V1–V10 layouts, restartable sample batches and recovery guarantees are
+documented in [EXTRACTION_RESUME.md](docs/EXTRACTION_RESUME.md). Generated dataset-wide
+readiness reports distinguish full-video candidates from diagnostic samples and keep
+boxer/session identity unknown unless supported by evidence.
+
+## Initial Level 1 experiments
+
+Use the prepared full V4/V5 datasets and the approved `mask_aware70` policy indices.
+Run from the repository root; outputs must be fresh directories under ignored `reports/`.
+
+```sh
+uv sync --locked --extra pose --extra train
+uv run --extra pose --extra train pytest
+uv run ruff check .
+uv run --extra pose --extra train boxing-motion-ai train-level1 --help
+uv run --extra pose --extra train boxing-motion-ai train-level1 --config configs/level1_smoke.yaml --output reports/boxingvi/level1-smoke-repeat
+uv run --extra pose --extra train boxing-motion-ai train-level1 --config configs/level1_initial.yaml --output reports/boxingvi/level1-initial-repeat
+```
+
+Both commands run the non-temporal linear baseline, a small causal TCN and matched mask-only
+ablations. Configuration, source snapshots/hashes, clip selections, predictions, metrics, curves
+and checkpoints remain local. V9 is reserved and never loaded. See
+[the experiment protocol and initial findings](docs/LEVEL1_EXPERIMENTS.md) for interpretation.
+These are provisional six-class positive-clip experiments, without `no_punch`, event detection,
+early recognition or claims of boxer-independent generalization.

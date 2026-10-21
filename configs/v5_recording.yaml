@@ -1,0 +1,20 @@
+# Existing user-approved V5 provisional mapping, explicitly separate from V4.
+video_id: V5
+source_url: 'https://www.youtube.com/watch?v=V59fcX1YC7E'
+header: [null, null, null, null, null]
+helper_formulas:
+  D: '=A{row}-24'
+  E: '=B{row}-24'
+class_map:
+  Jab: jab
+  Cross: cross
+  Lead Hook: lead_hook
+  Rear Hook: rear_hook
+  Lead Uppercut: lead_uppercut
+  Rear Uppercut: rear_uppercut
+frame_offset: 0
+end_assumption: inclusive
+boxer_id: null
+session_id: null
+mapping_status: provisional
+excluded_source_rows: [272, 323, 442, 536]
