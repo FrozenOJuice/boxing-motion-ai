@@ -131,8 +131,12 @@ def source_gap_limit(path):
 class VelocityClips(Dataset):
     """Wrap immutable PoseClips; never refilter examples, alter labels or read other sources."""
 
-    def __init__(self, dataset, *, diagnostic=False):
+    def __init__(self, dataset, *, diagnostic=False, multi_recording=False):
+        if diagnostic and multi_recording:
+            raise ValueError("Separate velocity access gates required")
         allowed = ("V6", "V7", "V8", "V10") if diagnostic else ("V4", "V5")
+        if multi_recording:
+            allowed = ("V4", "V5", "V6", "V7", "V8", "V10")
         if dataset.provenance["recording_id"] not in allowed:
             raise ValueError("Velocity experiment permits V4/V5 only; V9 reserved")
         gap = source_gap_limit(dataset.provenance["dataset"])

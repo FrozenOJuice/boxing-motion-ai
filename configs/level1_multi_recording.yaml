@@ -1,0 +1,18 @@
+schema_version: multi-recording-study-1.0
+base_config: configs/level1_initial.yaml
+transfer_config: configs/level1_velocity_transfer.yaml
+training_recordings: [V4, V6, V7, V8, V10]
+development_recordings: [V5]
+seeds: [20261021, 20261022, 20261023]
+logo_pilot_seed: 20261021
+representations: [xy_velocity, xy_velocity_limb]
+mirror_probability: 0.5
+visibility_probability: 0.0
+context_seconds: 0.0
+sampler: class_uniform_group_sqrt_recording_sqrt
+sampling_replacement: true
+samples_per_epoch: training_pool_size
+loss_class_weights: uniform_to_avoid_double_balancing
+logo_selection: V5_only_never_heldout_group
+duration_frame_bins: [8, 15, 24]
+duration_second_bins: [0.3, 0.6, 1.0]

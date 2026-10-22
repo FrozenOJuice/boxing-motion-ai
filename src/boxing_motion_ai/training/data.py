@@ -86,13 +86,22 @@ def validate_arrays(a):
 
 class PoseClips(Dataset):
     def __init__(
-        self, spec, expected_recording, limit_per_class=None, *, expansion=False, diagnostic=False
+        self,
+        spec,
+        expected_recording,
+        limit_per_class=None,
+        *,
+        expansion=False,
+        diagnostic=False,
+        multi_recording=False,
     ):
-        if expansion and diagnostic:
+        if sum((expansion, diagnostic, multi_recording)) > 1:
             raise ValueError("Diagnostic evaluation and training expansion are separate gates")
         allowed = ("V4", "V5", "V7", "V8", "V10") if expansion else ("V4", "V5")
         if diagnostic:
             allowed = ("V6", "V7", "V8", "V10")
+        if multi_recording:
+            allowed = ("V4", "V5", "V6", "V7", "V8", "V10")
         if expected_recording not in allowed:
             raise ValueError(
                 "Only V4/V5 by default; explicit expansion adds V7/V8 or V10; V9 reserved"
@@ -207,7 +216,10 @@ class PoseClips(Dataset):
         self.clips = clips
         counts = Counter(c["label"] for c in clips)
         if not clips or (
-            not expansion and not diagnostic and any(counts[i] == 0 for i in range(6))
+            not expansion
+            and not diagnostic
+            and not multi_recording
+            and any(counts[i] == 0 for i in range(6))
         ):
             raise ValueError("Every split must retain all six classes")
         self.provenance = {
@@ -245,6 +257,10 @@ class PoseClips(Dataset):
                 max(len(c["x"]) for c in clips),
             ],
         }
+        if multi_recording:
+            self.provenance["evaluation_scope"] = (
+                "multi-recording study; explicit split guard required"
+            )
         if diagnostic:
             self.provenance["evaluation_scope"] = "diagnostic only; no training admission"
 

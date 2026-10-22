@@ -16,6 +16,11 @@ The [arm-geometry study](docs/LEVEL1_LIMB_INVESTIGATION.md) improves lead-upperc
 recognition and mean F1 on V5/V6/V7/V8, but regresses on V10 and leaves rear punches
 unresolved. Geometry remains optional; the accepted reference stays unchanged.
 
+The [multi-recording study](docs/LEVEL1_MULTI_RECORDING.md) substantially improves
+V5 development recognition, but group-held-out rear-punch failures remain. It compares
+both existing representations with training-only balancing and mask/duration controls.
+The accepted V4-only XY+velocity+mirror reference remains unchanged.
+
 ## Setup and checks
 
 Install [uv](https://docs.astral.sh/uv/) and run from this directory:
@@ -258,3 +263,13 @@ uv run python -m boxing_motion_ai.training.limb_study --config configs/level1_li
 
 Omit `--smoke` for the full comparison and frozen external evaluations. Source datasets,
 old checkpoints and the frozen readiness report must already exist locally.
+
+Multi-recording study and guarded group-held-out pilot (fresh ignored outputs required):
+
+```sh
+uv run python -m boxing_motion_ai.training.multi_study --config configs/level1_multi_recording.yaml --output reports/boxingvi/level1-multi-smoke-repeat --smoke
+```
+
+Omit `--smoke` for three-seed combined training and the one-seed four-fold pilot.
+Use `--audit-only` for pool/sampling inspection without training. Verify a completed
+run with `uv run python -m boxing_motion_ai.training.multi_verify --output <run>`.
