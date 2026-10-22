@@ -1,0 +1,664 @@
+schema_version: label-pose-review-1.0
+status: assistant_visual_review_not_human_ground_truth
+case_manifest_sha256: 0d688c9bc1b998c9cbf3fd12764266ae85375f7919591023f8165a0a62719f1f
+diagnostic_only: true
+annotation_overrides: []
+new_exclusions: []
+human_review_status: pending
+candidate_evaluation_subset:
+- V4:144
+- V7:8
+- V8:51
+- V10:71
+- V4:343
+- V6:7
+- V6:46
+- V10:142
+- V6:264
+- V8:159
+- V6:266
+- V10:44
+priority_disputes:
+- V4:497
+- V6:613
+- V7:136
+- V8:82
+- V10:146
+- V10:147
+assessments:
+  V4:144:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Straight extension on the magenta/R estimated chain; early R elbow invalid, later
+      chain aligns glove. Local jab anchor, not independent stance truth.
+    evidence: []
+  V4:51:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Straight extension on cyan/L chain follows preceding opposite-arm action. Punching
+      cyan chain visible and reliable; opposite elbow invalid.
+    evidence: []
+  V4:343:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Curved/near-horizontal punch on magenta/R chain with mostly visible elbow/wrist;
+      cyan hand rests lower. Useful local arm-comparison anchor, not anatomical certification.
+    evidence: []
+  V4:135:
+    family: ambiguous
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Context already has a straight extension. Core is compact low-arm action/retraction
+      with far elbow invalid; hook versus short body uppercut difficult to distinguish.
+    evidence: []
+  V4:252:
+    family: ambiguous
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Low compact bent-arm body action; image-plane trajectory insufficient to distinguish
+      hook/uppercut confidently. R elbow visibility mostly 0.2; opposite chain remains visible.
+    evidence: []
+  V4:462:
+    family: ambiguous
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Short low sweeping/rising motion and body dip. R elbow invalid throughout; interval
+      largely loaded/recovery posture, subtype uncertain.
+    evidence: []
+  V4:213:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Compact rising/forward bent-arm body punch on magenta/R chain. The elbow becomes
+      invalid near recovery; contextual straight action is separate.
+    evidence: []
+  V4:355:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Bent-arm low upward punch visible; R elbow and wrist mostly invalid, while other
+      arm remains source-valid.
+    evidence: []
+  V4:497:
+    family: ambiguous
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Near arm rises beside the head into a cover/guard-like posture; outgoing uppercut
+      not independently clear. Possible defensive phase rather than the source uppercut; do not relabel.
+    evidence: []
+  V4:181:
+    family: ambiguous
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Compact low movement occluded by body/bag. Far wrist is not reliable; action family/side
+      cannot be certified from these frames.
+    evidence: []
+  V4:65:
+    family: ambiguous
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Longer interval contains compact low arm movement plus substantial guard/recovery;
+      a later raised-glove action occurs after interval. Cannot certify uppercut side.
+    evidence: []
+  V4:493:
+    family: ambiguous
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Source interval begins during a preceding extension, followed by compact lower-body
+      action and recovery. R elbow invalid; uppercut versus short body hook ambiguous.
+    evidence: []
+  V5:262:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Straight lead-side extension on cyan/L chain; both arm chains align within interval.
+      Contrasts with V4 jab on magenta/R chain.
+    evidence: []
+  V5:387:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Straight rotating rear-side punch on magenta/R chain; punching wrist/elbow reliable,
+      opposite elbow loses validity during rotation.
+    evidence: []
+  V5:432:
+    family: ambiguous
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Back-facing curved turn is visible before interval; core predominantly rotation/retraction
+      into guard. Punching-arm wrist becomes invalid; onset/peak may precede source start.
+    evidence: []
+  V5:92:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Bent-arm horizontal rear-side sweep visible on magenta/R chain; other cyan arm collapses
+      below threshold. Punching arm itself remains well tracked.
+    evidence: []
+  V5:298:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Rear-side curved sweep and recovery visible on magenta/R chain; opposite elbow/wrist
+      lose confidence as torso turns, not a complete punching-arm failure.
+    evidence: []
+  V5:529:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Bent rear-arm sweep/rotation clearly overlaps interval. Punching magenta chain remains
+      valid while cyan elbow/wrist are invalid during turn.
+    evidence: []
+  V5:58:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Cyan/L forearm rises from lowered elbow to guard-level compact uppercut; hands and
+      elbows align throughout core. Local lead-side anchor.
+    evidence: []
+  V5:196:
+    family: consistent
+    side: ambiguous
+    boundary: ambiguous
+    pose: ambiguous
+    observation: Cyan-side compact rising action follows an overlapping opposite-arm extension/retraction
+      phase. Some confident occluded-arm coordinates cannot be anatomically certified.
+    evidence: []
+  V5:381:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Compact cyan/L rising bent-arm action; both arms remain well localized within core,
+      useful lead-uppercut review candidate.
+    evidence: []
+  V5:121:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Magenta/R arm rises bent from lower position; cyan far elbow/wrist become invalid.
+      Reliable punching-arm motion remains despite off-hand mask failure.
+    evidence: []
+  V5:338:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Clear bent rear-arm rising trajectory and recovery; magenta/R chain reliable while
+      opposite cyan arm is masked during rotation.
+    evidence: []
+  V5:514:
+    family: consistent
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Rising bent-arm action follows back-facing turn; context contains a preceding different
+      extension. Some opposite-arm tracking is unreliable through rotation.
+    evidence: []
+  V6:7:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Cyan/L curved hook crosses in front of chest; opposite magenta guard distinct. Both
+      arms source-valid and visually localized.
+    evidence: []
+  V6:82:
+    family: consistent
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Cyan hook follows a preceding magenta extension inside/near source start. Punching
+      cyan elbow loses validity early before recovery; interval mixes combination phases.
+    evidence: []
+  V6:46:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Clear magenta/R curved hook with elbow raised horizontally, followed by return to
+      guard. Reliable punching-arm coordinates; not explained by missing punches in pose.
+    evidence: []
+  V6:72:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Magenta/R hook and torso rotation clearly occur within interval. Opposite hand is
+      partially occluded during crossing; no confident anatomical error established.
+    evidence: []
+  V6:87:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Magenta/R bent hook across chest then recovery, with reliable punching chain. Off-hand
+      confidence falls but main movement remains represented.
+    evidence: []
+  V6:264:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Compact cyan/L upward fist action, elbow remaining bent, overlaps source interval.
+      Frontal/square presentation limits independent lead-foot determination.
+    evidence: []
+  V6:315:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Cyan/L upward bent-arm action before next opposite-hand straight in context. Magenta
+      elbow/wrist lose confidence; punching chain remains visible.
+    evidence: []
+  V6:633:
+    family: consistent
+    side: ambiguous
+    boundary: ambiguous
+    pose: ambiguous
+    observation: Small compact rising/returning guard-level arm actions; uppercut family plausible
+      but exact action phase and side under crossing gloves remain uncertain.
+    evidence: []
+  V6:266:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Magenta/R glove rises on bent elbow and returns; cyan/L stays guard. Both chains
+      track visible movements well, useful rear-uppercut candidate pending stance confirmation.
+    evidence: []
+  V6:579:
+    family: ambiguous
+    side: ambiguous
+    boundary: ambiguous
+    pose: ambiguous
+    observation: Interval begins with an extended straight arm and includes lowered then raised gloves;
+      outgoing uppercut phase cannot be isolated confidently from this combination.
+    evidence: []
+  V6:613:
+    family: ambiguous
+    side: ambiguous
+    boundary: visibly_incorrect
+    pose: masked_failure
+    observation: Raw start contains a long cyan straight extension/return, followed by a different
+      compact raised-arm action. Source interval is visibly mixed as a single-punch unit; no replacement
+      label inferred.
+    evidence: []
+  V6:654:
+    family: ambiguous
+    side: ambiguous
+    boundary: ambiguous
+    pose: aligned
+    observation: Core includes cyan forward/high extension and subsequent guard/compact rise. Source
+      rear-uppercut identity not independently isolated; pose visibility alone is good.
+    evidence: []
+  V6:321:
+    family: ambiguous
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Held interval follows a straight extension and rotates through compact raised-hand
+      phases. Far cyan joints invalid; existing class/phase hold remains justified.
+    evidence: []
+  V6:685:
+    family: ambiguous
+    side: ambiguous
+    boundary: visibly_incorrect
+    pose: masked_failure
+    observation: Held interval starts with an obvious long cyan straight extension, followed by recovery
+      and a compact opposite-hand phase. Mixed-punch boundary; no automatic rear-uppercut relabeling.
+    evidence: []
+  V7:8:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Clear cyan/L straight extension then guard; opposite magenta hand remains near chin.
+      Local jab/lead-side anchor.
+    evidence: []
+  V7:51:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Magenta/R straight action and rotation clearly occur; cyan off-hand loses confidence
+      during back-facing recovery.
+    evidence: []
+  V7:38:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Cyan/L bent-arm sweep across chest matches hook-like family; both visible chains
+      localized.
+    evidence: []
+  V7:159:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Cyan arm swings from lower loading into a compact transverse hook; opposite hand
+      guards. Visible chain follows motion.
+    evidence: []
+  V7:169:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Wide cyan arm loading followed by across-body curved sweep and return; source-valid
+      chains follow the visible hands.
+    evidence: []
+  V7:190:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Compact cyan-side curved body hook; good visible hand/elbow correspondence, followed
+      by different straight punch only in context.
+    evidence: []
+  V7:52:
+    family: ambiguous
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Sole approved rear hook is a compact low magenta motion/retraction and body dip.
+      Hook versus transition cannot be certified; one elbow frame loses validity.
+    evidence: []
+  V7:136:
+    family: ambiguous
+    side: ambiguous
+    boundary: visibly_incorrect
+    pose: aligned
+    observation: Interval begins with a long magenta straight extension, followed by retraction/high
+      elbow and low cyan guard. Not a clean isolated lead-uppercut boundary; uppercut itself remains
+      uncertain.
+    evidence: []
+  V7:144:
+    family: consistent
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Compact cyan bent-arm rise is present after preceding magenta extension. Far arm
+      loses visibility; source interval includes turn/recovery phases.
+    evidence: []
+  V7:168:
+    family: ambiguous
+    side: ambiguous
+    boundary: visibly_incorrect
+    pose: masked_failure
+    observation: Begins with magenta straight extension then recoil/high guard and lowered cyan hand.
+      No independently isolated lead uppercut; mixed outgoing/recovery phases.
+    evidence: []
+  V7:179:
+    family: consistent
+    side: ambiguous
+    boundary: visibly_incorrect
+    pose: masked_failure
+    observation: Magenta straight extension/retraction precedes a distinct cyan bent-arm rise within
+      the source interval. Two-arm combination phase, not a clean single-punch window.
+    evidence: []
+  V7:191:
+    family: ambiguous
+    side: ambiguous
+    boundary: visibly_incorrect
+    pose: masked_failure
+    observation: 'Repeats row136 pattern: extended magenta punch at start, recoil/high elbow, cyan
+      hand low. Source lead-uppercut family not independently clear.'
+    evidence: []
+  V7:5:
+    family: consistent
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Held row includes ending cyan action followed by a clear magenta bent-arm rise.
+      Uppercut present, boundary/overlap and side confirmation unresolved; remain excluded.
+    evidence: []
+  V7:54:
+    family: ambiguous
+    side: ambiguous
+    boundary: ambiguous
+    pose: aligned
+    observation: Held nested conflict contains small alternating compact hand rises. Adjacent opposing
+      source label overlaps; cannot isolate a trustworthy single action or side.
+    evidence: []
+  V7:132:
+    family: consistent
+    side: ambiguous
+    boundary: visibly_incorrect
+    pose: masked_failure
+    observation: Held interval contains cyan transverse action followed by a distinct magenta bent-arm
+      rise. Combination contamination supports existing exclusion, not a guessed label replacement.
+    evidence: []
+  V8:31:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Cyan/L straight punch extends toward screen left. Punching chain is reliable; magenta
+      far arm is mostly invalid when back-facing.
+    evidence: []
+  V8:51:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Magenta/R straight punch projects toward camera and has limited image-plane displacement.
+      Both chains align; foreshortening limits 2D movement information.
+    evidence: []
+  V8:98:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Compact cyan curved body action between adjacent straights; magenta far elbow/wrist
+      lose validity. Hook/uppercut distinction is shallow but lateral sweep visible.
+    evidence: []
+  V8:131:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Bent cyan arm sweeps across front; opposite guard partly masked on torso rotation.
+      Hook-like movement visible.
+    evidence: []
+  V8:161:
+    family: ambiguous
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Side/back view hides cyan active arm; source interval appears largely guard/pivot
+      in projection. Magenta near hand remains valid but cannot certify hidden punch family.
+    evidence: []
+  V8:101:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Cyan bent-arm rising action visible while elbow is below threshold; wrist stays
+      source-valid. Opposite guard is distinct.
+    evidence: []
+  V8:159:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Cyan arm lowers to load then rises bent toward guard; magenta off-hand confidence
+      falls during side view. Clearer arm trajectory than subtype side semantics.
+    evidence: []
+  V8:179:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Cyan low-to-high bent-arm action during turn to front. Starts in occluded side view;
+      cyan elbow/wrist validity recovers as arm becomes visible.
+    evidence: []
+  V8:82:
+    family: ambiguous
+    side: ambiguous
+    boundary: visibly_incorrect
+    pose: masked_failure
+    observation: Source rear-uppercut window begins with a long cyan straight extension and return
+      before a separate compact magenta rise. Mixed-punch boundary, not an isolated uppercut.
+    evidence: []
+  V8:81:
+    family: consistent
+    side: ambiguous
+    boundary: visibly_incorrect
+    pose: aligned
+    observation: Cyan high/curved punch precedes a separate magenta bent-arm rise within the source
+      interval. Two action phases contaminate a nominal single rear uppercut.
+    evidence: []
+  V8:95:
+    family: consistent
+    side: ambiguous
+    boundary: ambiguous
+    pose: masked_failure
+    observation: Source interval begins with cyan high action before magenta low-to-high movement.
+      Overlapping combination phases and occlusion obscure precise uppercut boundary.
+    evidence: []
+  V8:173:
+    family: consistent
+    side: ambiguous
+    boundary: visibly_incorrect
+    pose: aligned
+    observation: Cyan curved action followed by distinct magenta low-to-high action within one source
+      rear-uppercut interval. Both arm traces visible; boundary contamination independent of confidence.
+    evidence: []
+  V10:57:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Cyan/L straight jab projects toward camera; wrist loses validity near extension.
+      Opposite arm remains near face; foreshortening differs from side-view bag work.
+    evidence: []
+  V10:71:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Magenta/R straight action toward camera, then guard; source-valid joints mostly
+      align, with small projected displacement.
+    evidence: []
+  V10:78:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Cyan/L wide curved fitness-style hook across chest; open opposite-hand guard and
+      broad torso turn differ from bag punches.
+    evidence: []
+  V10:7:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Magenta/R curved hook and hip turn clear; opposite cyan elbow/wrist lose confidence
+      during crossing, not wholesale punching-arm loss.
+    evidence: []
+  V10:138:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Magenta/R hook across chest; other cyan elbow drops below threshold in rotation.
+      Same visible hook-side pattern as row7.
+    evidence: []
+  V10:142:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Magenta/R curved hook clearly occurs; both wrists and punching elbow remain valid.
+      Near-square fitness stance does not independently certify rear side.
+    evidence: []
+  V10:147:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Magenta/R bent-arm rising uppercut while cyan hand stays low. Source says Lead Uppercut,
+      contrasting with earlier Rear Uppercuts on the same estimated arm; verify stance/block convention.
+      R elbow/wrist confidence collapses near peak.
+    evidence: []
+  V10:149:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Repeats magenta/R rising punch in late alternating block, labeled Lead Uppercut.
+      R elbow invalid near peak while other hand stays low; same-arm early/late label discrepancy
+      needs stance review.
+    evidence: []
+  V10:153:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: masked_failure
+    observation: Magenta/R rising uppercut in late block. R elbow becomes invalid during peak/recovery;
+      local source side convention remains uncertain.
+    evidence: []
+  V10:44:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Early magenta/R rising uppercut, labeled Rear Uppercut, with mostly source-valid
+      elbow/wrist. Compare same-arm late Lead Uppercuts without assuming stance is unchanged.
+    evidence: []
+  V10:47:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Early magenta/R uppercut repeats row44 side and motion; elbow/wrist track visible
+      action. Same source label differs from late block arm pairing.
+    evidence: []
+  V10:146:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Late cyan/L rising uppercut, labeled Rear Uppercut, immediately precedes magenta/R
+      Lead Uppercut row147. Arm pairing differs from early block; requires explicit stance verification.
+    evidence: []
+  V10:9:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Held introductory magenta/R uppercut resembles early Rear Uppercuts but source labels
+      Lead Uppercut. Preserve hold; near-square stance prevents automatic side correction.
+    evidence: []
+  V10:130:
+    family: consistent
+    side: ambiguous
+    boundary: consistent
+    pose: aligned
+    observation: Held standing uppercut after floor-exercise transition; cyan/L rises while stance
+      is nearly square. Movement is not a plank, but side contract remains unverified.
+    evidence: []
