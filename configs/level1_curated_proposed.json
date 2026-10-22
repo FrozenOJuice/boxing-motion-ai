@@ -1,0 +1,155 @@
+{
+  "schema_version": "annotation-curation-plan-1.0",
+  "status": "proposal_no_training",
+  "review_ledger": {
+    "path": "configs/annotation_reviews_v1.json",
+    "sha256": "eb1c6e7a2dc46d66faab255360752749621378305f7c520b54f46bababfd992c"
+  },
+  "diagnostic": {
+    "path": "configs/level1_label_pose_review.yaml",
+    "sha256": "081449bf6d73a7df8d601467950df8583668bf3903e6c9af131b96beae5c2c7b"
+  },
+  "cases": {
+    "path": "reports/boxingvi/level1-label-pose-review-v1/cases.json",
+    "sha256": "0d688c9bc1b998c9cbf3fd12764266ae85375f7919591023f8165a0a62719f1f"
+  },
+  "preservation_manifest": {
+    "path": "reports/boxingvi/level1-label-pose-review-v1/protected.json",
+    "sha256": "0be05e70b5b2bbdc222695f83c21a25ae1f12b3d2b1d487e319891e3cfdbd624"
+  },
+  "sources": {
+    "V4": {
+      "dataset": "data/processed/boxingvi/V4/candidates-full-v1",
+      "policy": {
+        "path": "reports/boxingvi/expansion/quality/V4/policy-index.json",
+        "sha256": "9e1e8dc5ed6d71becb271db9ac583261f555105c5858180a3c56ea9434b3fb28"
+      },
+      "inputs": {
+        "preparation.json": "e3dfe021134ea377e7aee17b772f01c7448af54a6db639c15f8669ca306a4dd7",
+        "poses.npz": "d6eec15c1a7c692d9cbe9bceecfad0a8780152b897224b7bfa9bd5e08760d852",
+        "candidates.jsonl": "f522f63e21b2dc8c858269e85bc6c4bbbd24270de9e85c42159139906f08a13c"
+      },
+      "source_group": "fightcamp-unresolved",
+      "related_recordings_guard": [
+        "V4"
+      ],
+      "role": "training"
+    },
+    "V5": {
+      "dataset": "data/processed/boxingvi/V5/candidates-full-v1",
+      "policy": {
+        "path": "reports/boxingvi/expansion/quality/V5/policy-index.json",
+        "sha256": "445761957ddc34b470e74384793ab3ba0b0198355b9055e901b73e4ae122e381"
+      },
+      "inputs": {
+        "preparation.json": "819d27dc1e32ab11738b217ef0a350d13408d59c988b94b1d38ed206996f1c31",
+        "poses.npz": "118b302240c84c3c785f204a3d6bb26bbf0bb9441705ef78853ee11c6b8be914",
+        "candidates.jsonl": "2af404528c705876d29bc119b93bb8fab0385fa392f59df69c1c7d58dedf1135"
+      },
+      "source_group": "self-improvement-boxer-unresolved",
+      "related_recordings_guard": [
+        "V5"
+      ],
+      "role": "development"
+    },
+    "V6": {
+      "dataset": "data/processed/boxingvi/V6/candidates-full-v1",
+      "policy": {
+        "path": "reports/boxingvi/v6-full-v1/quality/V6/policy-index.json",
+        "sha256": "20a54a5c0cadbd00c923da10964971e1285446a9393af75f3229175f4f3f4b84"
+      },
+      "inputs": {
+        "preparation.json": "f20ce62396c142a86a837e2aff528fae84857d28e6f21340d4120045238aead5",
+        "poses.npz": "eace08c797865de7b0c1fc2a93857825f6a291f4d53a4a422219232263f80b33",
+        "candidates.jsonl": "3734dcccbd37a03ff5fb4293a30a15c58d7217dc65f5bcf68c9179e844249a1d"
+      },
+      "source_group": "natebowerfitness-unresolved",
+      "related_recordings_guard": [
+        "V1",
+        "V6"
+      ],
+      "role": "training"
+    },
+    "V7": {
+      "dataset": "data/processed/boxingvi/V7/candidates-full-v1",
+      "policy": {
+        "path": "reports/boxingvi/v7-v8-full-v1/quality/V7/policy-index.json",
+        "sha256": "dfc90e85423cb3ec8faf63212fbc9ca98c8fc62d79dcc791a517b0ad23db1953"
+      },
+      "inputs": {
+        "preparation.json": "a61392314fa41cdff121c8dca4b644e2b8c84ffc81fbd135280d993017dc2421",
+        "poses.npz": "01b128c47d276ce42977172cf5cb636354ec1b3707523017c775e99808aa35e2",
+        "candidates.jsonl": "88c95aa6d4c34118baaa3ce2df46cce9c7f1cb3f564814dc344a8675e22ec865"
+      },
+      "source_group": "precision-striking-unresolved",
+      "related_recordings_guard": [
+        "V7",
+        "V8"
+      ],
+      "role": "training"
+    },
+    "V8": {
+      "dataset": "data/processed/boxingvi/V8/candidates-full-v1",
+      "policy": {
+        "path": "reports/boxingvi/v7-v8-full-v1/quality/V8/policy-index.json",
+        "sha256": "aa0f4d3c8647c4b8c0c3e236a96901a5e24996d9145e030cd6f914ed04b2cbe0"
+      },
+      "inputs": {
+        "preparation.json": "d9bf2de849793edd395ffb5807ae9ca473f625f1a8a06fad04efbc66067a8a21",
+        "poses.npz": "6064524c306662b3adc110030d4fe98d83ba382e346825cad2dd0c72172555af",
+        "candidates.jsonl": "45d977191212038c7ad2b39b598466ebe80e364ae9406c1962a5bca70d0956b0"
+      },
+      "source_group": "precision-striking-unresolved",
+      "related_recordings_guard": [
+        "V7",
+        "V8"
+      ],
+      "role": "training"
+    },
+    "V10": {
+      "dataset": "data/processed/boxingvi/V10/candidates-full-v1",
+      "policy": {
+        "path": "reports/boxingvi/v10-full-v1/quality/V10/policy-index.json",
+        "sha256": "db380ff57d53ab05bafe7af1b00d106c132615fd911a75ea9b2208d7616eea01"
+      },
+      "inputs": {
+        "preparation.json": "265ec190528f99eaa80471f4bfe1322f2c457ccf65650730e2771eaaac18f5a8",
+        "poses.npz": "37164316d4cf3dcd961d29fe8031a29581c4460ba2750c751102c9e82fce9fda",
+        "candidates.jsonl": "d09b2ec9c9f4ac932c913f376757f7290d4455796a4c740d5eba0498a989e208"
+      },
+      "source_group": "utah-lee-unresolved",
+      "related_recordings_guard": [
+        "V10"
+      ],
+      "role": "training"
+    }
+  },
+  "unreviewed_policy": "retain_previously_approved_as_provisional",
+  "development_policy": "unchanged_frozen_benchmark_with_shadow_holds",
+  "training_representation": "xy_velocity",
+  "mirror_probability": 0.5,
+  "visibility_probability": 0.0,
+  "context_seconds": 0.0,
+  "priority_disputes": [
+    "V4:497",
+    "V6:613",
+    "V7:136",
+    "V8:82",
+    "V10:146",
+    "V10:147"
+  ],
+  "verification_anchors": [
+    "V4:144",
+    "V7:8",
+    "V8:51",
+    "V10:71",
+    "V4:343",
+    "V6:7",
+    "V6:46",
+    "V10:142",
+    "V6:264",
+    "V8:159",
+    "V6:266",
+    "V10:44"
+  ]
+}

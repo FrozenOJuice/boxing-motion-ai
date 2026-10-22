@@ -414,3 +414,46 @@ def train_context_study(
     except Exception as exc:
         typer.echo(f'Context study failed: {type(exc).__name__}: {exc}', err=True)
         raise typer.Exit(1) from exc
+
+
+@app.command('curate-annotations')
+def curate_annotations(
+    config: Annotated[Path, typer.Option(help='Hash-pinned annotation-curation plan JSON.')],
+    output: Annotated[Path, typer.Option(help='Fresh ignored reports directory.')],
+):
+    """Preview exclusion-only curation; exit 1 while human verification is incomplete."""
+    try:
+        from .data.curation import run_curation
+
+        result = run_curation(config, output)
+    except (OSError, ValueError, KeyError, ImportError) as exc:
+        typer.echo(f'Cannot prepare curation: {exc}', err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f"Curation: {result['status']}; training is disabled.")
+    typer.echo(f"Pending targeted human cases: {len(result['pending_human_queue'])}")
+    typer.echo(f"Report: {output / 'CURATION.md'}")
+    if result['blockers']:
+        raise typer.Exit(1)
+
+
+@app.command('record-annotation-review')
+def record_annotation_review(
+    ledger: Annotated[Path, typer.Option(help='Existing immutable review ledger JSON.')],
+    decision: Annotated[Path, typer.Option(help='Explicit case/revision decision JSON.')],
+    output: Annotated[Path, typer.Option(help='New ledger file under configs/ or reports/.')],
+    attest_human_review: Annotated[
+        bool,
+        typer.Option(help='Attest that the named human supplied this review.'),
+    ] = False,
+):
+    """Append a decision into a new ledger version; never change the original ledger/data."""
+    try:
+        from .data.annotation_review import append_review, file_hash
+
+        result = append_review(ledger, decision, output, attest_human=attest_human_review)
+    except (OSError, ValueError, KeyError) as exc:
+        typer.echo(f'Cannot record review: {exc}', err=True)
+        raise typer.Exit(2) from exc
+    typer.echo(f'Ledger version {result.ledger_version}: {output}')
+    typer.echo(f'SHA256: {file_hash(output)}')
+    typer.echo('Repin a NEW curation configuration before generating an updated proposal.')

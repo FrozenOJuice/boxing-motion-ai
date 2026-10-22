@@ -1,0 +1,2782 @@
+{
+  "schema_version": "annotation-review-1.0",
+  "ledger_version": 1,
+  "parent_ledger_sha256": null,
+  "diagnostic_sha256": "081449bf6d73a7df8d601467950df8583668bf3903e6c9af131b96beae5c2c7b",
+  "cases_sha256": "0d688c9bc1b998c9cbf3fd12764266ae85375f7919591023f8165a0a62719f1f",
+  "cases": {
+    "V4:144": {
+      "source_candidate_sha256": "154cecd452e2b586bb9f7886097aa11daf81b8094d2d90246f1fdba186861a1c",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V4:144",
+              "description": "Straight extension on the magenta/R estimated chain; early R elbow invalid, later chain aligns glove. Local jab anchor, not independent stance truth.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V4:51": {
+      "source_candidate_sha256": "19f90d2e84338f9359bcfa10847f7223f0c131fac0a4135abf4d960350d4b32a",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V4:51",
+              "description": "Straight extension on cyan/L chain follows preceding opposite-arm action. Punching cyan chain visible and reliable; opposite elbow invalid.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V4:343": {
+      "source_candidate_sha256": "5323bc06aa9fbd693d60aa38b0aefe970442ae24d3ca52a8b2a0719b24c57faf",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V4:343",
+              "description": "Curved/near-horizontal punch on magenta/R chain with mostly visible elbow/wrist; cyan hand rests lower. Useful local arm-comparison anchor, not anatomical certification.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V4:135": {
+      "source_candidate_sha256": "04db38887ff1e5416492ed0418388a55becd198bb5d4a925e5cd1f5d33859c22",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "punch_family_ambiguous",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V4:135",
+              "description": "Context already has a straight extension. Core is compact low-arm action/retraction with far elbow invalid; hook versus short body uppercut difficult to distinguish.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V4:252": {
+      "source_candidate_sha256": "6c4a0f9c30c8abe96cbb7f437963496d71f348fbd273d43dd8215ea887df0c30",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "punch_family_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V4:252",
+              "description": "Low compact bent-arm body action; image-plane trajectory insufficient to distinguish hook/uppercut confidently. R elbow visibility mostly 0.2; opposite chain remains visible.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V4:462": {
+      "source_candidate_sha256": "3f8af21e53ce77de4f76c11c2de8fd63c14f9647faa9d81f453d706a101b5425",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "punch_family_ambiguous",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V4:462",
+              "description": "Short low sweeping/rising motion and body dip. R elbow invalid throughout; interval largely loaded/recovery posture, subtype uncertain.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V4:213": {
+      "source_candidate_sha256": "53db0927d7c30d9a56fea149e9fed6c3d9eaec21bdd7c3dd770597550e5700aa",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V4:213",
+              "description": "Compact rising/forward bent-arm body punch on magenta/R chain. The elbow becomes invalid near recovery; contextual straight action is separate.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V4:355": {
+      "source_candidate_sha256": "8374abcab9a375a9254810f53f348a6f794803fee8b1b7565a728f691f7fcd45",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V4:355",
+              "description": "Bent-arm low upward punch visible; R elbow and wrist mostly invalid, while other arm remains source-valid.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V4:497": {
+      "source_candidate_sha256": "76b1f51821548d65cffd174a822961219202df43704ce002341d63217f72d815",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "priority_dispute_pending_human_review",
+            "punch_family_ambiguous",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V4:497",
+              "description": "Near arm rises beside the head into a cover/guard-like posture; outgoing uppercut not independently clear. Possible defensive phase rather than the source uppercut; do not relabel.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V4:181": {
+      "source_candidate_sha256": "db49a445ba81af0b7e7a756f6bf01cecd282b3e256be49321d112129368659b7",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "punch_family_ambiguous",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V4:181",
+              "description": "Compact low movement occluded by body/bag. Far wrist is not reliable; action family/side cannot be certified from these frames.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V4:65": {
+      "source_candidate_sha256": "a0d443da13ec491f87ecc4c9eed8ea1f1aef98a8a0dac869be95a49302c0ae53",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "punch_family_ambiguous",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V4:65",
+              "description": "Longer interval contains compact low arm movement plus substantial guard/recovery; a later raised-glove action occurs after interval. Cannot certify uppercut side.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V4:493": {
+      "source_candidate_sha256": "14802d73ff1aea074f90aff1dcd480739be01fc79e3613fd7b2eff1e718f2e06",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "punch_family_ambiguous",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V4:493",
+              "description": "Source interval begins during a preceding extension, followed by compact lower-body action and recovery. R elbow invalid; uppercut versus short body hook ambiguous.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V5:262": {
+      "source_candidate_sha256": "52bfb2d248d0ad7bdc929c4f3de1c6553d2949802df20261a68f753487f20c77",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V5:262",
+              "description": "Straight lead-side extension on cyan/L chain; both arm chains align within interval. Contrasts with V4 jab on magenta/R chain.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V5:387": {
+      "source_candidate_sha256": "f7dc1dbacd98438846bc81853c1adc577916d46a23f9c946a4ecb3da185636db",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V5:387",
+              "description": "Straight rotating rear-side punch on magenta/R chain; punching wrist/elbow reliable, opposite elbow loses validity during rotation.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V5:432": {
+      "source_candidate_sha256": "d3962fdbf612903b99a0e2f8d9e1d8d838ec111cc4f553af5718e12e7d3f4d20",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "punch_family_ambiguous",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V5:432",
+              "description": "Back-facing curved turn is visible before interval; core predominantly rotation/retraction into guard. Punching-arm wrist becomes invalid; onset/peak may precede source start.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V5:92": {
+      "source_candidate_sha256": "012b891aeb0447a5f582efe3e74d76853f5998714389ad29686bde3dbf5697d4",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V5:92",
+              "description": "Bent-arm horizontal rear-side sweep visible on magenta/R chain; other cyan arm collapses below threshold. Punching arm itself remains well tracked.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V5:298": {
+      "source_candidate_sha256": "6ec8e5c711d25fbd18861c5ca0b70b2402abe0ae124c0a34db48e4c1e012c826",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V5:298",
+              "description": "Rear-side curved sweep and recovery visible on magenta/R chain; opposite elbow/wrist lose confidence as torso turns, not a complete punching-arm failure.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V5:529": {
+      "source_candidate_sha256": "d2a0b666329259afe6fe4c5505617229ff9a541d4d985b63ac5ac821e9fb9e39",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V5:529",
+              "description": "Bent rear-arm sweep/rotation clearly overlaps interval. Punching magenta chain remains valid while cyan elbow/wrist are invalid during turn.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V5:58": {
+      "source_candidate_sha256": "ebb6cb869574919a1ccdac5d3c010fd167fb6004e0395bc607c9eef931736ac0",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V5:58",
+              "description": "Cyan/L forearm rises from lowered elbow to guard-level compact uppercut; hands and elbows align throughout core. Local lead-side anchor.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V5:196": {
+      "source_candidate_sha256": "97d6bc11e2899ac63cf5e1dca7e12b1d06ecab1e8f7fb70c1a6b502e0f9e74aa",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V5:196",
+              "description": "Cyan-side compact rising action follows an overlapping opposite-arm extension/retraction phase. Some confident occluded-arm coordinates cannot be anatomically certified.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V5:381": {
+      "source_candidate_sha256": "8e2411ec9ec06fd185ad891dad5dd6fa5bc977597712fdbc920be265f6aeeb2b",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V5:381",
+              "description": "Compact cyan/L rising bent-arm action; both arms remain well localized within core, useful lead-uppercut review candidate.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V5:121": {
+      "source_candidate_sha256": "38d31c6b4438f62c7ccdb8a42273f2adf316324fbd5f014f966900ca38ce9fc0",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V5:121",
+              "description": "Magenta/R arm rises bent from lower position; cyan far elbow/wrist become invalid. Reliable punching-arm motion remains despite off-hand mask failure.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V5:338": {
+      "source_candidate_sha256": "5ef19d8bb5d048c83b8272c0402ec2416f628d755a9f99c67607822aa21e072d",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V5:338",
+              "description": "Clear bent rear-arm rising trajectory and recovery; magenta/R chain reliable while opposite cyan arm is masked during rotation.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V5:514": {
+      "source_candidate_sha256": "ccb78abbc5116237d50721230ab1e70791a142a3f7595cd95406640864900f5a",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V5:514",
+              "description": "Rising bent-arm action follows back-facing turn; context contains a preceding different extension. Some opposite-arm tracking is unreliable through rotation.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:7": {
+      "source_candidate_sha256": "7f118543ff4cde3bba266824a6dca54c77971e0a6b96dcaf1bc0011557d32b15",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:7",
+              "description": "Cyan/L curved hook crosses in front of chest; opposite magenta guard distinct. Both arms source-valid and visually localized.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:82": {
+      "source_candidate_sha256": "64ccc951862c6541838baa39818b3382c14920dc2a55bf0e08b436f922f4e159",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:82",
+              "description": "Cyan hook follows a preceding magenta extension inside/near source start. Punching cyan elbow loses validity early before recovery; interval mixes combination phases.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:46": {
+      "source_candidate_sha256": "666a335eb242beec5d5f44a89e4f63fdf306c01d62b808ed85ff48a4daf523fd",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:46",
+              "description": "Clear magenta/R curved hook with elbow raised horizontally, followed by return to guard. Reliable punching-arm coordinates; not explained by missing punches in pose.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:72": {
+      "source_candidate_sha256": "d5f9a0fb98ba6b4ac3bf8b09677634292b76ceb6ea9ff3037343e0a75f624e14",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:72",
+              "description": "Magenta/R hook and torso rotation clearly occur within interval. Opposite hand is partially occluded during crossing; no confident anatomical error established.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:87": {
+      "source_candidate_sha256": "7b9ff2c45178bb924dd8d71f0e99ce5b258478ff595d023fba1cafb03feea428",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:87",
+              "description": "Magenta/R bent hook across chest then recovery, with reliable punching chain. Off-hand confidence falls but main movement remains represented.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:264": {
+      "source_candidate_sha256": "d5ddefdc6cff633dc3612f92873b5180aadbffe2791cc47c905ea97f09cc0d90",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:264",
+              "description": "Compact cyan/L upward fist action, elbow remaining bent, overlaps source interval. Frontal/square presentation limits independent lead-foot determination.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:315": {
+      "source_candidate_sha256": "f9a25ad454d3b78369c21b6a2158a97ed18f18d9adbdb5e9c26e863642ed5875",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:315",
+              "description": "Cyan/L upward bent-arm action before next opposite-hand straight in context. Magenta elbow/wrist lose confidence; punching chain remains visible.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:633": {
+      "source_candidate_sha256": "568cfbdab7984a8dcdb8d10a5037140294cce03a728112ca38cddd31d600ddf8",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:633",
+              "description": "Small compact rising/returning guard-level arm actions; uppercut family plausible but exact action phase and side under crossing gloves remain uncertain.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:266": {
+      "source_candidate_sha256": "edbb18d4f4a5145b1e52dda3798e13255c0ba6050714ccaa9320ccd77dc04e7a",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:266",
+              "description": "Magenta/R glove rises on bent elbow and returns; cyan/L stays guard. Both chains track visible movements well, useful rear-uppercut candidate pending stance confirmation.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:579": {
+      "source_candidate_sha256": "46eae91c06b5399691a1246c43b6f75b6129291f617b0325bd78273e755266ae",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "punch_family_ambiguous",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:579",
+              "description": "Interval begins with an extended straight arm and includes lowered then raised gloves; outgoing uppercut phase cannot be isolated confidently from this combination.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:613": {
+      "source_candidate_sha256": "b83722f63150d8b7753effa4b951a205813367abfe748f38318b64387ca54589",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "mixed_action",
+          "confirmed_bounds": null,
+          "reasons": [
+            "priority_dispute_pending_human_review",
+            "punch_family_ambiguous",
+            "mixed_action_interval"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:613",
+              "description": "Raw start contains a long cyan straight extension/return, followed by a different compact raised-arm action. Source interval is visibly mixed as a single-punch unit; no replacement label inferred.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:654": {
+      "source_candidate_sha256": "8694873aea6149db83616efa4097e04b31a753dc6d67ba8bb9bd3149db2eafd2",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "punch_family_ambiguous",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:654",
+              "description": "Core includes cyan forward/high extension and subsequent guard/compact rise. Source rear-uppercut identity not independently isolated; pose visibility alone is good.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:321": {
+      "source_candidate_sha256": "467e0b813a47264f22f7fe78f73dd08a004309cbec45e93227c85bff48610395",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "preserve_existing_exclusion",
+            "punch_family_ambiguous",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:321",
+              "description": "Held interval follows a straight extension and rotates through compact raised-hand phases. Far cyan joints invalid; existing class/phase hold remains justified.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V6:685": {
+      "source_candidate_sha256": "21b77b85531a3518cec03a09e1c3b174fa9a4149d262f0e7d2be73e95ff2af88",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "mixed_action",
+          "confirmed_bounds": null,
+          "reasons": [
+            "preserve_existing_exclusion",
+            "punch_family_ambiguous",
+            "mixed_action_interval"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V6:685",
+              "description": "Held interval starts with an obvious long cyan straight extension, followed by recovery and a compact opposite-hand phase. Mixed-punch boundary; no automatic rear-uppercut relabeling.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:8": {
+      "source_candidate_sha256": "197c18f0c95e88848bbb0fd7b5e3c128d4e3439fd6cf42e66e6de5da65a5b105",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:8",
+              "description": "Clear cyan/L straight extension then guard; opposite magenta hand remains near chin. Local jab/lead-side anchor.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:51": {
+      "source_candidate_sha256": "7ae8107290f6636ce589b00c9042ac3d0cdf110fa5c2365c033a0f8d774d093e",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:51",
+              "description": "Magenta/R straight action and rotation clearly occur; cyan off-hand loses confidence during back-facing recovery.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:38": {
+      "source_candidate_sha256": "b438b3d52ea94da4ac441796f01929d9fc920b56d53cea538ad2591a4f82bece",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:38",
+              "description": "Cyan/L bent-arm sweep across chest matches hook-like family; both visible chains localized.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:159": {
+      "source_candidate_sha256": "ef1a92cef6c71aab9099668d62d6be1781281e1ab297f7a91f63f9ed77a2fd34",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:159",
+              "description": "Cyan arm swings from lower loading into a compact transverse hook; opposite hand guards. Visible chain follows motion.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:169": {
+      "source_candidate_sha256": "136b4707bfb4f0f968ccf83d80bc4c50d69423a793de5e98af86ac12d8a3a5b3",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:169",
+              "description": "Wide cyan arm loading followed by across-body curved sweep and return; source-valid chains follow the visible hands.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:190": {
+      "source_candidate_sha256": "77860135554e283bebe15bfb12c8c92321407a5e3812e4a634ddfa89e98a253b",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:190",
+              "description": "Compact cyan-side curved body hook; good visible hand/elbow correspondence, followed by different straight punch only in context.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:52": {
+      "source_candidate_sha256": "6faadaa5beb81d7f1cb5f1e4188f073e54953bb96c928e0905a0971afe127a5d",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "punch_family_ambiguous",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:52",
+              "description": "Sole approved rear hook is a compact low magenta motion/retraction and body dip. Hook versus transition cannot be certified; one elbow frame loses validity.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:136": {
+      "source_candidate_sha256": "8e7610b6608884fb2ef59e5958fdec4a5bf9437dc8942c7f629616e32b843cc8",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "mixed_action",
+          "confirmed_bounds": null,
+          "reasons": [
+            "priority_dispute_pending_human_review",
+            "punch_family_ambiguous",
+            "mixed_action_interval"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:136",
+              "description": "Interval begins with a long magenta straight extension, followed by retraction/high elbow and low cyan guard. Not a clean isolated lead-uppercut boundary; uppercut itself remains uncertain.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:144": {
+      "source_candidate_sha256": "95bbd6c791eb32ff5f0c3d7050dd3e6199f49f9b28f292d616463e99eb35a6de",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:144",
+              "description": "Compact cyan bent-arm rise is present after preceding magenta extension. Far arm loses visibility; source interval includes turn/recovery phases.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:168": {
+      "source_candidate_sha256": "c20d5673274a51d96cbe26513c812df85fd15b1ecee8ce471a76af18b6dadeff",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "mixed_action",
+          "confirmed_bounds": null,
+          "reasons": [
+            "punch_family_ambiguous",
+            "mixed_action_interval"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:168",
+              "description": "Begins with magenta straight extension then recoil/high guard and lowered cyan hand. No independently isolated lead uppercut; mixed outgoing/recovery phases.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:179": {
+      "source_candidate_sha256": "42e2fdab8d23bf61b59d815bae004f0e3a61d5040702e05ee8b1e7b76673739d",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "mixed_action",
+          "confirmed_bounds": null,
+          "reasons": [
+            "mixed_action_interval"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:179",
+              "description": "Magenta straight extension/retraction precedes a distinct cyan bent-arm rise within the source interval. Two-arm combination phase, not a clean single-punch window.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:191": {
+      "source_candidate_sha256": "2a29916807003d5e9fef84535619a3aebd0ceeece4c08a228d9950f080174154",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "mixed_action",
+          "confirmed_bounds": null,
+          "reasons": [
+            "punch_family_ambiguous",
+            "mixed_action_interval"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:191",
+              "description": "Repeats row136 pattern: extended magenta punch at start, recoil/high elbow, cyan hand low. Source lead-uppercut family not independently clear.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:5": {
+      "source_candidate_sha256": "4cb6cd947ab68ff0dfde5f24ac993833714618c79b42658826d8b5899316ce00",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "preserve_existing_exclusion",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:5",
+              "description": "Held row includes ending cyan action followed by a clear magenta bent-arm rise. Uppercut present, boundary/overlap and side confirmation unresolved; remain excluded.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:54": {
+      "source_candidate_sha256": "a6a83c8bc8005b068875dfff6951ab884555923dace5e604d1651b777cb796bc",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "preserve_existing_exclusion",
+            "punch_family_ambiguous",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:54",
+              "description": "Held nested conflict contains small alternating compact hand rises. Adjacent opposing source label overlaps; cannot isolate a trustworthy single action or side.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V7:132": {
+      "source_candidate_sha256": "07f9d458defee5469d537d1fd77c19922781cd279317f893412344b33eafc4ce",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "mixed_action",
+          "confirmed_bounds": null,
+          "reasons": [
+            "preserve_existing_exclusion",
+            "mixed_action_interval"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V7:132",
+              "description": "Held interval contains cyan transverse action followed by a distinct magenta bent-arm rise. Combination contamination supports existing exclusion, not a guessed label replacement.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V8:31": {
+      "source_candidate_sha256": "28b91155ccb066b58eae28821f909d9a33c62a0fa616f237576ca9084e5f58d0",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V8:31",
+              "description": "Cyan/L straight punch extends toward screen left. Punching chain is reliable; magenta far arm is mostly invalid when back-facing.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V8:51": {
+      "source_candidate_sha256": "07f1fa89d6349b7c545083c11c39ce7950a0aa8f31b8b4ce27ecbdc332fe7a25",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V8:51",
+              "description": "Magenta/R straight punch projects toward camera and has limited image-plane displacement. Both chains align; foreshortening limits 2D movement information.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V8:98": {
+      "source_candidate_sha256": "14d9566eb61403de2f8eb73fb6ef000c037dd38ce4d423b3ba6580794a0eeee7",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V8:98",
+              "description": "Compact cyan curved body action between adjacent straights; magenta far elbow/wrist lose validity. Hook/uppercut distinction is shallow but lateral sweep visible.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V8:131": {
+      "source_candidate_sha256": "72e0634fe7ec63d6d1b2ed255ebec1cb5a98f5dc3d31d3a986826d95d967f2be",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V8:131",
+              "description": "Bent cyan arm sweeps across front; opposite guard partly masked on torso rotation. Hook-like movement visible.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V8:161": {
+      "source_candidate_sha256": "6ad6d67c9df4cb7e289527ac86ebcd7feec11dc8d5018c28fd68aa3bb3659699",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "punch_family_ambiguous",
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V8:161",
+              "description": "Side/back view hides cyan active arm; source interval appears largely guard/pivot in projection. Magenta near hand remains valid but cannot certify hidden punch family.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V8:101": {
+      "source_candidate_sha256": "ce2542cce3541426d3afaff7a6523a8340421c27ea4c3eab9122cada3dcdfcca",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V8:101",
+              "description": "Cyan bent-arm rising action visible while elbow is below threshold; wrist stays source-valid. Opposite guard is distinct.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V8:159": {
+      "source_candidate_sha256": "e7cd34dd26022a46881e22fa333a49fd449f43b957551872e062be21bdb3dc4f",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V8:159",
+              "description": "Cyan arm lowers to load then rises bent toward guard; magenta off-hand confidence falls during side view. Clearer arm trajectory than subtype side semantics.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V8:179": {
+      "source_candidate_sha256": "5930f6b1fc1dce754c31a6fc67c16037eca8aa717bd27a8a88fc6beb230f5c72",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V8:179",
+              "description": "Cyan low-to-high bent-arm action during turn to front. Starts in occluded side view; cyan elbow/wrist validity recovers as arm becomes visible.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V8:82": {
+      "source_candidate_sha256": "9da45731d39d81b21ebb0d03116b542c0ac87678d9cc066e07dfb2aac0e2ce48",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "mixed_action",
+          "confirmed_bounds": null,
+          "reasons": [
+            "priority_dispute_pending_human_review",
+            "punch_family_ambiguous",
+            "mixed_action_interval"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V8:82",
+              "description": "Source rear-uppercut window begins with a long cyan straight extension and return before a separate compact magenta rise. Mixed-punch boundary, not an isolated uppercut.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V8:81": {
+      "source_candidate_sha256": "22bd283955791926b5fad8124f9e0846c0e74ee76b8f4783939ee648eaad9d36",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "mixed_action",
+          "confirmed_bounds": null,
+          "reasons": [
+            "mixed_action_interval"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V8:81",
+              "description": "Cyan high/curved punch precedes a separate magenta bent-arm rise within the source interval. Two action phases contaminate a nominal single rear uppercut.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V8:95": {
+      "source_candidate_sha256": "dfa7497e031c8003c63543c2a055b461a33b8228012bb4af27dc1e96a5837add",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "ambiguous",
+          "confirmed_bounds": null,
+          "reasons": [
+            "boundary_phase_ambiguous"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V8:95",
+              "description": "Source interval begins with cyan high action before magenta low-to-high movement. Overlapping combination phases and occlusion obscure precise uppercut boundary.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V8:173": {
+      "source_candidate_sha256": "11d0c3026092622e480e75ea02d1a203c058f4ea7d1e2f688694458da0032744",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "mixed_action",
+          "confirmed_bounds": null,
+          "reasons": [
+            "mixed_action_interval"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V8:173",
+              "description": "Cyan curved action followed by distinct magenta low-to-high action within one source rear-uppercut interval. Both arm traces visible; boundary contamination independent of confidence.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:57": {
+      "source_candidate_sha256": "4694bdb95fcb6ecf5514ccf089675abacc037776fd916673947b3e58e59d8b50",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:57",
+              "description": "Cyan/L straight jab projects toward camera; wrist loses validity near extension. Opposite arm remains near face; foreshortening differs from side-view bag work.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:71": {
+      "source_candidate_sha256": "ee249eb86eb26f0b112a5e63aa1f934f34a5f3187779d4b8fdfb111aa8789067",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:71",
+              "description": "Magenta/R straight action toward camera, then guard; source-valid joints mostly align, with small projected displacement.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:78": {
+      "source_candidate_sha256": "b7b04371f29ac9d5103221c8670f09c54675534557890f6f544ee2c7659612a0",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:78",
+              "description": "Cyan/L wide curved fitness-style hook across chest; open opposite-hand guard and broad torso turn differ from bag punches.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:7": {
+      "source_candidate_sha256": "cb04f56b6a9838fca26e209b626c2d3468096179bbb4631cbec5c95066bb7242",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:7",
+              "description": "Magenta/R curved hook and hip turn clear; opposite cyan elbow/wrist lose confidence during crossing, not wholesale punching-arm loss.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:138": {
+      "source_candidate_sha256": "ea7e8e8524a0f92aaa87fb7d3453c5bfa349d355aa1d69d905603cca92ceef9b",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:138",
+              "description": "Magenta/R hook across chest; other cyan elbow drops below threshold in rotation. Same visible hook-side pattern as row7.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:142": {
+      "source_candidate_sha256": "a5e9a189b2abb1f8b20456f93216a646f12ea092fe296f26ed902ae12f13a1cf",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:142",
+              "description": "Magenta/R curved hook clearly occurs; both wrists and punching elbow remain valid. Near-square fitness stance does not independently certify rear side.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:147": {
+      "source_candidate_sha256": "5f0c20ee9c1ffc7a713ef0e13b69fbbbc3ff28c7a83e3452cce912708181a938",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "priority_dispute_pending_human_review",
+            "precautionary_late_uppercut_semantics_block"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:147",
+              "description": "Magenta/R bent-arm rising uppercut while cyan hand stays low. Source says Lead Uppercut, contrasting with earlier Rear Uppercuts on the same estimated arm; verify stance/block convention. R elbow/wrist confidence collapses near peak.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:149": {
+      "source_candidate_sha256": "d39fde981ea42e52b9315b9d87d50e0a5ba3c1fa5e4db5c78dc689f8fb622b06",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "precautionary_late_uppercut_semantics_block"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:149",
+              "description": "Repeats magenta/R rising punch in late alternating block, labeled Lead Uppercut. R elbow invalid near peak while other hand stays low; same-arm early/late label discrepancy needs stance review.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:153": {
+      "source_candidate_sha256": "fa12638279a2a9d103480175ab847bd7bf2bae2e504e21a432148395cf63628c",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "precautionary_late_uppercut_semantics_block"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:153",
+              "description": "Magenta/R rising uppercut in late block. R elbow becomes invalid during peak/recovery; local source side convention remains uncertain.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:44": {
+      "source_candidate_sha256": "bfd58afa521b50da2520a7741e847dc72d284de8ca2d6680d73cf4fd9c585163",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:44",
+              "description": "Early magenta/R rising uppercut, labeled Rear Uppercut, with mostly source-valid elbow/wrist. Compare same-arm late Lead Uppercuts without assuming stance is unchanged.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:47": {
+      "source_candidate_sha256": "c1a84e909dcc3db09e59cfecac8208a6049220711219ab293cb60e145f9c49e6",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "provisional",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "previously_approved_but_not_human_verified"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:47",
+              "description": "Early magenta/R uppercut repeats row44 side and motion; elbow/wrist track visible action. Same source label differs from late block arm pairing.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:146": {
+      "source_candidate_sha256": "5d9868269492c398a060b4d0438db87a140515b0658a68b73827ca812ec9241b",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "priority_dispute_pending_human_review",
+            "precautionary_late_uppercut_semantics_block"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:146",
+              "description": "Late cyan/L rising uppercut, labeled Rear Uppercut, immediately precedes magenta/R Lead Uppercut row147. Arm pairing differs from early block; requires explicit stance verification.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:9": {
+      "source_candidate_sha256": "bfc911300d7a51483b2d695460bf44ffc3c2a6fbcfec9c1a10ad50757d5e2de7",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "preserve_existing_exclusion"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:9",
+              "description": "Held introductory magenta/R uppercut resembles early Rear Uppercuts but source labels Lead Uppercut. Preserve hold; near-square stance prevents automatic side correction.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:130": {
+      "source_candidate_sha256": "a48f2a089eb17b9b7f56639f7a3c331f285018a1eaea98b0233dc1e954871e14",
+      "origin": "diagnostic_79",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "unreviewed",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "preserve_existing_exclusion"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:130",
+              "description": "Held standing uppercut after floor-exercise transition; cyan/L rises while stance is nearly square. Movement is not a plank, but side contract remains unverified.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified."
+          ]
+        }
+      ]
+    },
+    "V10:148": {
+      "source_candidate_sha256": "0304653a21611d4da87edcd802ae0624059b7e14723b59e81579b6474bc4df70",
+      "origin": "precautionary_neighbor",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "precautionary_late_uppercut_semantics_block"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:146,V10:147",
+              "description": "Unreviewed neighboring example in the same late uppercut exercise block; precautionary hold based on the V10:146/147 side-semantic dispute, not a visual finding about this row.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified.",
+            "Neighbor was not visually inspected; no incorrect label is asserted."
+          ]
+        }
+      ]
+    },
+    "V10:150": {
+      "source_candidate_sha256": "44d79620fdc020c2e3f5e7f7633e39fecd70c9e2cd42ec7a567833445ae5215c",
+      "origin": "precautionary_neighbor",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "precautionary_late_uppercut_semantics_block"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:146,V10:147",
+              "description": "Unreviewed neighboring example in the same late uppercut exercise block; precautionary hold based on the V10:146/147 side-semantic dispute, not a visual finding about this row.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified.",
+            "Neighbor was not visually inspected; no incorrect label is asserted."
+          ]
+        }
+      ]
+    },
+    "V10:151": {
+      "source_candidate_sha256": "24fc7380ecd02f207f56455636c664e8c5d5ed8229282be4dfade8255c26a0ad",
+      "origin": "precautionary_neighbor",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "precautionary_late_uppercut_semantics_block"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:146,V10:147",
+              "description": "Unreviewed neighboring example in the same late uppercut exercise block; precautionary hold based on the V10:146/147 side-semantic dispute, not a visual finding about this row.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified.",
+            "Neighbor was not visually inspected; no incorrect label is asserted."
+          ]
+        }
+      ]
+    },
+    "V10:152": {
+      "source_candidate_sha256": "3f3e8d0b6832b600c235de826da38a44f57b6c6085c47523c2076515fd6a941a",
+      "origin": "precautionary_neighbor",
+      "revisions": [
+        {
+          "revision_id": "diagnostic-intake-1",
+          "supersedes_sha256": null,
+          "actor_type": "assistant",
+          "reviewer": "Codex diagnostic intake; not human certification",
+          "reviewed_at": "2026-10-22T16:14:14.753865+00:00",
+          "disposition": "hold",
+          "label_status": "ambiguous",
+          "confirmed_label": null,
+          "lead_rear_evidence": null,
+          "boundary_status": "unreviewed",
+          "confirmed_bounds": null,
+          "reasons": [
+            "precautionary_late_uppercut_semantics_block"
+          ],
+          "evidence": [
+            {
+              "kind": "diagnostic_observation",
+              "reference": "configs/level1_label_pose_review.yaml#assessments/V10:146,V10:147",
+              "description": "Unreviewed neighboring example in the same late uppercut exercise block; precautionary hold based on the V10:146/147 side-semantic dispute, not a visual finding about this row.",
+              "frame_indices": []
+            }
+          ],
+          "unresolved_uncertainty": [
+            "Stance-relative lead/rear meaning and exact phase boundaries are not independently human-certified.",
+            "Neighbor was not visually inspected; no incorrect label is asserted."
+          ]
+        }
+      ]
+    }
+  }
+}
