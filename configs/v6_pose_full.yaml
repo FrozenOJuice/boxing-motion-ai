@@ -1,0 +1,33 @@
+# Every source frame; independent IMAGE inference, no temporal filling.
+pose_mode: image
+max_width: 960
+confidence: 0.5
+ranges: []
+scene_cuts: []
+overlay_limit: 24
+overlay_frames:
+- 157
+- 164
+- 171
+- 6470
+- 6476
+- 6482
+- 7906
+- 7916
+- 7927
+- 23274
+- 23280
+- 23287
+- 30535
+- 30546
+- 30557
+- 30598
+- 30604
+- 30610
+- 42486
+- 42493
+- 42500
+- 44325
+- 44330
+- 44338
+# No complete cut inventory certified. IMAGE has no state across frames/cuts.

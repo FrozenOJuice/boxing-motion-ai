@@ -1,0 +1,33 @@
+schema_version: velocity-transfer-1.0
+reference_registry: configs/level1_reference.yaml
+frozen_study: reports/boxingvi/level1-velocity-v1
+seeds: [20261021, 20261022, 20261023]
+checkpoint: best
+# Descriptive diagnostics only. No values are filtered, clipped or used for selection.
+tail_threshold_source: accepted_V4_training_velocity_p99
+severe_tail_threshold_torso_per_second: 50.0
+recordings:
+  - recording: V6
+    source_group_id: natebowerfitness-unresolved
+    related_recordings_guard: [V1, V6]
+    dataset: data/processed/boxingvi/V6/candidates-full-v1
+    policy: reports/boxingvi/v6-full-v1/quality/V6/policy-index.json
+    pose_run: data/processed/boxingvi/V6/pose-full-image-v1
+  - recording: V7
+    source_group_id: precision-striking-unresolved
+    related_recordings_guard: [V7, V8]
+    dataset: data/processed/boxingvi/V7/candidates-full-v1
+    policy: reports/boxingvi/v7-v8-full-v1/quality/V7/policy-index.json
+    pose_run: data/processed/boxingvi/V7/pose-full-image-v1
+  - recording: V8
+    source_group_id: precision-striking-unresolved
+    related_recordings_guard: [V7, V8]
+    dataset: data/processed/boxingvi/V8/candidates-full-v1
+    policy: reports/boxingvi/v7-v8-full-v1/quality/V8/policy-index.json
+    pose_run: data/processed/boxingvi/V8/pose-full-image-v1
+  - recording: V10
+    source_group_id: utah-lee-unresolved
+    related_recordings_guard: [V10]
+    dataset: data/processed/boxingvi/V10/candidates-full-v1
+    policy: reports/boxingvi/v10-full-v1/quality/V10/policy-index.json
+    pose_run: data/processed/boxingvi/V10/pose-full-image-v1

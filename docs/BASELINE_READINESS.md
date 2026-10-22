@@ -1,5 +1,13 @@
 # Dataset expansion and path to the first PyTorch baseline
 
+Historical pre-training snapshot. The current provisional reference is **V4-only XY +
+validity-gated velocities + 50% mirror augmentation**, with V5 development and V9 reserved.
+The [frozen transfer diagnostics](LEVEL1_VELOCITY_TRANSFER.md) do not establish consistent
+benefits beyond V5 and recommend a controlled representation investigation before V6
+expansion. V7/V8 remain one unresolved source group, and the V1/V6 guard remains.
+The reference registry is `configs/level1_reference.yaml`. This supersedes the prospective
+recommendations below; those findings remain historical.
+
 This step performs data validation only. No temporal model has been implemented or trained.
 Source punch labels, raw-index mappings and endpoint assumptions remain provisional. Pose
 retention is a quality filter, not validation of the expected action.

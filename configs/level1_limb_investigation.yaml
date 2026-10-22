@@ -1,0 +1,9 @@
+schema_version: limb-investigation-1.0
+reference_registry: configs/level1_reference.yaml
+base_config: configs/level1_initial.yaml
+transfer_config: configs/level1_velocity_transfer.yaml
+# Descriptive sensitivity probes only: never alter masks or select training examples.
+short_projected_segment_torso_units: 0.05
+majority_frame_fraction: 0.5
+large_consecutive_angle_jump_degrees: 30.0
+recordings: [V4, V5, V6, V7, V8, V10]

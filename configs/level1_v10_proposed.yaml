@@ -1,0 +1,87 @@
+# Review proposal only; existing training runners reject this schema. No training authorized.
+schema_version: level1-v10-proposal-1.0
+status: proposed_pending_review
+reference: reports/boxingvi/level1-mirror-v1
+base_config: configs/level1_initial.yaml
+readiness: reports/boxingvi/v10-full-v1/readiness/readiness.json
+seeds:
+- 20261021
+- 20261022
+- 20261023
+comparison:
+  reference_recordings:
+  - V4
+  proposed_recordings:
+  - V4
+  - V10
+  rationale: Isolate the V10 contribution; V7/V8 remain a separate experimental arm.
+train:
+- recording: V4
+  source_group_id: fightcamp-unresolved
+  boxer_id: null
+  session_id: null
+  dataset: data/processed/boxingvi/V4/candidates-full-v1
+  policy: reports/boxingvi/expansion/quality/V4/policy-index.json
+  pose_run: data/processed/boxingvi/V4/pose-full-image-v1
+- recording: V10
+  source_group_id: utah-lee-unresolved
+  boxer_id: null
+  session_id: null
+  dataset: data/processed/boxingvi/V10/candidates-full-v1
+  policy: reports/boxingvi/v10-full-v1/quality/V10/policy-index.json
+  pose_run: data/processed/boxingvi/V10/pose-full-image-v1
+development:
+  recording: V5
+  source_group_id: self-improvement-boxer-unresolved
+  boxer_id: null
+  session_id: null
+  dataset: data/processed/boxingvi/V5/candidates-full-v1
+  policy: reports/boxingvi/expansion/quality/V5/policy-index.json
+  pose_run: data/processed/boxingvi/V5/pose-full-image-v1
+reserved_recordings:
+- V9
+other_source_guards:
+  precision-striking-unresolved:
+  - V7
+  - V8
+  natebowerfitness-unresolved:
+  - V1
+  - V6
+model: existing_causal_tcn
+feature_version: torso-core-2d-1.0
+quality_policy: mask_aware70
+mirror_probability: 0.5
+visibility_augmentation: false
+pre_clip_context: false
+epochs: 40
+batch_size: 32
+learning_rate: 0.001
+weight_decay: 0.001
+hidden: 32
+dropout: 0.1
+threads: 2
+class_weights: existing_inverse_training_frequency_formula
+controls:
+- tcn
+- tcn_mask_only
+selection: existing_V5_development_macro_F1_epoch_selection
+remaining_implementation_gate: Explicitly extend the frozen grouped loader for V4/V10
+  after review.
+dataset_snapshot:
+  readiness_sha256: f2674aeeb574488cf831b797394c729f9f440409ab5c3849517015056555682a
+  V10_policy_index_sha256: db380ff57d53ab05bafe7af1b00d106c132615fd911a75ea9b2208d7616eea01
+  V10_retained:
+    jab: 49
+    cross: 36
+    lead_hook: 25
+    rear_hook: 6
+    lead_uppercut: 4
+    rear_uppercut: 21
+  V4_plus_V10_counts:
+    jab: 166
+    cross: 75
+    lead_hook: 165
+    rear_hook: 79
+    lead_uppercut: 75
+    rear_uppercut: 108
+  V4_plus_V10_total: 668

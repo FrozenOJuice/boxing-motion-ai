@@ -1,0 +1,57 @@
+schema_version: rear-punch-data-review-1.0
+status: recommendations_only_not_a_training_gate
+evidence: reports/boxingvi/rear-punch-priorities-v1/review.json
+reference_model: V4-only mirror-augmented TCN
+development_recording: V5
+reserved_recording: V9
+new_training_approved: []
+annotation_overrides: []
+quality_policy: mask_aware70
+source_groups:
+  precision-striking-unresolved: [V7, V8]
+  natebowerfitness-unresolved: [V1, V6]
+  utah-lee-unresolved: [V10]
+identity_status: publisher guards only; boxer and session IDs remain unknown
+v7_rear_uppercuts:
+  source_count: 20
+  currently_usable: 0
+  all_remain_excluded: true
+  endpoint_only:
+    source_rows: [5, 96]
+    finding: Distinct consecutive movements visible; shared boundary frame convention unresolved
+    next_action: Review both adjacent events before any separately versioned endpoint decision
+  partial_overlap:
+    source_rows: [10, 42, 45, 49, 99, 102, 105, 108, 110, 112, 114, 117, 120, 123, 126, 129, 132]
+    finding: Plausible consecutive uppercut-like actions; retraction/loading overlap and neighboring punch contamination remain
+    next_action: Review onset/action/recovery for the whole combination; do not trim automatically
+  nested_conflict:
+    source_rows: [54]
+    partner_source_rows: [53, 55]
+    finding: Row 53 lead-uppercut interval is entirely inside row 54 rear-uppercut interval; suspected boundary or label error
+    next_action: Keep quarantined pending qualified review or author evidence; no guessed replacement label
+v6:
+  status: hold_for_targeted_alignment_and_class_review
+  inspected_raw_rows: [2, 8, 41, 49, 78, 288, 321, 336, 338, 411, 598, 642, 685, 686]
+  specific_pending_rows: [3, 379, 685]
+  proposed_additional_quarantine: [685]
+  quarantine_reason: Raw interval appears dominated by a straight extension, so rear-uppercut class/phase needs confirmation
+  raw_structural_ceiling: {jab: 0, cross: 0, lead_hook: 64, rear_hook: 32, lead_uppercut: 133, rear_uppercut: 88}
+  review_constrained_ceiling: {jab: 0, cross: 0, lead_hook: 64, rear_hook: 32, lead_uppercut: 133, rear_uppercut: 87}
+  pose_evidence: Five samples per available class pass the existing policy; no full extraction
+  timing_decision: No global FPS/offset correction verified; do not apply helper minus 157 to source media
+v10:
+  status: recommended_next_provisional_preparation_after_small_semantics_review
+  inspected_raw_rows: [2, 7, 9, 10, 83, 120, 131, 132, 135, 137, 138, 140, 144, 149, 153]
+  existing_exclusions: [123]
+  raw_structural_ceiling: {jab: 49, cross: 36, lead_hook: 25, rear_hook: 6, lead_uppercut: 10, rear_uppercut: 25}
+  pose_evidence: Five samples per class pass the existing policy; no full extraction
+  timing_decision: Raw indices supported provisionally by inspected movements; exact frame base/end/lead-rear semantics remain unverified
+  segment_note: Standing uppercuts are distinct from adjacent floor transitions, kicks and instruction; unlabeled footage stays unknown
+planning:
+  assumed_pose_yield: 0.8
+  interpretation: Capacity scenario only, not measured retention, random-sample inference or a statistical interval
+  all_estimates_conditional_on: alignment, class/stance semantics, segment review and unchanged full-pose quality policy
+  guaranteed_additional_examples: 0
+  primary_recommendation: Prepare V10 first for lower-risk all-class source diversity
+  largest_rear_punch_upside: V6 after resolving the targeted review gate
+  v7_recovery_estimate: 0 approved; 2 endpoint cases then at most 17 partial-overlap cases for review; nested case remains quarantined

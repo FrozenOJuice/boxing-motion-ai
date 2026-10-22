@@ -1,0 +1,9 @@
+# Raw-index mapping remains provisional. IMAGE mode has no temporal state.
+pose_mode: image
+max_width: 960
+confidence: 0.5
+ranges: []
+# No complete scene-cut inventory is certified; never smooth/interpolate.
+scene_cuts: []
+overlay_limit: 18
+overlay_frames: [1372, 1376, 1381, 1497, 1501, 1505, 1535, 1544, 1554, 9444, 9451, 9459, 19117, 19124, 19131, 19378, 19384, 19391]

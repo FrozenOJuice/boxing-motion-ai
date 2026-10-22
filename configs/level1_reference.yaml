@@ -1,0 +1,19 @@
+# Provisional reference registry, not an executable training configuration.
+schema_version: level1-reference-1.0
+status: provisional
+accepted_study: reports/boxingvi/level1-velocity-v1
+representation: xy_velocity
+feature_version: torso-core-2d-velocity-1.0
+architecture: existing_causal_tcn
+training_recordings: [V4]
+development_recordings: [V5]
+seeds: [20261021, 20261022, 20261023]
+checkpoint: best
+selection: original_per_seed_V5_macro_F1_earliest_tie
+mirror_probability: 0.5
+visibility_probability: 0.0
+context_seconds: 0.0
+quality_policy: mask_aware70
+previous_reference: reports/boxingvi/level1-mirror-v1
+ensemble: false
+reserved_recordings: [V9]

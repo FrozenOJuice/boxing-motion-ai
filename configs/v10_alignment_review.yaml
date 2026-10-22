@@ -1,0 +1,118 @@
+schema_version: v10-alignment-review-1.0
+video_id: V10
+status: raw_indices_supported_for_provisional_preparation
+evidence: reports/boxingvi/v10-targeted-review-v1/review.json
+evidence_sha256: b3a5c27cc87bf3f0021ee461eff6d072894411dc9afed54531277c91fd43065c
+review_method: Assistant inspection of exact-PTS source strips; not expert biomechanical/stance
+  certification
+inspected_source_rows:
+- 2
+- 5
+- 6
+- 7
+- 8
+- 9
+- 10
+- 33
+- 41
+- 79
+- 83
+- 120
+- 130
+- 131
+- 132
+- 133
+- 135
+- 137
+- 138
+- 139
+- 140
+- 142
+- 144
+- 146
+- 147
+- 149
+- 153
+mapping:
+  frame_offset: 0
+  end_assumption: inclusive
+  annotation_fps: null
+  verified_frame_base: null
+  verified_end_convention: null
+  verified_trim_offset: null
+excluded_source_rows:
+- 9
+- 10
+- 123
+- 130
+- 131
+- 132
+- 133
+- 134
+- 135
+- 136
+- 137
+additional_preparation_exclusions:
+- 9
+- 10
+exclusion_evidence:
+  introductory_uppercuts:
+    rows:
+    - 9
+    - 10
+    comparison_rows:
+    - 41
+    - 79
+    - 147
+    - 149
+    reason: Source Lead Uppercut demonstrations resemble later Rear Uppercut execution
+      without a clearly established stance change. Suspected lead/rear inconsistency,
+      not a verified correction. Quarantine pending short expert/author check.
+  reversed_interval:
+    rows:
+    - 123
+    raw_start: 9760
+    raw_end: 9723
+    reason: Original reversed interval; never swapped or restored.
+  floor_exercise_uppercuts:
+    rows:
+    - 130
+    - 131
+    - 132
+    - 133
+    - 134
+    - 135
+    - 136
+    - 137
+    raw_range:
+    - 18703
+    - 18777
+    reason: Standing uppercut-like motions between floor exercise phases; near-square
+      stance makes lead/rear semantics uncertain. Row137 also borders floor descent.
+      Conservative quarantine, not a declaration all eight labels are wrong.
+observations:
+- Raw intervals contain punch-like motion at early, middle and late anchors across
+  all six source labels; no offset or FPS conversion applied.
+- All six rear-hook intervals inspected. Curved bent-arm movement visible, but lead/rear
+  semantics remain source-provisional.
+- "Rows130\u2013137 are standing actions, not planks; floor phase before/after is\
+  \ unknown and not no_punch."
+- Alternating late hooks/uppercuts use distinguishable arms; this does not independently
+  establish stance or certify lead/rear labels.
+- 25 FPS clock agrees with raw PTS because every inspected inventory step is40ms;
+  this does not establish authors annotation clock.
+- No complete scene-cut inventory certified. IMAGE inference has no temporal state,
+  filling or interpolation.
+uncertainties:
+- Zero versus one indexing, end convention, exact biomechanical boundaries and author
+  media edit/version remain unverified.
+- Literal class mappings remain provisional; do not infer lead/rear from anatomical
+  left/right or workout banner text.
+- Boxer/session identities remain unknown. Source group utah-lee-unresolved is a conservative
+  publisher guard, not verified identity.
+- Outside and excluded annotation intervals stay unknown; no background negatives
+  generated.
+- Pose confidence is not independent anatomical accuracy. Licensing/redistribution
+  unverified.
+new_training_authorized: false
+annotation_overrides: []

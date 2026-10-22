@@ -1,0 +1,6 @@
+# Experiment 2: preserve mirror augmentation; add only temporary occlusion masking.
+schema_version: visibility-study-1.0
+reference_mirror_study: reports/boxingvi/level1-mirror-v1
+seeds: [20261021, 20261022, 20261023]
+mirror_probability: 0.5
+visibility_probability: 0.5

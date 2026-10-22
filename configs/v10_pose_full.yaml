@@ -1,0 +1,9 @@
+# Independent IMAGE inference; original source PTS and every decoded frame.
+pose_mode: image
+max_width: 960
+confidence: 0.5
+ranges: []
+# No complete cut inventory certified; no smoothing, tracking or interpolation.
+scene_cuts: []
+overlay_limit: 24
+overlay_frames: [1721, 1726, 1731, 2069, 2074, 2078, 2116, 2124, 2133, 2330, 2337, 2345, 5987, 5993, 6000, 9684, 9690, 9697, 18770, 18777, 18785, 20844, 20849, 20855]

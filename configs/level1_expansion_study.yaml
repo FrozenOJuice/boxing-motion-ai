@@ -1,0 +1,18 @@
+schema_version: expansion-study-1.0
+base_config: configs/level1_initial.yaml
+reference: reports/boxingvi/level1-mirror-v1
+seeds: [20261021, 20261022, 20261023]
+gate: reports/boxingvi/v7-v8-full-v1/training-gate.json
+train:
+  - recording: V4
+    dataset: data/processed/boxingvi/V4/candidates-full-v1
+    policy: reports/boxingvi/expansion/quality/V4/policy-index.json
+    pose_run: data/processed/boxingvi/V4/pose-full-image-v1
+  - recording: V7
+    dataset: data/processed/boxingvi/V7/candidates-full-v1
+    policy: reports/boxingvi/v7-v8-full-v1/quality/V7/policy-index.json
+    pose_run: data/processed/boxingvi/V7/pose-full-image-v1
+  - recording: V8
+    dataset: data/processed/boxingvi/V8/candidates-full-v1
+    policy: reports/boxingvi/v7-v8-full-v1/quality/V8/policy-index.json
+    pose_run: data/processed/boxingvi/V8/pose-full-image-v1

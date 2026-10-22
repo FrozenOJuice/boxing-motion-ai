@@ -351,3 +351,66 @@ def train_level1(
     except Exception as exc:
         typer.echo(f'Experiment failed: {type(exc).__name__}: {exc}', err=True)
         raise typer.Exit(1) from exc
+
+
+@app.command('train-mirror-study')
+def train_mirror_study(
+    config: Annotated[Path, typer.Option(help='Matched three-seed mirror-study YAML.')],
+    output: Annotated[Path, typer.Option(help='Fresh ignored directory under reports/.')],
+    smoke: Annotated[
+        bool, typer.Option(help='Two epochs, two clips/class, first seed only.')
+    ] = False,
+):
+    """Compare training-only 50% mirroring with matched original and mask-only TCNs."""
+    try:
+        from .training.mirror_study import run_study
+
+        run_study(config, output, smoke, typer.echo)
+    except ImportError as exc:
+        typer.echo('Install dependencies: uv sync --extra train --extra pose', err=True)
+        raise typer.Exit(1) from exc
+    except Exception as exc:
+        typer.echo(f'Mirror study failed: {type(exc).__name__}: {exc}', err=True)
+        raise typer.Exit(1) from exc
+
+
+@app.command('train-visibility-study')
+def train_visibility_study(
+    config: Annotated[Path, typer.Option(help='Matched mirror + visibility study YAML.')],
+    output: Annotated[Path, typer.Option(help='Fresh ignored directory under reports/.')],
+    smoke: Annotated[
+        bool, typer.Option(help='First seed, two epochs and two clips/class.')
+    ] = False,
+):
+    """Compare mirror-only with class-independent temporary occlusions (three seeds)."""
+    try:
+        from .training.visibility_study import run_study
+
+        run_study(config, output, smoke, typer.echo)
+    except ImportError as exc:
+        typer.echo('Install dependencies: uv sync --extra train --extra pose', err=True)
+        raise typer.Exit(1) from exc
+    except Exception as exc:
+        typer.echo(f'Visibility study failed: {type(exc).__name__}: {exc}', err=True)
+        raise typer.Exit(1) from exc
+
+
+@app.command('train-context-study')
+def train_context_study(
+    config: Annotated[Path, typer.Option(help='Matched mirror + real time-context study YAML.')],
+    output: Annotated[Path, typer.Option(help='Fresh ignored directory under reports/.')],
+    smoke: Annotated[
+        bool, typer.Option(help='First seed, two epochs and two clips/class.')
+    ] = False,
+):
+    """Compare real causal pre-clip context; pool only annotated punches; no visibility masking."""
+    try:
+        from .training.context_study import run_study
+
+        run_study(config, output, smoke, typer.echo)
+    except ImportError as exc:
+        typer.echo('Install dependencies: uv sync --extra train --extra pose', err=True)
+        raise typer.Exit(1) from exc
+    except Exception as exc:
+        typer.echo(f'Context study failed: {type(exc).__name__}: {exc}', err=True)
+        raise typer.Exit(1) from exc

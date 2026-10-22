@@ -1,0 +1,9 @@
+schema_version: limb-study-1.0
+base_config: configs/level1_initial.yaml
+frozen_reference: reports/boxingvi/level1-velocity-v1
+coverage_report: reports/boxingvi/level1-limb-readiness-v2/summary.json
+transfer_config: configs/level1_velocity_transfer.yaml
+seeds: [20261021, 20261022, 20261023]
+mirror_probability: 0.5
+visibility_probability: 0.0
+context_seconds: 0.0

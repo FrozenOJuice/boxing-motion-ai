@@ -6,6 +6,16 @@ audit reports. Phase 1 adds recording-aware pose extraction and provisional clip
 The first Level 1 experiment uses V4 for training and V5 for development validation. Level 2 is the core target; Level 2.5 analytics follows the core.
 See [the project specification](docs/PROJECT_SPEC.md).
 
+The provisional Level 1 reference is now **V4-only XY + validity-gated velocities +
+50% mirror augmentation**, selected on V5 development. The
+[frozen transfer study](docs/LEVEL1_VELOCITY_TRANSFER.md) finds that its V5 improvement
+is not consistent on V6/V7/V8/V10. See [the reference registry](configs/level1_reference.yaml).
+V9 remains reserved. Earlier study/reference descriptions below are historical.
+
+The [arm-geometry study](docs/LEVEL1_LIMB_INVESTIGATION.md) improves lead-uppercut
+recognition and mean F1 on V5/V6/V7/V8, but regresses on V10 and leaves rear punches
+unresolved. Geometry remains optional; the accepted reference stays unchanged.
+
 ## Setup and checks
 
 Install [uv](https://docs.astral.sh/uv/) and run from this directory:
@@ -126,3 +136,125 @@ and checkpoints remain local. V9 is reserved and never loaded. See
 [the experiment protocol and initial findings](docs/LEVEL1_EXPERIMENTS.md) for interpretation.
 These are provisional six-class positive-clip experiments, without `no_punch`, event detection,
 early recognition or claims of boxer-independent generalization.
+
+The controlled mirror-only TCN study uses three matched seeds and mask-only controls:
+
+```sh
+uv run --extra pose --extra train boxing-motion-ai train-mirror-study --config configs/level1_mirror_study.yaml --output reports/boxingvi/level1-mirror-repeat
+```
+
+Use `--smoke` for a short end-to-end check. See [the mirror study](docs/LEVEL1_MIRROR_STUDY.md)
+for reflection semantics, matched-control checks and measured per-class results. Other
+augmentations and pre-clip context are not part of this comparison.
+
+The visibility comparison preserves mirror augmentation and tests temporary class-independent
+wrist/forearm occlusions, with reliable torso anchors protected:
+
+```sh
+uv run --extra pose --extra train boxing-motion-ai train-visibility-study --config configs/level1_visibility_study.yaml --output reports/boxingvi/level1-visibility-repeat
+```
+
+Use `--smoke` for a short check. See [the visibility study](docs/LEVEL1_VISIBILITY_STUDY.md)
+for the lead-uppercut preflight, frozen masking policy and per-class findings.
+
+The context comparison keeps mirror-only as its control and visibility masking disabled:
+
+```sh
+uv run --extra pose --extra train boxing-motion-ai train-context-study --config configs/level1_context_study.yaml --output reports/boxingvi/level1-context-repeat
+```
+
+Use `--smoke` for a short check. [The context study](docs/LEVEL1_CONTEXT_STUDY.md) documents the
+exact-time window, hard continuity boundaries, punch-only pooling and shortcut diagnostics.
+
+The [V7/V8 expansion study](docs/LEVEL1_DATA_EXPANSION.md) documents per-recording alignment
+evidence, conservative annotation exclusions, full-pose preparation and a frozen readiness gate.
+It compares V4-only against V4/V7/V8 training with the same mirror-only TCN and three seeds.
+V7/V8 share one unresolved source group; V5 remains development and V9 remains reserved.
+Visibility augmentation and pre-clip context stay disabled.
+
+After preparation and the documented gate check:
+
+```sh
+uv run python -m boxing_motion_ai.training.expansion_study --config configs/level1_expansion_study.yaml --output reports/boxingvi/level1-expansion-repeat --smoke
+```
+
+Omit `--smoke` for the matched 40-epoch comparison. Use a fresh output directory; prior
+studies, original data and existing pose artifacts are preserved.
+
+The [rear-punch data expansion plan](docs/DATA_EXPANSION_PLAN.md) investigates V7's
+excluded uppercuts and compares V6/V10 without inference or model training. It keeps
+V4-only mirror augmentation as reference, recommends V10 as the next preparation
+source, and separates V6's larger potential yield from its unresolved alignment/class
+concerns. Run the read-only source review with a fresh ignored output directory:
+
+```sh
+uv run python -m boxing_motion_ai.data.source_review --output reports/boxingvi/rear-punch-priorities-repeat
+```
+
+[V10 preparation](docs/V10_PREPARATION.md) documents the targeted transition/label
+review, explicit quarantines, full IMAGE extraction and unchanged mask-aware policy.
+Its exact-PTS readiness report freezes retained examples without authorizing training.
+`configs/level1_v10_proposed.yaml` is a review-only proposal for V4/V10 versus the
+preserved V4-only mirror reference; existing training runners reject that proposal
+schema. V5 stays development and V9 remains reserved.
+
+The accepted proposal is now supported through the separate frozen V4/V10 gate in
+`python -m boxing_motion_ai.training.v10_study`. The [V10 controlled study](docs/LEVEL1_V10_STUDY.md)
+records smoke/full reproduction commands and three-seed results. V10 improves
+rear-uppercut recall but regresses lead hooks and does not improve aggregate macro-F1;
+V4-only mirror augmentation remains the reference. The proposal file is preserved;
+the runner translates it into a recorded executable study without enabling visibility
+augmentation or context.
+
+The [V6 readiness investigation](docs/V6_READINESS.md) reviews exact-frame alignment,
+overlaps, helper columns and existing pose samples without inference or training.
+It recommends provisional extraction with quarantines; the 302-event ceiling is
+not measured full-policy retention. `configs/v6_alignment_review.yaml` records
+recommendations without altering source or training configurations.
+
+```sh
+uv run python -m boxing_motion_ai.data.v6_review --output reports/boxingvi/v6-readiness-repeat
+```
+
+[V6 full preparation](docs/V6_PREPARATION.md) now documents all 46,705 frames and
+302 retained provisional hook/uppercut examples under the unchanged mask policy.
+All exclusions and V1/V6 grouping remain; no new training was run. The
+[representation assessment](docs/POSE_REPRESENTATION_ASSESSMENT.md) proposed a
+separate causal velocity-feature experiment, evaluated below.
+
+The [velocity study](docs/LEVEL1_VELOCITY_STUDY.md) implements optional
+masked backward velocities and compares V4-only mirror XY against XY + velocities.
+All three seeds improve macro-F1, especially rear uppercuts; rear hooks and lead
+uppercuts remain weak, and some confident pose errors generate large derivatives.
+V6 is excluded from this comparison and V9 remains untouched.
+
+```sh
+uv run python -m boxing_motion_ai.training.velocity_study --config configs/level1_velocity_study.yaml --output reports/boxingvi/level1-velocity-repeat --smoke
+```
+
+Omit `--smoke` for the three-seed 40-epoch study. Use fresh ignored destinations;
+the original XY mirror controls must reproduce the preserved reference exactly.
+
+Frozen transfer evaluation (no training), using the existing accepted checkpoints:
+
+```sh
+uv run python -m boxing_motion_ai.training.velocity_transfer --config configs/level1_velocity_transfer.yaml --output reports/boxingvi/level1-velocity-transfer-repeat
+```
+
+See the [transfer findings](docs/LEVEL1_VELOCITY_TRANSFER.md) for class coverage,
+confusions, mask controls, velocity tails and the recommendation before V6 expansion.
+
+Read-only relative-limb/joint-angle coverage investigation (no training):
+
+```sh
+uv run python -m boxing_motion_ai.training.limb_investigation --config configs/level1_limb_investigation.yaml --output reports/boxingvi/level1-limb-readiness-repeat
+```
+
+Controlled additive arm-geometry study (same V4-only training budget and three seeds):
+
+```sh
+uv run python -m boxing_motion_ai.training.limb_study --config configs/level1_limb_study.yaml --output reports/boxingvi/level1-limb-study-repeat --smoke
+```
+
+Omit `--smoke` for the full comparison and frozen external evaluations. Source datasets,
+old checkpoints and the frozen readiness report must already exist locally.

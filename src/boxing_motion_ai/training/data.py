@@ -85,9 +85,18 @@ def validate_arrays(a):
 
 
 class PoseClips(Dataset):
-    def __init__(self, spec, expected_recording, limit_per_class=None):
-        if expected_recording not in ("V4", "V5"):
-            raise ValueError("Only V4 training and V5 development are allowed")
+    def __init__(
+        self, spec, expected_recording, limit_per_class=None, *, expansion=False, diagnostic=False
+    ):
+        if expansion and diagnostic:
+            raise ValueError("Diagnostic evaluation and training expansion are separate gates")
+        allowed = ("V4", "V5", "V7", "V8", "V10") if expansion else ("V4", "V5")
+        if diagnostic:
+            allowed = ("V6", "V7", "V8", "V10")
+        if expected_recording not in allowed:
+            raise ValueError(
+                "Only V4/V5 by default; explicit expansion adds V7/V8 or V10; V9 reserved"
+            )
         root, index_path, pose_run = map(Path, (spec["dataset"], spec["policy"], spec["pose_run"]))
         manifest = json.loads((root / "preparation.json").read_text())
         index = json.loads(index_path.read_text())
@@ -197,7 +206,9 @@ class PoseClips(Dataset):
             clips = subset
         self.clips = clips
         counts = Counter(c["label"] for c in clips)
-        if any(counts[i] == 0 for i in range(6)):
+        if not clips or (
+            not expansion and not diagnostic and any(counts[i] == 0 for i in range(6))
+        ):
             raise ValueError("Every split must retain all six classes")
         self.provenance = {
             "recording_id": expected_recording,
@@ -234,6 +245,8 @@ class PoseClips(Dataset):
                 max(len(c["x"]) for c in clips),
             ],
         }
+        if diagnostic:
+            self.provenance["evaluation_scope"] = "diagnostic only; no training admission"
 
     def __len__(self):
         return len(self.clips)

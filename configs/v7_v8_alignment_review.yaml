@@ -1,0 +1,42 @@
+schema_version: expansion-alignment-review-1.0
+status: raw_indices_supported_for_provisional_expansion
+evidence: reports/boxingvi/v7-v8-expansion-gate-v2/expansion.json
+source_group: precision-striking-unresolved
+boxer_id: null
+session_id: null
+review_method: Assistant visual inspection of exact-PTS source frame strips; not expert label certification
+mapping:
+  frame_offset: 0
+  end_assumption: inclusive
+  annotation_fps: null
+  verified_frame_base: null
+  verified_end_convention: null
+  verified_trim_offset: null
+recordings:
+  V7:
+    workbook_sha256: 5b107113a1baa22aac804ca54b36d792f64af97e82c7e655cad00b6fb4a43895
+    inspected_source_rows: [2, 5, 13, 26, 52, 53, 54, 106, 108, 132, 154, 194, 195]
+    observations:
+      - Raw intervals contain punch movement across early, middle and late source anchors.
+      - At row 106 the 30 FPS interpretation includes the preceding action instead of centering the annotated straight punch.
+      - At row 195 the 30 FPS interpretation is mainly guard/loading; the raw interval contains the hook-like movement.
+      - Uppercut type and lead/rear semantics remain provisional, especially oblique late views.
+      - All existing overlap, shared-endpoint, order and whitespace flags remain exclusions.
+      - Rows 53/54 nest a three-frame lead-uppercut interval inside a rear-uppercut interval; neither is corrected or included.
+  V8:
+    workbook_sha256: 642b85cee24481e051bb7230954063111b2db1f5106607ae917efde0dc7d14c0
+    inspected_source_rows: [7, 8, 65, 66, 112, 119, 149, 195, 197, 200]
+    observations:
+      - At row 112 raw bounds contain a straight punch while the 30 FPS interpretation is mainly guard.
+      - Late rows 197 and 200 contain punch movement in raw bounds; the 30 FPS alternative ends before most of that movement.
+      - Turning, self-occlusion and oblique uppercut/hook trajectories limit class verification.
+      - No Rear Hook source labels exist; do not invent them.
+      - All existing overlap and shared-endpoint flags remain exclusions.
+      - Rows 65/66 share start 8913 with different classes; the lead-hook interval is contained inside the lead-uppercut interval. Both stay excluded.
+uncertainties:
+  - Raw indices are a working hypothesis supported by sampled source frames, not author-certified conventions.
+  - Zero versus one indexing and inclusive versus exclusive ends cannot be resolved by these strips.
+  - No complete scene-cut inventory or independent biomechanical boundaries have been certified.
+  - Class correctness and boxer/session identities remain unverified; no labels are corrected.
+  - Only structurally eligible, fixed-policy pose candidates may enter provisional training.
+  - Excluded and unlabeled footage stays unknown and is never no_punch.

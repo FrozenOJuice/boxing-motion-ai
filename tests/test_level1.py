@@ -71,6 +71,7 @@ def synthetic(tmp_path, video="V4", scene_cut=False):
     manifest = {
         "schema_version": "recording-preparation-1.1" if video == "V4" else "v5-preparation-1.0",
         "scope": "full_video",
+        "confirmed_scene_cuts": [],
         "video_id": video,
         "source_frame_count": n,
         "pose_contract": {
@@ -265,3 +266,214 @@ def test_synthetic_training_report_checkpoints_and_split_guard(tmp_path, monkeyp
     path.write_text(yaml.safe_dump(config))
     with pytest.raises(ValueError, match="V9 reserved"):
         load_config(path)
+
+
+def test_mirrored_training_uses_original_evaluation_and_records_decisions(tmp_path, monkeypatch):
+    from boxing_motion_ai.training import experiment
+
+    monkeypatch.chdir(tmp_path)
+    config = {
+        "schema_version": "level1-experiment-1.1",
+        "seed": 8,
+        "epochs": 2,
+        "batch_size": 6,
+        "learning_rate": 0.001,
+        "weight_decay": 0.001,
+        "hidden": 8,
+        "dropout": 0.1,
+        "threads": 1,
+        "limit_per_class": None,
+        "mirror_probability": 0.5,
+        "train": synthetic(tmp_path, "V4"),
+        "development": synthetic(tmp_path, "V5"),
+        "runs": ["tcn", "tcn_mask_only"],
+    }
+    path = tmp_path / "mirror.yaml"
+    path.write_text(yaml.safe_dump(config))
+    evaluate_original = experiment.evaluate
+    evaluations = []
+
+    def checked_evaluate(model, loader, feature_key, weights):
+        # Evaluation uses the source dataset itself, never an augmented wrapper.
+        clip = loader.dataset[0]
+        assert clip["raw"]["coordinates"][1, 15, 0] == 0.2
+        evaluations.append(loader.dataset.provenance["recording_id"])
+        return evaluate_original(model, loader, feature_key, weights)
+
+    monkeypatch.setattr(experiment, "evaluate", checked_evaluate)
+    output = tmp_path / "reports/mirror"
+    experiment.run_experiment(path, output, progress=lambda _: None)
+    assert set(evaluations) == {"V4", "V5"}
+    logs = [
+        json.loads((output / name / "augmentation.json").read_text()) for name in config["runs"]
+    ]
+    assert logs[0] == logs[1]
+    assert all(e["seen"] == 6 for e in logs[0])
+    assert sum(len(e["mirrored_source_rows"]) for e in logs[0]) > 0
+    state = torch.load(output / "tcn/last.pt", weights_only=True)
+    assert "augmentation_rng_state" in state
+    for probability in (0.1, True):
+        config["mirror_probability"] = probability
+        path.write_text(yaml.safe_dump(config))
+        with pytest.raises(ValueError, match="Mirror probability"):
+            load_config(path)
+
+
+def test_visibility_config_training_and_unaugmented_evaluation(tmp_path, monkeypatch):
+    from boxing_motion_ai.training import experiment
+
+    monkeypatch.chdir(tmp_path)
+    config = {
+        "schema_version": "level1-experiment-1.2",
+        "seed": 8,
+        "epochs": 2,
+        "batch_size": 6,
+        "learning_rate": 0.001,
+        "weight_decay": 0.001,
+        "hidden": 8,
+        "dropout": 0.1,
+        "threads": 1,
+        "limit_per_class": None,
+        "mirror_probability": 0.5,
+        "visibility_probability": 0.5,
+        "train": synthetic(tmp_path, "V4"),
+        "development": synthetic(tmp_path, "V5"),
+        "runs": ["tcn", "tcn_mask_only"],
+    }
+    path = tmp_path / "visibility.yaml"
+    path.write_text(yaml.safe_dump(config))
+    evaluate = experiment.evaluate
+    seen = []
+
+    def checked(model, loader, feature_key, weights):
+        assert loader.dataset[0]["raw"]["valid_mask"][1].all()
+        assert loader.dataset[0]["x"][1, 2 * 5 + 4] == 1
+        seen.append(loader.dataset.provenance["recording_id"])
+        return evaluate(model, loader, feature_key, weights)
+
+    monkeypatch.setattr(experiment, "evaluate", checked)
+    output = tmp_path / "reports/visibility"
+    experiment.run_experiment(path, output, progress=lambda _: None)
+    assert set(seen) == {"V4", "V5"}
+    logs = [
+        json.loads((output / name / "augmentation.json").read_text()) for name in config["runs"]
+    ]
+    assert logs[0] == logs[1]
+    assert sum(len(e["visibility_events"]) for e in logs[0]) > 0
+    state = torch.load(output / "tcn/last.pt", weights_only=True)
+    assert "visibility_rng_state" in state
+    for probability in (0.1, True):
+        config["visibility_probability"] = probability
+        path.write_text(yaml.safe_dump(config))
+        with pytest.raises(ValueError, match="Visibility probability"):
+            load_config(path)
+
+
+def test_context_wrapper_preserves_original_examples_features_raw_missingness(tmp_path):
+    from boxing_motion_ai.training.context import ContextClips
+
+    base = PoseClips(synthetic(tmp_path), "V4")
+    ds = ContextClips(base, 0.65)
+    assert len(ds) == len(base) == 6
+    assert ds.provenance["source_rows"] == base.provenance["source_rows"]
+    assert ds[0]["context_length"] == 0  # Do not exclude recording-start examples.
+    assert ds[1]["context_length"] == 6
+    assert ds[5]["context_length"] == 19
+    for c, original in zip(ds.clips, base.clips, strict=True):
+        offset = c["context_length"]
+        torch.testing.assert_close(c["x"][offset:], original["x"], rtol=0, atol=0)
+        torch.testing.assert_close(c["mask_x"][offset:], original["mask_x"], rtol=0, atol=0)
+        assert c["pool_mask"].sum() == len(original["x"])
+        assert not c["pool_mask"][:offset].any()
+        for key in original["raw"]:
+            np.testing.assert_array_equal(c["raw"][key][offset:], original["raw"][key])
+    assert np.isnan(ds[1]["raw"]["coordinates"][0, 13]).all()
+    assert not ds[1]["raw"]["valid_mask"][0, 13]
+    assert exact_times(ds[1])[1] == Fraction(1001, 30000)
+
+
+def test_context_training_keeps_punch_pooling_and_visibility_disabled(tmp_path, monkeypatch):
+    from boxing_motion_ai.training import experiment
+
+    monkeypatch.chdir(tmp_path)
+    config = {
+        "schema_version": "level1-experiment-1.3",
+        "seed": 8,
+        "epochs": 2,
+        "batch_size": 6,
+        "learning_rate": 0.001,
+        "weight_decay": 0.001,
+        "hidden": 8,
+        "dropout": 0.1,
+        "threads": 1,
+        "limit_per_class": None,
+        "mirror_probability": 0.5,
+        "visibility_probability": 0.0,
+        "context_seconds": 0.65,
+        "train": synthetic(tmp_path, "V4"),
+        "development": synthetic(tmp_path, "V5"),
+        "runs": ["tcn", "tcn_mask_only"],
+    }
+    path = tmp_path / "context.yaml"
+    path.write_text(yaml.safe_dump(config))
+    output = tmp_path / "reports/context"
+    experiment.run_experiment(path, output, progress=lambda _: None)
+    p = json.loads((output / "provenance.json").read_text())
+    assert p["context_policy"]["seconds"] == 0.65
+    assert p["train"]["class_counts"] == p["development"]["class_counts"]
+    for model in config["runs"]:
+        logs = json.loads((output / model / "augmentation.json").read_text())
+        assert not any(e["visibility_events"] for e in logs)
+    config["visibility_probability"] = 0.5
+    path.write_text(yaml.safe_dump(config))
+    with pytest.raises(ValueError, match="visibility disabled"):
+        load_config(path)
+
+
+def test_real_context_truncates_at_cuts_and_segments_without_dropping_examples(tmp_path):
+    from boxing_motion_ai.training.context import ContextClips
+
+    spec = synthetic(tmp_path)
+    root = tmp_path / "V4"
+    with np.load(root / "poses.npz") as z:
+        arrays = {k: z[k] for k in z.files}
+    arrays["scene_id"][6:] = 1
+    arrays["segment_id"][18:] = 1
+    np.savez_compressed(root / "poses.npz", **arrays)
+    manifest = json.loads((root / "preparation.json").read_text())
+    manifest.update(confirmed_scene_cuts=[6], npz_sha256=sha256(root / "poses.npz"))
+    dump(root / "preparation.json", manifest)
+    policy = json.loads((root / "policy.json").read_text())
+    policy["inputs"] = {k: sha256(root / k) for k in policy["inputs"]}
+    dump(root / "policy.json", policy)
+    base = PoseClips(spec, "V4")
+    ds = ContextClips(base, 0.65)
+    assert len(ds) == 6
+    assert ds[1]["context_length"] == 0
+    assert ds[2]["context_length"] == 6
+    assert ds[3]["context_length"] == 0
+    assert ds[4]["raw"]["frame_index"][0] == 18
+    # A confirmed but otherwise uncatalogued cut inside the target must fail closed.
+    manifest["confirmed_scene_cuts"] = [4, 6]
+    dump(root / "preparation.json", manifest)
+    policy["inputs"] = {k: sha256(root / k) for k in policy["inputs"]}
+    dump(root / "policy.json", policy)
+    with pytest.raises(ValueError, match="Punch crosses"):
+        ContextClips(PoseClips(spec, "V4"), 0.65)
+
+
+def test_incomplete_extraction_is_rejected_before_context_loading(tmp_path):
+    spec = synthetic(tmp_path)
+    root = tmp_path / "V4"
+    with np.load(root / "poses.npz") as z:
+        arrays = {k: z[k] for k in z.files}
+    arrays["frame_index"][6:] += 1
+    np.savez_compressed(root / "poses.npz", **arrays)
+    manifest = json.loads((root / "preparation.json").read_text())
+    manifest["npz_sha256"] = sha256(root / "poses.npz")
+    dump(root / "preparation.json", manifest)
+    policy = json.loads((root / "policy.json").read_text())
+    policy["inputs"] = {k: sha256(root / k) for k in policy["inputs"]}
+    dump(root / "policy.json", policy)
+    with pytest.raises(ValueError, match="complete, contiguous"):
+        PoseClips(spec, "V4")

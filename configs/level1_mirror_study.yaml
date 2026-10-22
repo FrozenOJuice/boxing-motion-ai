@@ -1,0 +1,6 @@
+# Experiment 1 only; every arm inherits the frozen original training budget.
+schema_version: mirror-study-1.0
+base_config: configs/level1_initial.yaml
+reference_experiment: reports/boxingvi/level1-initial-v1
+seeds: [20261021, 20261022, 20261023]
+mirror_probability: 0.5

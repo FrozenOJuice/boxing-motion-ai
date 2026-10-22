@@ -1,0 +1,7 @@
+schema_version: velocity-study-1.0
+base_config: configs/level1_initial.yaml
+reference_mirror_study: reports/boxingvi/level1-mirror-v1
+seeds: [20261021, 20261022, 20261023]
+mirror_probability: 0.5
+visibility_probability: 0.0
+context_seconds: 0.0

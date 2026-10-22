@@ -1,6 +1,7 @@
 """Fixed-budget CPU experiments. V5 selects epochs; V9 is never opened."""
 
 import csv
+import hashlib
 import json
 import platform
 import random
@@ -14,6 +15,8 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from ..vision.pipeline import code_provenance, sha256
+from .augmentation import MIRROR_VERSION, VISIBILITY_POLICY, augment_batch, visibility_batch
+from .context import CONTEXT_POLICY, ContextClips, context_collate, pooling_mask
 from .data import CLASSES, FEATURE_VERSION, PoseClips, collate
 from .models import CausalTCN, StaticBaseline
 
@@ -64,9 +67,10 @@ def evaluate(model, loader, feature_key, weights):
     model.eval()
     targets, predictions, rows, probabilities = [], [], [], []
     numerator, denominator = 0.0, 0.0
+    recording_ids = []
     with torch.no_grad():
         for b in loader:
-            logits = model(b[feature_key], b["time_mask"])
+            logits = model(b[feature_key], pooling_mask(b))
             labels = b["labels"]
             numerator += float(
                 nn.functional.cross_entropy(logits, labels, weight=weights, reduction="sum")
@@ -76,11 +80,20 @@ def evaluate(model, loader, feature_key, weights):
             predictions.extend(logits.argmax(-1).tolist())
             probabilities.extend(logits.softmax(-1).tolist())
             rows.extend(b["source_rows"])
+            recording_ids.extend(c["recording_id"] for c in b["clips"])
     result = metrics(targets, predictions)
     result["weighted_loss"] = numerator / denominator
     detail = [
-        {"source_row": r, "target": CLASSES[t], "prediction": CLASSES[p], "probabilities": probs}
-        for r, t, p, probs in zip(rows, targets, predictions, probabilities, strict=True)
+        {
+            "recording_id": vid,
+            "source_row": r,
+            "target": CLASSES[t],
+            "prediction": CLASSES[p],
+            "probabilities": probs,
+        }
+        for vid, r, t, p, probs in zip(
+            recording_ids, rows, targets, predictions, probabilities, strict=True
+        )
     ]
     return result, detail
 
@@ -102,9 +115,34 @@ def load_config(path):
         "development",
         "runs",
     }
+    if isinstance(config, dict) and config.get("schema_version") in (
+        "level1-experiment-1.1",
+        "level1-experiment-1.2",
+        "level1-experiment-1.3",
+        "level1-experiment-1.4",
+        "level1-experiment-1.5",
+        "level1-experiment-1.6",
+    ):
+        required.add("mirror_probability")
+        if config["schema_version"] in ("level1-experiment-1.2", "level1-experiment-1.3"):
+            required.add("visibility_probability")
+        if config["schema_version"] == "level1-experiment-1.3":
+            required.add("context_seconds")
+        if config["schema_version"] == "level1-experiment-1.4":
+            required.add("expansion_gate")
+        if config["schema_version"] in ("level1-experiment-1.5", "level1-experiment-1.6"):
+            required.add("feature_representation")
     if not isinstance(config, dict) or set(config) != required:
         raise ValueError("Unexpected or missing experiment configuration fields")
-    if config["schema_version"] != "level1-experiment-1.0":
+    if config["schema_version"] not in (
+        "level1-experiment-1.0",
+        "level1-experiment-1.1",
+        "level1-experiment-1.2",
+        "level1-experiment-1.3",
+        "level1-experiment-1.4",
+        "level1-experiment-1.5",
+        "level1-experiment-1.6",
+    ):
         raise ValueError("Unsupported experiment version")
     for k in ("seed", "epochs", "batch_size", "hidden", "threads"):
         if type(config[k]) is not int or config[k] < (0 if k == "seed" else 1):
@@ -117,8 +155,56 @@ def load_config(path):
         type(config["limit_per_class"]) is not int or config["limit_per_class"] < 1
     ):
         raise ValueError("Invalid smoke subset limit")
-    if config["runs"] != ["static", "tcn", "static_mask_only", "tcn_mask_only"]:
+    allowed_runs = [["static", "tcn", "static_mask_only", "tcn_mask_only"]]
+    if config["schema_version"] in (
+        "level1-experiment-1.1",
+        "level1-experiment-1.2",
+        "level1-experiment-1.3",
+        "level1-experiment-1.4",
+        "level1-experiment-1.5",
+        "level1-experiment-1.6",
+    ):
+        allowed_runs.append(["tcn", "tcn_mask_only"])
+        if type(config["mirror_probability"]) not in (int, float) or config[
+            "mirror_probability"
+        ] not in (0.0, 0.5):
+            raise ValueError("Mirror probability must be 0 or fixed at 0.5")
+    if config["schema_version"] in ("level1-experiment-1.2", "level1-experiment-1.3"):
+        if type(config["visibility_probability"]) not in (int, float) or config[
+            "visibility_probability"
+        ] not in (0.0, 0.5):
+            raise ValueError("Visibility probability must be 0 or fixed at 0.5")
+    if config["schema_version"] == "level1-experiment-1.3":
+        value = config["context_seconds"]
+        if type(value) not in (int, float) or not np.isfinite(value) or not 0 <= value <= 2:
+            raise ValueError("Context duration must be finite, between 0 and 2 seconds")
+        if config["visibility_probability"] != 0 or config["runs"] != ["tcn", "tcn_mask_only"]:
+            raise ValueError("Context study requires visibility disabled and the two TCN controls")
+    if config["runs"] not in allowed_runs:
         raise ValueError("Both baselines and both matched mask ablations are required")
+    if config["schema_version"] == "level1-experiment-1.5":
+        if (
+            config["feature_representation"] not in ("xy", "xy_velocity")
+            or config["mirror_probability"] != 0.5
+            or config["runs"] != ["tcn", "tcn_mask_only"]
+        ):
+            raise ValueError("Velocity study requires XY/XY+velocity and mirror-only TCN controls")
+    if config["schema_version"] == "level1-experiment-1.6":
+        if (
+            config["feature_representation"] not in ("xy_velocity", "xy_velocity_limb")
+            or config["mirror_probability"] != 0.5
+            or config["runs"] != ["tcn", "tcn_mask_only"]
+        ):
+            raise ValueError("Arm geometry study requires velocity/velocity+limb mirror-only TCNs")
+    if config["schema_version"] == "level1-experiment-1.4":
+        from .groups import validate_split
+
+        if config["mirror_probability"] != 0.5 or config["runs"] != ["tcn", "tcn_mask_only"]:
+            raise ValueError("Expansion retains mirror-only TCN and matched mask control")
+        if not isinstance(config["expansion_gate"], str):
+            raise ValueError("Expansion gate must be a report path")
+        validate_split(config["train"], config["development"])
+        return config
     for split, recording in (("train", "V4"), ("development", "V5")):
         spec = config[split]
         if (
@@ -139,15 +225,60 @@ def run_experiment(config_path, output, progress=print):
     if output.exists():
         raise ValueError("Output already exists; choose a fresh run directory")
     progress("Checking immutable datasets and approved policy selections...")
-    train = PoseClips(config["train"], "V4", config["limit_per_class"])
+    expanded = config["schema_version"] == "level1-experiment-1.4"
+    if expanded:
+        from .expansion_study import check_gate
+        from .groups import GroupedClips
+
+        check_gate(Path(config["expansion_gate"]), config["train"])
+        train = GroupedClips(config["train"], config["limit_per_class"])
+    else:
+        train = PoseClips(config["train"], "V4", config["limit_per_class"])
     dev = PoseClips(config["development"], "V5", config["limit_per_class"])
-    if train.provenance["hashes"]["poses.npz"] == dev.provenance["hashes"]["poses.npz"]:
+    limbs = config.get("feature_representation") == "xy_velocity_limb"
+    velocities = config.get("feature_representation") == "xy_velocity" or limbs
+    if velocities:
+        from .velocity import VelocityClips
+
+        train, dev = VelocityClips(train), VelocityClips(dev)
+    if limbs:
+        from .limbs import LimbClips
+
+        train, dev = LimbClips(train), LimbClips(dev)
+    collate_fn = collate
+    if config.get("context_seconds", 0):
+        train, dev = (ContextClips(ds, config["context_seconds"]) for ds in (train, dev))
+        collate_fn = context_collate
+    members = train.datasets if expanded else [train]
+    if any(
+        ds.provenance["hashes"]["poses.npz"] == dev.provenance["hashes"]["poses.npz"]
+        for ds in members
+    ):
         raise ValueError("Train and development source poses are identical")
     output.mkdir(parents=True)
     shutil.copyfile(config_path, output / "config.yaml")
     provenance = {
         "schema_version": "level1-run-1.0",
         "feature_version": FEATURE_VERSION,
+        "augmentation": {
+            "version": MIRROR_VERSION,
+            "mirror_probability": config.get("mirror_probability", 0.0),
+            "unit": "whole clip",
+            "scope": "optimization batches only; "
+            + "/".join(s["recording"] for s in config["train"])
+            if expanded
+            else "optimization batches only; V4",
+            "labels": "unchanged relative lead/rear semantics; no stance assumption",
+            "evaluation": "original training clips and V5 only, no augmentation",
+            "rng": "private Torch generator, seed + 1000003; independent of shuffle/dropout",
+        },
+        "visibility_augmentation": {
+            **VISIBILITY_POLICY,
+            "probability": config.get("visibility_probability", 0.0),
+            "scope": "V4 optimization batches only; evaluation unchanged",
+            "rng": "private generator seed + 2000003",
+        },
+        "context_policy": {**CONTEXT_POLICY, "seconds": config.get("context_seconds", 0)},
         "config_sha256": sha256(config_path),
         "code": code_provenance(),
         "python": platform.python_version(),
@@ -175,6 +306,28 @@ def run_experiment(config_path, output, progress=print):
             "clip duration and mask coverage may act as shortcuts",
         ],
     }
+    if expanded:
+        provenance["expansion_gate_sha256"] = sha256(Path(config["expansion_gate"]))
+    if velocities:
+        from .velocity import VELOCITY_POLICY, VELOCITY_VERSION
+
+        provenance.update(
+            feature_version=VELOCITY_VERSION,
+            velocity_policy=VELOCITY_POLICY,
+            features="original 41 XY channels plus 8 * [vx,vy,velocity_valid] = 65",
+            ablation="8 original masks + 8 derivative-validity masks; no coordinates or vectors",
+            timing="exact rational backward PTS deltas in derivatives; native frames",
+            input_initialization="reference weights copied; new columns zero; RNG preserved",
+        )
+    if limbs:
+        from .limbs import LIMB_POLICY, LIMB_VERSION
+
+        provenance.update(
+            feature_version=LIMB_VERSION,
+            limb_policy=LIMB_POLICY,
+            features="unchanged 65 XY/velocity channels + 34 arm-geometry values/masks",
+            ablation="16 original/derivative masks + 12 geometry masks; no vector/angle values",
+        )
     source_root = Path(__file__).resolve().parents[3]
     source_files = sorted((source_root / "src/boxing_motion_ai").rglob("*.py"))
     snapshot = output / "source"
@@ -198,36 +351,86 @@ def run_experiment(config_path, output, progress=print):
         feature_key = "mask_x" if name.endswith("mask_only") else "x"
         cls = StaticBaseline if name.startswith("static") else CausalTCN
         channels = train[0][feature_key].shape[1]
-        model = cls(channels, config["hidden"], config["dropout"])
+        base_channels = (8 if feature_key == "mask_x" else 41) if velocities else channels
+        model = cls(base_channels, config["hidden"], config["dropout"])
+        shared_initial_sha256 = hashlib.sha256(
+            b"".join(p.detach().cpu().numpy().tobytes() for p in model.parameters())
+        ).hexdigest()
+        if velocities:
+            from .velocity import expand_input
+
+            model = expand_input(model, channels)
+        initial_state_sha256 = hashlib.sha256(
+            b"".join(p.detach().cpu().numpy().tobytes() for p in model.parameters())
+        ).hexdigest()
         optimizer = torch.optim.AdamW(
             model.parameters(), lr=config["learning_rate"], weight_decay=config["weight_decay"]
         )
         generator = torch.Generator().manual_seed(config["seed"])
+        augmentation_generator = torch.Generator().manual_seed(config["seed"] + 1000003)
+        visibility_generator = torch.Generator().manual_seed(config["seed"] + 2000003)
+        augmentation_log = []
         shuffled = DataLoader(
             train,
             batch_size=config["batch_size"],
             shuffle=True,
             generator=generator,
-            collate_fn=collate,
+            collate_fn=collate_fn,
             num_workers=0,
         )
-        train_eval = DataLoader(train, batch_size=config["batch_size"], collate_fn=collate)
-        dev_eval = DataLoader(dev, batch_size=config["batch_size"], collate_fn=collate)
+        train_eval = DataLoader(train, batch_size=config["batch_size"], collate_fn=collate_fn)
+        dev_eval = DataLoader(dev, batch_size=config["batch_size"], collate_fn=collate_fn)
         directory = output / name
         directory.mkdir()
         curves, best = [], -1.0
         for epoch in range(1, config["epochs"] + 1):
             model.train()
+            mirrored_rows, epoch_rows, visibility_events = [], [], []
+            epoch_examples, mirrored_examples = [], []
             for b in shuffled:
+                b, mirrored = augment_batch(
+                    b, augmentation_generator, config.get("mirror_probability", 0.0)
+                )
+                b, events = visibility_batch(
+                    b, visibility_generator, config.get("visibility_probability", 0.0)
+                )
+                visibility_events.extend(events)
+                epoch_rows.extend(b["source_rows"])
+                if expanded:
+                    examples = [[c["recording_id"], c["source_row"]] for c in b["clips"]]
+                    epoch_examples.extend(examples)
+                    mirrored_examples.extend(
+                        ex for ex, yes in zip(examples, mirrored.tolist(), strict=True) if yes
+                    )
+                mirrored_rows.extend(
+                    row
+                    for row, selected in zip(b["source_rows"], mirrored.tolist(), strict=True)
+                    if selected
+                )
                 optimizer.zero_grad(set_to_none=True)
                 loss = nn.functional.cross_entropy(
-                    model(b[feature_key], b["time_mask"]), b["labels"], weight=weights
+                    model(b[feature_key], pooling_mask(b)), b["labels"], weight=weights
                 )
                 if not torch.isfinite(loss):
                     raise ValueError("Nonfinite training loss")
                 loss.backward()
                 nn.utils.clip_grad_norm_(model.parameters(), 1.0)
                 optimizer.step()
+            augmentation_log.append(
+                {
+                    "epoch": epoch,
+                    "seen": len(epoch_rows),
+                    "mirrored_source_rows": mirrored_rows,
+                    "visibility_events": visibility_events,
+                    "shuffle_sha256": hashlib.sha256(
+                        np.asarray(epoch_rows, dtype="<i8").tobytes()
+                    ).hexdigest(),
+                }
+            )
+            if expanded:
+                augmentation_log[-1].update(
+                    example_order=epoch_examples, mirrored_examples=mirrored_examples
+                )
             tr, _ = evaluate(model, train_eval, feature_key, weights)
             va, _ = evaluate(model, dev_eval, feature_key, weights)
             curves.append(
@@ -239,6 +442,11 @@ def run_experiment(config_path, output, progress=print):
                     "dev_accuracy": va["accuracy"],
                     "train_macro_f1": tr["macro_f1"],
                     "dev_macro_f1": va["macro_f1"],
+                    "mirrored_clips": len(mirrored_rows),
+                    "visibility_clips": len(visibility_events),
+                    "newly_hidden_usable_entries": sum(
+                        e["newly_hidden_usable_entries"] for e in visibility_events
+                    ),
                 }
             )
             checkpoint = {
@@ -248,9 +456,11 @@ def run_experiment(config_path, output, progress=print):
                 "seed": config["seed"],
                 "config": config,
                 "run": name,
-                "feature_version": FEATURE_VERSION,
+                "feature_version": provenance["feature_version"],
                 "torch_rng_state": torch.get_rng_state(),
                 "loader_rng_state": generator.get_state(),
+                "augmentation_rng_state": augmentation_generator.get_state(),
+                "visibility_rng_state": visibility_generator.get_state(),
                 "provenance_sha256": sha256(output / "provenance.json"),
             }
             if va["macro_f1"] > best:
@@ -268,6 +478,8 @@ def run_experiment(config_path, output, progress=print):
         tr, tr_detail = evaluate(model, train_eval, feature_key, weights)
         va, va_detail = evaluate(model, dev_eval, feature_key, weights)
         result = {
+            "initial_model_sha256": initial_state_sha256,
+            "shared_initial_model_sha256": shared_initial_sha256,
             "selected_epoch": best_epoch,
             "train": tr,
             "development": va,
@@ -275,6 +487,7 @@ def run_experiment(config_path, output, progress=print):
             "parameters": sum(p.numel() for p in model.parameters()),
             "class_weights_train_only": weights.tolist(),
         }
+        write_json(directory / "augmentation.json", augmentation_log)
         write_json(directory / "metrics.json", result)
         write_json(directory / "train_predictions.json", tr_detail)
         write_json(directory / "development_predictions.json", va_detail)
@@ -285,16 +498,15 @@ def run_experiment(config_path, output, progress=print):
         plot(directory, curves, va["confusion_matrix"])
         results[name] = result
     majority = int(counts.argmax())
-    results["v4_majority_reference"] = metrics(
-        [c["label"] for c in dev.clips], [majority] * len(dev)
-    )
+    majority_key = "training_majority_reference" if expanded else "v4_majority_reference"
+    results[majority_key] = metrics([c["label"] for c in dev.clips], [majority] * len(dev))
     write_json(output / "results.json", results)
     report(output, results, provenance)
     # Detect concurrent accidental input changes; never write source artifacts.
+    from .groups import verify_unchanged
+
     for split in (train, dev):
-        for filename, digest in split.provenance["hashes"].items():
-            if sha256(Path(split.provenance["dataset"]) / filename) != digest:
-                raise ValueError("Dataset changed during experiment")
+        verify_unchanged(split)
     progress(f"Complete: {output / 'results.md'}")
     return results
 
@@ -343,13 +555,15 @@ def plot(directory, curves, confusion):
 
 
 def report(output, results, provenance):
+    expanded = provenance["train"].get("schema_version") == "grouped-training-1.0"
+    training = "V4/V7/V8" if expanded else "V4"
     lines = [
-        "# Initial Level 1 experiment",
+        "# Level 1 experiment",
         "",
-        "V4 training; V5 development. V9 was not opened. Labels and boundaries remain "
+        f"{training} training; V5 development. V9 was not opened. Labels and boundaries remain "
         "provisional. This is positive-clip recognition, with no no_punch examples.",
         "",
-        "| Run | Selected epoch | V4 accuracy | V4 macro-F1 | V5 accuracy | V5 macro-F1 |",
+        "| Run | Selected epoch | Train accuracy | Train macro-F1 | V5 accuracy | V5 macro-F1 |",
         "|---|---:|---:|---:|---:|---:|",
     ]
     for name, r in results.items():
@@ -360,10 +574,10 @@ def report(output, results, provenance):
             f"| {name} | {r['selected_epoch']} | {tr['accuracy']:.4f} | "
             f"{tr['macro_f1']:.4f} | {va['accuracy']:.4f} | {va['macro_f1']:.4f} |"
         )
-    majority = results["v4_majority_reference"]
+    majority = results["training_majority_reference" if expanded else "v4_majority_reference"]
     lines += [
         "",
-        f"V4-majority reference on V5: accuracy {majority['accuracy']:.4f}; "
+        f"Training-majority reference on V5: accuracy {majority['accuracy']:.4f}; "
         f"macro-F1 {majority['macro_f1']:.4f}.",
         "",
         "Each run contains per-class precision/recall/F1/support, confusion matrix, "

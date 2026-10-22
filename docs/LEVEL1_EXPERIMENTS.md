@@ -146,3 +146,36 @@ TCN confusion matrix (rows = source label; columns = prediction), ordered jab, c
 ### Verification
 
 Automated tests: **108 passed** (including nine new synthetic training/loader/model tests). Ruff: **passed**. CLI help works. Tests cover exact rational timing, stale hashes, fixed splits, policy changes, known scene boundaries, source exclusions, invalid-coordinate gating, frame-local normalization, padding invariance, temporal causality, finite gradients, metrics and checkpoint/report writing. All prepared input hashes matched again after experiments. Git tracks no dataset files, reports, environments or checkpoints.
+
+## Follow-up diagnosis
+
+The [frozen-checkpoint failure diagnosis](LEVEL1_FAILURE_DIAGNOSIS.md) compares V4/V5 viewpoint,
+visibility, duration and boundary shortcuts, reproduces saved predictions, and provides 16 source
+video/pose examples. It recommends three controlled comparisons for review; no further training
+or model/feature changes were performed during that diagnosis.
+
+## Controlled mirror experiment
+
+[Experiment 1](LEVEL1_MIRROR_STUDY.md) adds optional training-only physical reflection and compares
+three matched seeds for original/mirrored full-feature and mask-only TCNs. Initial experiment
+artifacts remain unchanged; the mirror study uses fresh ignored output directories.
+
+## Controlled visibility experiment
+
+[Experiment 2](LEVEL1_VISIBILITY_STUDY.md) first inspects lead-uppercut failures, then compares
+mirror-only against mirror plus temporary, class-independent wrist/forearm masking. It retains
+the three seeds, existing architecture/data/policy and mask-only controls, without pre-clip context.
+
+## Controlled pre-clip context experiment
+
+[Experiment 3](LEVEL1_CONTEXT_STUDY.md) compares mirror-only against real causal context from the
+same full-video poses, with exact timestamps and pooling only on original punch frames. It keeps
+visibility augmentation disabled, the original eligible examples, architecture and three seeds.
+
+## Recording-group expansion
+
+The [V7/V8 expansion](LEVEL1_DATA_EXPANSION.md) keeps mirror-only as reference, adds new
+training sources behind a frozen provisional alignment/data gate, and keeps V7/V8 in one
+unresolved source group. V5 remains development; V9 is not opened. The comparison retains the
+TCN/features/policy and three seeds, with matched mask-only controls. Visibility augmentation
+and pre-clip context remain disabled.
