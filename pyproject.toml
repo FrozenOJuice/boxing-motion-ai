@@ -21,6 +21,7 @@ train = [
     "numpy>=2,<3",
     "pyyaml>=6,<7",
     "torch>=2.6,<3",
+    "torchvision>=0.26,<1",
 ]
 
 [build-system]

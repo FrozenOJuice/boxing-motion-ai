@@ -1,0 +1,24 @@
+schema_version: rgb-targeted-review-1.0
+status: provisional_pilot_permitted
+review_artifact: reports/boxingvi/level1-rgb-review-v1/review.json
+reviewed_sheets: 19
+new_exclusions: []
+label_or_timing_corrections: []
+findings:
+  - V4 rear arm is frequently hidden by the bag or head; tracking can attach to occluded anatomy.
+  - V6 rows 41 and 336 show hook-like movement; row 674 includes late/recovery uppercut phases.
+  - V6 held row 685 shows a straight extension and mixed phases; keep all existing holds.
+  - V7 sole approved rear hook row 52 is phase-ambiguous; one example cannot certify class recall.
+  - V7 rear-uppercut rows 5 and 132 show mixed consecutive phases; remain excluded.
+  - V8 rear uppercuts show compact rising arm movements with far-arm occlusion; no rear hooks exist.
+  - V10 rear hooks and uppercuts have better visible arms; anatomical side remains provisional.
+  - V10 excluded lead-uppercut row 9 resembles an approved rear-uppercut side; keep excluded.
+  - No new global offset or verified label correction is established by this sparse review.
+  - V4/V6/V7 combination legends and V10 Uppercut banner can directly reveal source exercise labels.
+limitations:
+  - Small exact-frame sheets establish action overlap, not independently verified stance or every label.
+  - Existing candidates are preserved; uncertain labels limit conclusions and are not silently certified.
+  - Initial crop QA found residual V4 timer and V5 punch digits; v1.2 uses fixed source-specific HUD rectangles, independent of class/time.
+  - Wider global masks obscured body pixels; source-specific masks preserve visible anatomy.
+  - Residual yellow V10 banner tip required masking to x=0.42; no model was trained in preflight.
+  - Fixed HUD redaction must be visually checked before training; background remains a confound.

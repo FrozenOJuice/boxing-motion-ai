@@ -273,3 +273,15 @@ uv run python -m boxing_motion_ai.training.multi_study --config configs/level1_m
 Omit `--smoke` for three-seed combined training and the one-seed four-fold pilot.
 Use `--audit-only` for pool/sampling inspection without training. Verify a completed
 run with `uv run python -m boxing_motion_ai.training.multi_verify --output <run>`.
+
+The bounded [RGB + pose feasibility pilot](docs/LEVEL1_RGB_FEASIBILITY.md) compares
+frozen MobileNetV3-Small crop features with the existing XY+velocity TCN, using the
+approved multi-recording pool and grouped holdouts. It includes static-background,
+mask-only and duration controls. Source HUD/punch-number overlays are redacted;
+visual features, media and checkpoints remain local and ignored. This is an
+exploratory Level 1 study, with V5 development-only and V9 reserved.
+
+```sh
+uv sync --extra pose --extra train
+TORCH_HOME="$PWD/weights/torch" uv run python -m boxing_motion_ai.training.rgb_study --help
+```
