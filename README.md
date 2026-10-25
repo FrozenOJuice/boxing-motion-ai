@@ -6,6 +6,15 @@ audit reports. Phase 1 adds recording-aware pose extraction and provisional clip
 The first Level 1 experiment uses V4 for training and V5 for development validation. Level 2 is the core target; Level 2.5 analytics follows the core.
 See [the project specification](docs/PROJECT_SPEC.md).
 
+**Current workflow:** [versioned annotation curation](docs/ANNOTATION_CURATION.md).
+The proposed selection retains 1,125 provisional training examples; the 18 targeted
+human reviews remain pending. Original annotations and the frozen V5 development
+benchmark are preserved. No curated training experiment has been run.
+
+Preparation for the FastAPI backend and React development dashboard begins with the
+[repository cleanup assessment](docs/CLEANUP_ASSESSMENT.md). It records the current
+check baseline, preservation requirements and cleanup proposals awaiting approval.
+
 The provisional Level 1 reference is now **V4-only XY + validity-gated velocities +
 50% mirror augmentation**, selected on V5 development. The
 [frozen transfer study](docs/LEVEL1_VELOCITY_TRANSFER.md) finds that its V5 improvement
