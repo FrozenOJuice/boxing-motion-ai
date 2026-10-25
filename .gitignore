@@ -255,3 +255,9 @@ __marimo__/
 *.MTS
 *.keras
 *.tflite
+
+# Local dashboard dependencies, builds and exact-frame previews
+/web/node_modules/
+/web/dist/
+/web/coverage/
+/.dashboard-cache/

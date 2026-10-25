@@ -6,6 +6,7 @@ import math
 import os
 import re
 import stat
+from contextlib import contextmanager
 from pathlib import Path, PurePosixPath
 
 from boxing_motion_ai.models import relative_path
@@ -68,10 +69,10 @@ class MetadataStore:
         if _RESERVED.search(str(self.root)):
             raise ServiceError("invalid", "reserved_root")
 
-    def read(self, path, sha256=None):
+    @contextmanager
+    def open_regular(self, path):
+        """Internal trusted-path reader, also used for registered dashboard media."""
         safe_relative(path)
-        if PurePosixPath(path).suffix not in (".json", ".jsonl", ".yaml", ".yml"):
-            raise ServiceError("invalid", "metadata_only")
         parts = (*self.root.parts[1:], *PurePosixPath(path).parts)
         fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
         try:
@@ -81,18 +82,26 @@ class MetadataStore:
                 fd = child
             file_fd = os.open(parts[-1], os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=fd)
             with os.fdopen(file_fd, "rb") as stream:
-                info = os.fstat(stream.fileno())
-                if not stat.S_ISREG(info.st_mode) or info.st_size > MAX_BYTES:
+                if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
                     raise ServiceError("invalid", "not_bounded_regular_metadata")
-                raw = stream.read(MAX_BYTES + 1)
-            if len(raw) > MAX_BYTES:
-                raise ServiceError("invalid", "metadata_too_large")
+                yield stream
         except FileNotFoundError as exc:
             raise ServiceError("missing", "artifact_not_found") from exc
         except OSError as exc:
             raise ServiceError("invalid", "unsafe_or_unreadable_artifact") from exc
         finally:
             os.close(fd)
+
+    def read(self, path, sha256=None):
+        safe_relative(path)
+        if PurePosixPath(path).suffix not in (".json", ".jsonl", ".yaml", ".yml"):
+            raise ServiceError("invalid", "metadata_only")
+        with self.open_regular(path) as stream:
+            if os.fstat(stream.fileno()).st_size > MAX_BYTES:
+                raise ServiceError("invalid", "not_bounded_regular_metadata")
+            raw = stream.read(MAX_BYTES + 1)
+        if len(raw) > MAX_BYTES:
+            raise ServiceError("invalid", "metadata_too_large")
         actual = hashlib.sha256(raw).hexdigest()
         if sha256 is not None and actual != sha256:
             raise ServiceError("stale", "artifact_hash_mismatch")

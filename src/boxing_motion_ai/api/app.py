@@ -1,0 +1,158 @@
+"""Thin localhost API over existing services; exact-frame media is opt-in per request."""
+
+from pathlib import Path
+
+from fastapi import FastAPI, Query, Request
+from fastapi.responses import JSONResponse, Response
+from starlette.middleware.trustedhost import TrustedHostMiddleware
+from starlette.staticfiles import StaticFiles
+
+from boxing_motion_ai.data.annotation_review import LABELS, RECORDINGS
+from boxing_motion_ai.services import DashboardService
+from boxing_motion_ai.services.artifacts import ServiceError
+from boxing_motion_ai.services.contracts import QueryResult
+
+from .media import FrameService
+
+STATUS = {"available": 200, "incomplete": 200, "missing": 404, "invalid": 422, "stale": 409}
+
+
+def reply(result):
+    return JSONResponse(result.model_dump(mode="json"), status_code=STATUS[result.status])
+
+
+def create_app(root: Path):
+    service = DashboardService(root)
+    frames = FrameService(service)
+    app = FastAPI(
+        title="Boxing Motion AI — local review", version="0.1.0", docs_url=None, redoc_url=None
+    )
+    app.state.service, app.state.frames = service, frames
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "[::1]"])
+
+    @app.middleware("http")
+    async def local_requests(request: Request, call_next):
+        origin = request.headers.get("origin")
+        allowed = {
+            f"http://{host}:{port}"
+            for host in ("localhost", "127.0.0.1")
+            for port in (5174, 8000, 4174)
+        }
+        if (origin and origin not in allowed) or request.headers.get(
+            "sec-fetch-site"
+        ) == "cross-site":
+            return JSONResponse({"detail": "Only local dashboard requests are allowed"}, 403)
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    @app.exception_handler(ServiceError)
+    async def service_error(request, exc):
+        return reply(QueryResult(status=exc.status, issues=[exc.code]))
+
+    @app.get("/api/health")
+    def health():
+        return {"version": "0.1.0", "mode": "local_read_only", "v9": "reserved"}
+
+    @app.get("/api/inventory")
+    def inventory():
+        return reply(service.inventory())
+
+    @app.get("/api/statistics")
+    def statistics():
+        return {v: service.statistics(v).model_dump(mode="json") for v in RECORDINGS}
+
+    @app.get("/api/reviews")
+    def reviews():
+        status = service.review_status()
+        if status.status != "available":
+            return reply(status)
+        queue = service.review_queue()
+        priorities = {r["id"]: r["priority"] for r in (queue.data or {}).get("entries", [])}
+        entries = []
+        for key in status.data["case_ids"]:
+            v, row = key.split(":")
+            result = service.review(v, int(row))
+            entries.append(
+                dict(
+                    id=key,
+                    priority=priorities.get(key, "diagnostic"),
+                    review=result.model_dump(mode="json"),
+                )
+            )
+        entries.sort(key=lambda e: (e["priority"] != "dispute", e["priority"] != "anchor", e["id"]))
+        return reply(
+            QueryResult(status="available", data=dict(entries=entries, summary=status.data))
+        )
+
+    @app.get("/api/curation")
+    def curation():
+        return reply(service.curation_status())
+
+    @app.get("/api/recordings/{recording}/annotations")
+    def annotations(
+        recording: str, offset: int = Query(0, ge=0), limit: int = Query(100, ge=1, le=100)
+    ):
+        return reply(service.annotations(recording, offset=offset, limit=limit))
+
+    @app.get("/api/cases/{recording}/{row}")
+    def case(recording: str, row: int):
+        annotation = service.annotation(recording, row)
+        if annotation.status != "available":
+            return reply(annotation)
+        return reply(
+            QueryResult(
+                status="available",
+                data=dict(
+                    annotation=annotation.data["source"],
+                    labels=list(LABELS),
+                    review=service.review(recording, row).model_dump(mode="json"),
+                    evidence=service.review_evidence(recording, row).model_dump(mode="json"),
+                    recording=service.recording(recording).model_dump(mode="json"),
+                ),
+            )
+        )
+
+    @app.get("/api/experiments")
+    def experiments():
+        return reply(service.experiments())
+
+    @app.get("/api/experiments/{experiment}")
+    def experiment(experiment: str):
+        return reply(service.experiment(experiment))
+
+    @app.get("/api/experiments/{experiment}/metrics/{metric}")
+    def metrics(experiment: str, metric: str):
+        return reply(service.model_metrics(experiment, metric))
+
+    def get_frame(recording, index):
+        try:
+            return frames.frame(recording, index)
+        except ServiceError:
+            raise
+        except (ValueError, KeyError, TypeError, OSError) as exc:
+            raise ServiceError("invalid", "frame_unavailable_or_invalid_source") from exc
+
+    @app.get("/api/recordings/{recording}/frames/{index}")
+    def frame(recording: str, index: int):
+        metadata, _ = get_frame(recording, index)
+        return reply(QueryResult(status="available", data=metadata))
+
+    @app.get("/api/recordings/{recording}/frames/{index}/image")
+    def image(recording: str, index: int):
+        metadata, pixels = get_frame(recording, index)
+        return Response(
+            pixels,
+            media_type="image/jpeg",
+            headers={
+                "X-Native-Frame": str(metadata["frame_index"]),
+                "X-Exact-Timestamp": metadata["exact_timestamp"],
+            },
+        )
+
+    # Only the built application, never the repository, datasets or reports.
+    dist = Path(root) / "web" / "dist"
+    if dist.is_dir() and not dist.is_symlink():
+        app.mount("/", StaticFiles(directory=dist, html=True), name="dashboard")
+    return app

@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
-      - run: uv sync --locked --extra pose --extra train
-      - run: uv run --locked --extra pose --extra train pytest -ra --require-no-skips
-      - run: uv run --locked --extra pose --extra train ruff check .
-      - run: uv run --locked --extra pose --extra train boxing-motion-ai --help
+      - run: uv sync --locked --extra pose --extra train --extra dashboard
+      - run: uv run --locked --extra pose --extra train --extra dashboard pytest -ra --require-no-skips
+      - run: uv run --locked --extra pose --extra train --extra dashboard ruff check .
+      - run: uv run --locked --extra pose --extra train --extra dashboard boxing-motion-ai --help
