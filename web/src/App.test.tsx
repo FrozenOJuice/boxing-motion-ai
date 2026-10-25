@@ -49,85 +49,95 @@ const frame = {
   scene_cut_before: false,
 };
 function mockApi() {
-  const fetchMock = vi.fn(async (url: RequestInfo | URL) => {
-    const path = String(url);
-    let value: unknown;
-    if (path === "/api/reviews")
-      value = ok({
-        entries: [
-          { id: "V4:1", priority: "dispute", review: ok(review) },
-          {
-            id: "V5:2",
-            priority: "diagnostic",
-            review: ok({
-              ...review,
-              source: { ...source, video_id: "V5", source_row: 2 },
+  const fetchMock = vi.fn(
+    async (url: RequestInfo | URL, _init?: RequestInit) => {
+      const path = String(url);
+      let value: unknown;
+      if (path === "/api/reviews")
+        value = ok({
+          entries: [
+            { id: "V4:1", priority: "dispute", review: ok(review) },
+            {
+              id: "V5:2",
+              priority: "diagnostic",
+              review: ok({
+                ...review,
+                source: { ...source, video_id: "V5", source_row: 2 },
+              }),
+            },
+          ],
+          summary: {
+            case_count: 2,
+            human_accepted: 0,
+            dispositions: { hold: 2 },
+          },
+        });
+      else if (path === "/api/inventory")
+        value = ok({
+          available_recordings: 2,
+          records: {
+            V4: ok({
+              recording_id: "V4",
+              role: "training",
+              source_group: "unknown",
+              boxer_id: null,
+              session_id: null,
+              preparation: { source_frame_count: 10 },
+            }),
+            V5: ok({
+              recording_id: "V5",
+              role: "development",
+              source_group: "unknown",
+              boxer_id: null,
+              session_id: null,
+              preparation: { source_frame_count: 10 },
             }),
           },
-        ],
-        summary: {
-          case_count: 2,
-          human_accepted: 0,
-          dispositions: { hold: 2 },
-        },
-      });
-    else if (path === "/api/inventory")
-      value = ok({
-        available_recordings: 2,
-        records: {
-          V4: ok({
-            recording_id: "V4",
-            role: "training",
-            source_group: "unknown",
+        });
+      else if (path === "/api/experiments") value = ok({ items: {} });
+      else if (path.startsWith("/api/cases/"))
+        value = ok({
+          edit: ok({
+            ledger_sha256: "a".repeat(64),
+            revision_sha256: "b".repeat(64),
+            source_candidate_sha256: "c".repeat(64),
+            ledger_version: 1,
+            history: [revision],
+            decisions: [],
+          }),
+          annotation: source,
+          labels: ["jab", "cross"],
+          review: ok(review),
+          evidence: ok({
+            case: {
+              prediction: { prediction: "cross", probabilities: [0.2, 0.8] },
+              selection: "synthetic held-out",
+              selection_fold: "hold-V4",
+            },
+          }),
+          recording: ok({
+            preparation: { source_frame_count: 10 },
             boxer_id: null,
             session_id: null,
-            preparation: { source_frame_count: 10 },
           }),
-          V5: ok({
-            recording_id: "V5",
-            role: "development",
-            source_group: "unknown",
-            boxer_id: null,
-            session_id: null,
-            preparation: { source_frame_count: 10 },
-          }),
-        },
-      });
-    else if (path === "/api/experiments") value = ok({ items: {} });
-    else if (path.startsWith("/api/cases/"))
-      value = ok({
-        annotation: source,
-        labels: ["jab", "cross"],
-        review: ok(review),
-        evidence: ok({
-          case: {
-            prediction: { prediction: "cross", probabilities: [0.2, 0.8] },
-            selection: "synthetic held-out",
-            selection_fold: "hold-V4",
-          },
-        }),
-        recording: ok({
-          preparation: { source_frame_count: 10 },
-          boxer_id: null,
-          session_id: null,
-        }),
-      });
-    else if (path.includes("/frames/")) {
-      const index = Number(path.split("/").at(-1));
-      value = ok({
-        ...frame,
-        frame_index: index,
-        image_url: `/synthetic-${index}.jpg`,
-      });
-    } else value = ok({});
-    return { ok: true, json: async () => value } as Response;
-  });
+        });
+      else if (path.includes("/frames/")) {
+        const index = Number(path.split("/").at(-1));
+        value = ok({
+          ...frame,
+          frame_index: index,
+          image_url: `/synthetic-${index}.jpg`,
+        });
+      } else value = ok({});
+      return { ok: true, json: async () => value } as Response;
+    },
+  );
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
 afterEach(() => vi.unstubAllGlobals());
-describe("read-only dashboard", () => {
-  it("shows real response labels, uncertainty and model confidence without edit controls", async () => {
+describe("interactive dashboard", () => {
+  it("shows real response labels, uncertainty and model confidence with explicit human review controls", async () => {
     mockApi();
     render(<App />);
     expect(await screen.findByText("80.0%")).toBeInTheDocument();
@@ -135,9 +145,7 @@ describe("read-only dashboard", () => {
     expect(
       screen.getByText(/Model confidence is not annotation evidence/),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: /save|approve|confirm/i }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save review" })).toBeDisabled();
     expect(screen.getByRole("navigation")).toBeInTheDocument();
   });
   it("steps integer frames and filters to V5 without touching V9", async () => {
@@ -242,4 +250,100 @@ it("clears the viewer when no annotation matches the filters", async () => {
   await waitFor(() =>
     expect(screen.queryByAltText("V4, native frame 2")).not.toBeInTheDocument(),
   );
+});
+
+it("saves an explicitly attested hold and refreshes review history", async () => {
+  const fetchMock = mockApi();
+  render(<App />);
+  await screen.findByRole("button", { name: "Hold" });
+  fireEvent.click(screen.getByRole("button", { name: "Hold" }));
+  fireEvent.change(screen.getByLabelText("Reviewer"), {
+    target: { value: "Human tester" },
+  });
+  fireEvent.change(screen.getByLabelText("Evidence and notes"), {
+    target: { value: "Unclear movement" },
+  });
+  fireEvent.change(screen.getByLabelText(/Unresolved uncertainty/), {
+    target: { value: "Stance not established" },
+  });
+  expect(screen.getByRole("button", { name: "Save review" })).toBeDisabled();
+  fireEvent.click(screen.getByLabelText(/I personally reviewed/));
+  fireEvent.click(screen.getByRole("button", { name: "Save review" }));
+  await screen.findByText(/Saved review for V4:1/);
+  const call = fetchMock.mock.calls.find(
+    ([url, init]) =>
+      String(url) === "/api/reviews/V4/1" &&
+      (init as RequestInit)?.method === "POST",
+  );
+  expect(call).toBeDefined();
+  const payload = JSON.parse((call![1] as RequestInit).body as string);
+  expect(payload).toMatchObject({
+    action: "hold",
+    reviewer: "Human tester",
+    attest_human: true,
+    inspected_frames: [],
+    expected_ledger_sha256: "a".repeat(64),
+  });
+  expect(screen.queryByLabelText(/I personally reviewed/)).not.toBeChecked();
+});
+
+it("requires displayed boundary frames and stance evidence for confirmation", async () => {
+  mockApi();
+  render(<App />);
+  fireEvent.load(await screen.findByAltText("V4, native frame 2"));
+  fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
+  fireEvent.change(screen.getByLabelText("Reviewer"), {
+    target: { value: "Human tester" },
+  });
+  fireEvent.change(screen.getByLabelText("Evidence and notes"), {
+    target: { value: "Punch reviewed" },
+  });
+  fireEvent.change(screen.getByLabelText(/Lead\/rear or stance evidence/), {
+    target: { value: "Observed stance" },
+  });
+  fireEvent.click(screen.getByLabelText(/I personally reviewed/));
+  expect(screen.getByRole("button", { name: "Save review" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Inspect proposed end" }));
+  fireEvent.load(await screen.findByAltText("V4, native frame 4"));
+  expect(screen.getByRole("button", { name: "Save review" })).toBeEnabled();
+  fireEvent.change(screen.getByLabelText("Proposed punch label"), {
+    target: { value: "cross" },
+  });
+  expect(screen.getByLabelText(/I personally reviewed/)).not.toBeChecked();
+});
+
+it("preserves a draft on conflict and guards navigation", async () => {
+  const mock = mockApi();
+  const original = mock.getMockImplementation()!;
+  mock.mockImplementation(async (url, init) =>
+    (init as RequestInit)?.method === "POST"
+      ? ({
+          ok: false,
+          status: 409,
+          json: async () => ({ issues: ["stale_review_reload"] }),
+        } as Response)
+      : original(url, init),
+  );
+  vi.spyOn(window, "confirm").mockReturnValue(false);
+  render(<App />);
+  await screen.findByRole("button", { name: "Exclude" });
+  fireEvent.click(screen.getByRole("button", { name: "Exclude" }));
+  fireEvent.change(screen.getByLabelText("Reviewer"), {
+    target: { value: "Human tester" },
+  });
+  fireEvent.change(screen.getByLabelText("Evidence and notes"), {
+    target: { value: "Mixed actions" },
+  });
+  fireEvent.click(screen.getByLabelText(/I personally reviewed/));
+  fireEvent.click(screen.getByRole("button", { name: "Save review" }));
+  await screen.findByText(/Review changed or source verification failed/);
+  expect(screen.getByLabelText("Evidence and notes")).toHaveValue(
+    "Mixed actions",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Next annotation" }));
+  expect(window.confirm).toHaveBeenCalled();
+  expect(screen.getByLabelText("Evidence and notes")).toHaveValue(
+    "Mixed actions",
+  );
+  vi.restoreAllMocks();
 });

@@ -14,6 +14,10 @@ export type Source = {
   exclusion_reasons?: string[];
 };
 export type Revision = {
+  revision_id?: string;
+  reviewed_at?: string;
+  confirmed_label?: string | null;
+  confirmed_bounds?: Bounds | null;
   actor_type: string;
   reviewer: string;
   disposition: string;
@@ -26,6 +30,7 @@ export type Review = {
   source: Source;
   latest: Revision | null;
   human_accepted: boolean;
+  latest_action?: string;
 };
 export type QueueEntry = {
   id: string;
@@ -37,6 +42,7 @@ export type Reviews = {
   summary: {
     case_count: number;
     human_accepted: number;
+    human_reviewed?: number;
     dispositions: Record<string, number>;
   };
 };
@@ -53,6 +59,7 @@ export type Inventory = {
   available_recordings: number;
 };
 export type Case = {
+  edit?: Result<EditState>;
   annotation: Source;
   labels: string[];
   review: Result<Review>;
@@ -130,7 +137,8 @@ export async function request<T>(
     );
   return value as T;
 }
-export function useRequest<T>(url: string | null) {
+export function useRequest<T>(url: string | null, refresh = 0) {
+  const key = `${url}:${refresh}`;
   const [state, setState] = useState<{
     key: string | null;
     data?: T;
@@ -141,15 +149,15 @@ export function useRequest<T>(url: string | null) {
     const controller = new AbortController();
     request<T>(url, controller.signal)
       .then((data) => {
-        if (!controller.signal.aborted) setState({ key: url, data });
+        if (!controller.signal.aborted) setState({ key, data });
       })
       .catch((error) => {
         if (!controller.signal.aborted)
-          setState({ key: url, error: String(error.message) });
+          setState({ key, error: String(error.message) });
       });
     return () => controller.abort();
-  }, [url]);
-  return state.key === url ? state : { key: url };
+  }, [url, refresh]);
+  return state.key === key ? state : { key };
 }
 export const title = (value: string) => value.replaceAll("_", " ");
 export const percent = (n: number | undefined) =>
@@ -173,4 +181,42 @@ export function frameBounds(
   if (!convention) return null;
   const end = rawEnd - (convention[1] === "exclusive" ? 1 : 0);
   return start >= 0 && end >= start && end < count ? [start, end] : null;
+}
+
+export type Bounds = {
+  start: number;
+  end: number;
+  convention: "zero_based_decoded_inclusive";
+};
+export type EditState = {
+  ledger_sha256: string;
+  revision_sha256: string | null;
+  source_candidate_sha256: string;
+  ledger_version: number;
+  history: Revision[];
+  decisions: { decision: Record<string, unknown>; saved_at: string }[];
+};
+export async function saveReview(
+  recording: string,
+  row: number,
+  decision: object,
+) {
+  const response = await fetch(`/api/reviews/${recording}/${row}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Review-Client": "dashboard-v0.2",
+    },
+    body: JSON.stringify(decision),
+  });
+  const value = await response.json();
+  if (!response.ok)
+    throw new Error(
+      response.status === 409
+        ? "Review changed or source verification failed. Reload the case before retrying; your draft has not been saved."
+        : value.issues?.join(", ") ||
+            JSON.stringify(value.detail) ||
+            `HTTP ${response.status}`,
+    );
+  return value;
 }

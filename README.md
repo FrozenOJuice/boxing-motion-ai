@@ -16,7 +16,7 @@ Preparation for the FastAPI backend and React development dashboard begins with 
 check baseline and preservation requirements. P0 and the read-only part of P1 are
 now implemented; see [dashboard service interfaces](docs/DASHBOARD_SERVICES.md) for
 queries, artifact status semantics and the intentionally limited integration scope.
-Dashboard v0.1 now supplies the read-only UI. Other cleanup and review writes remain deferred.
+Dashboard v0.2 adds explicit human reviews with append-only curation versions. Other cleanup remains deferred.
 
 The provisional Level 1 reference is now **V4-only XY + validity-gated velocities +
 50% mirror augmentation**, selected on V5 development. The
@@ -35,9 +35,11 @@ The accepted V4-only XY+velocity+mirror reference remains unchanged.
 
 ## Local development dashboard
 
-The read-only **[Dashboard v0.1](docs/DASHBOARD_V01.md)** provides annotation review,
+**[Dashboard v0.2](docs/DASHBOARD_V02.md)** provides interactive annotation review,
 exact-frame MKV previews with existing pose overlays, dataset statistics and frozen
-experiment/model metrics. Original annotations and V9 protections remain unchanged.
+experiment/model metrics. Confirm, mark ambiguous, hold or exclude cases; proposed label/frame
+corrections and revision history remain separate from originals. V9 remains inaccessible.
+Back up `reports/boxingvi/dashboard-reviews-v1/`: it contains durable human decisions, not disposable previews.
 
 ```sh
 uv sync --locked --extra dashboard

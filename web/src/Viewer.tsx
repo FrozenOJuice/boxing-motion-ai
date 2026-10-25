@@ -56,10 +56,12 @@ function ExactFrame({
   recording,
   index,
   overlay,
+  onVisible,
 }: {
   recording: string;
   index: number;
   overlay: boolean;
+  onVisible?: (frame: Frame) => void;
 }) {
   const result = useRequest<Result<Frame>>(
     `/api/recordings/${recording}/frames/${index}`,
@@ -99,7 +101,10 @@ function ExactFrame({
           src={frame.image_url}
           alt={`${recording}, native frame ${index}`}
           style={{ visibility: ready ? "visible" : "hidden" }}
-          onLoad={() => setReady(true)}
+          onLoad={() => {
+            setReady(true);
+            onVisible?.(frame);
+          }}
           onError={() => setImageError(true)}
         />
         {ready && overlay && <Skeleton frame={frame} />}
@@ -142,18 +147,45 @@ function ExactFrame({
 export default function Viewer({
   data,
   recording,
+  onVisible,
+  onBoundary,
+  jump,
 }: {
   data: Case;
   recording: string;
+  onVisible?: (frame: Frame) => void;
+  jump?: { index: number; token: number };
+  onBoundary?: (kind: "start" | "end", index: number) => void;
 }) {
   const source = data.annotation;
   const count = data.recording.data?.preparation.source_frame_count ?? 0;
   const bounds = frameBounds(source, count);
   const [index, setIndex] = useState(bounds?.[0] ?? 0);
+  const [loaded, setLoaded] = useState<number | null>(null);
+  const [playing, setPlaying] = useState(false);
   const [overlay, setOverlay] = useState(true);
   const [context, setContext] = useState(30);
-  const minimum = Math.max(0, (bounds?.[0] ?? 0) - context);
-  const maximum = Math.min(count - 1, (bounds?.[1] ?? 0) + context);
+  const minimum = Math.max(0, Math.min(index, (bounds?.[0] ?? 0) - context));
+  const maximum = Math.min(
+    count - 1,
+    Math.max(index, (bounds?.[1] ?? 0) + context),
+  );
+  useEffect(() => {
+    if (
+      jump &&
+      Number.isInteger(jump.index) &&
+      jump.index >= 0 &&
+      jump.index < count
+    ) {
+      setPlaying(false);
+      setIndex(jump.index);
+    }
+  }, [jump, count]);
+  useEffect(() => {
+    if (!playing || loaded !== index || index >= maximum) return;
+    const timer = window.setTimeout(() => setIndex(index + 1), 120);
+    return () => window.clearTimeout(timer);
+  }, [playing, loaded, index, maximum]);
   const step = (delta: number) =>
     setIndex((i) => Math.max(minimum, Math.min(maximum, i + delta)));
   useEffect(() => {
@@ -209,8 +241,50 @@ export default function Viewer({
         recording={recording}
         index={index}
         overlay={overlay}
+        onVisible={(frame) => {
+          setLoaded(frame.frame_index);
+          onVisible?.(frame);
+        }}
       />
       <div className="transport">
+        <button onClick={() => setPlaying(!playing)}>
+          {playing ? "Pause" : "Play frames"}
+        </button>
+        <small>Decode-paced · not realtime</small>
+        <label>
+          Go to native frame
+          <input
+            aria-label="Go to native frame"
+            type="number"
+            min={0}
+            max={count - 1}
+            value={index}
+            onChange={(e) => {
+              const n = Number(e.target.value);
+              if (Number.isInteger(n) && n >= 0 && n < count) {
+                setPlaying(false);
+                setIndex(n);
+              }
+            }}
+          />
+        </label>
+        {onBoundary && (
+          <div className="button-group">
+            <button
+              disabled={loaded !== index}
+              onClick={() => onBoundary("start", index)}
+            >
+              Use frame as start
+            </button>
+            <button
+              disabled={loaded !== index}
+              onClick={() => onBoundary("end", index)}
+            >
+              Use frame as end
+            </button>
+          </div>
+        )}
+
         <div className="button-group">
           <button
             aria-label="Previous frame"

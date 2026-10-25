@@ -1169,3 +1169,45 @@ footer span {
     animation: none;
   }
 }
+
+.review-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 20px 0;
+}
+.review-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: var(--muted);
+}
+.review-fields input,
+.review-fields textarea,
+.review-fields select {
+  background: #121923;
+  color: #ecf1f8;
+  border: 1px solid #344252;
+  border-radius: 6px;
+  padding: 10px;
+  width: 100%;
+}
+.review-editor .button-group {
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+.review-editor button[aria-pressed="true"] {
+  background: #276c57;
+  color: white;
+}
+.review-editor details {
+  margin-top: 20px;
+  overflow-wrap: anywhere;
+}
+.review-editor pre {
+  white-space: pre-wrap;
+}
+.review-editor article {
+  border-top: 1px solid #344252;
+  padding-top: 12px;
+}

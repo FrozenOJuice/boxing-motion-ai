@@ -243,3 +243,10 @@ proposed configuration, code, synthetic tests and documentation are versioned.
 Validation result: **289 tests passed** (including 16 new synthetic review/curation
 cases); Ruff and CLI help checks passed. Current readiness remains blocked, as
 expected; the curation command exits 1 rather than reporting a false success.
+
+## Interactive review interface
+
+[Dashboard v0.2](DASHBOARD_V02.md) now appends human decisions through these same
+contracts. Its versioned review workspace preserves the original ledger and every
+revision; corrections remain separate from prepared datasets. Historical counts
+above describe the original proposal, not subsequent dashboard decisions.

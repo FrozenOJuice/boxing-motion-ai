@@ -9,7 +9,8 @@ import {
   title,
   useRequest,
 } from "./api";
-import Viewer, { Notice } from "./Viewer";
+import { Notice } from "./Viewer";
+import ReviewWorkbench from "./ReviewWorkbench";
 import { Dataset, ExperimentsView, Models } from "./Overview";
 const sections = ["Review Queue", "Dataset", "Experiments", "Models"] as const;
 type Section = (typeof sections)[number];
@@ -49,7 +50,10 @@ function NavIcon({ index }: { index: number }) {
 }
 export default function App() {
   const [section, setSection] = useState<Section>("Review Queue");
-  const queue = useRequest<Result<Reviews>>("/api/reviews");
+  const [refresh, setRefresh] = useState(0);
+  const [dirty, setDirty] = useState(false);
+  const [saved, setSaved] = useState("");
+  const queue = useRequest<Result<Reviews>>("/api/reviews", refresh);
   const inventory = useRequest<Result<Inventory>>("/api/inventory");
   const experiments = useRequest<Result<Experiments>>("/api/experiments");
   const [selected, setSelected] = useState("");
@@ -66,7 +70,11 @@ export default function App() {
           (status === "all" ||
             (status === "dispute"
               ? e.priority === "dispute"
-              : e.review.data?.latest?.disposition === status)) &&
+              : status === "anchor"
+                ? e.priority === "anchor"
+                : status === "ambiguous"
+                  ? e.review.data?.latest_action === "ambiguous"
+                  : e.review.data?.latest?.disposition === status)) &&
           `${e.id} ${source?.source_class ?? ""} ${source?.punch_type_provisional ?? ""}`
             .toLowerCase()
             .includes(search.toLowerCase())
@@ -81,7 +89,14 @@ export default function App() {
   }, [filtered, selected]);
   const current = useRequest<Result<Case>>(
     selected ? `/api/cases/${selected.replace(":", "/")}` : null,
+    refresh,
   );
+  const navigate = (id: string) => {
+    if (!dirty || window.confirm("Discard unsaved review changes?")) {
+      setDirty(false);
+      setSelected(id);
+    }
+  };
   const data = current.data?.data;
   const position = filtered.findIndex((e) => e.id === selected);
   const selectedEntry = entries.find((e) => e.id === selected);
@@ -112,7 +127,15 @@ export default function App() {
               key={s}
               className={section === s ? "active" : ""}
               aria-current={section === s ? "page" : undefined}
-              onClick={() => setSection(s)}
+              onClick={() => {
+                if (
+                  !dirty ||
+                  window.confirm("Discard unsaved review changes?")
+                ) {
+                  setDirty(false);
+                  setSection(s);
+                }
+              }}
             >
               <NavIcon index={i} />
               {s}
@@ -133,7 +156,7 @@ export default function App() {
             Original data preserved
           </p>
           <div className="version">
-            DASHBOARD <b>v0.1</b>
+            DASHBOARD <b>v0.2</b>
           </div>
         </div>
       </aside>
@@ -144,7 +167,8 @@ export default function App() {
           </span>
           <div>
             <span className="status-dot" />
-            LOCAL SESSION <span className="read-only">▣ READ ONLY</span>
+            LOCAL SESSION{" "}
+            <span className="read-only">▣ INTERACTIVE REVIEW</span>
           </div>
         </header>
         <main>
@@ -200,8 +224,13 @@ export default function App() {
                   <b>{queue.data?.data?.summary.human_accepted ?? "—"}</b> human
                   accepted
                 </span>
+                <span>
+                  <b>{queue.data?.data?.summary.human_reviewed ?? 0}</b> human
+                  reviewed (includes unresolved)
+                </span>
                 <span className="muted-text">
-                  No annotation changes can be made in this version
+                  Corrections are separately versioned; source annotations stay
+                  unchanged
                 </span>
               </div>
               <div className="review-layout">
@@ -215,13 +244,29 @@ export default function App() {
                       aria-label="Search cases"
                       placeholder="Search class or source row…"
                       value={search}
-                      onChange={(e) => setSearch(e.target.value)}
+                      onChange={(e) => {
+                        if (
+                          !dirty ||
+                          window.confirm("Discard unsaved review changes?")
+                        ) {
+                          setDirty(false);
+                          setSearch(e.target.value);
+                        }
+                      }}
                     />
                     <div>
                       <select
                         aria-label="Filter recording"
                         value={recording}
-                        onChange={(e) => setRecording(e.target.value)}
+                        onChange={(e) => {
+                          if (
+                            !dirty ||
+                            window.confirm("Discard unsaved review changes?")
+                          ) {
+                            setDirty(false);
+                            setRecording(e.target.value);
+                          }
+                        }}
                       >
                         <option value="all">All recordings</option>
                         {Object.keys(inventory.data?.data?.records ?? {}).map(
@@ -233,13 +278,24 @@ export default function App() {
                       <select
                         aria-label="Filter review state"
                         value={status}
-                        onChange={(e) => setStatus(e.target.value)}
+                        onChange={(e) => {
+                          if (
+                            !dirty ||
+                            window.confirm("Discard unsaved review changes?")
+                          ) {
+                            setDirty(false);
+                            setStatus(e.target.value);
+                          }
+                        }}
                       >
                         <option value="all">All states</option>
+                        <option value="anchor">Proposed anchors</option>
+                        <option value="ambiguous">Human ambiguous</option>
                         <option value="dispute">Priority disputes</option>
                         <option value="hold">On hold</option>
                         <option value="provisional">Provisional</option>
                         <option value="accept">Accepted</option>
+                        <option value="exclude">Excluded</option>
                       </select>
                     </div>
                   </div>
@@ -254,7 +310,7 @@ export default function App() {
                       <button
                         className={`case-item ${selected === e.id ? "selected" : ""}`}
                         key={e.id}
-                        onClick={() => setSelected(e.id)}
+                        onClick={() => navigate(e.id)}
                       >
                         <div>
                           <span className="case-recording">
@@ -263,10 +319,15 @@ export default function App() {
                           <span
                             className={`case-status ${e.priority === "dispute" ? "amber" : ""}`}
                           >
-                            {e.priority === "dispute"
-                              ? "DISPUTED"
-                              : (e.review.data?.latest?.disposition?.toUpperCase() ??
-                                e.review.status.toUpperCase())}
+                            {e.review.data?.latest?.actor_type === "human"
+                              ? (
+                                  e.review.data.latest_action ??
+                                  e.review.data.latest.disposition
+                                ).toUpperCase()
+                              : e.priority === "dispute"
+                                ? "DISPUTED"
+                                : (e.review.data?.latest?.disposition?.toUpperCase() ??
+                                  e.review.status.toUpperCase())}
                           </span>
                         </div>
                         <strong>
@@ -284,6 +345,7 @@ export default function App() {
                   </div>
                 </section>
                 <div className="review-main">
+                  {saved && <Notice>{saved}</Notice>}
                   {!selected ? (
                     <Notice>
                       Select an annotation case to inspect its source frames.
@@ -304,15 +366,20 @@ export default function App() {
                           <h2>
                             {title(data.annotation.punch_type_provisional)}{" "}
                             <span className="badge amber">
-                              {selectedEntry?.priority === "dispute"
-                                ? "Disputed"
-                                : review?.disposition === "hold"
-                                  ? "On hold"
-                                  : review?.disposition === "exclude"
-                                    ? "Excluded"
-                                    : data.review.data?.human_accepted
-                                      ? "Human accepted"
-                                      : "Provisional"}
+                              {review?.actor_type === "human"
+                                ? title(
+                                    data.review.data?.latest_action ??
+                                      review.disposition,
+                                  )
+                                : selectedEntry?.priority === "dispute"
+                                  ? "Disputed"
+                                  : review?.disposition === "hold"
+                                    ? "On hold"
+                                    : review?.disposition === "exclude"
+                                      ? "Excluded"
+                                      : data.review.data?.human_accepted
+                                        ? "Human accepted"
+                                        : "Provisional"}
                             </span>
                           </h2>
                         </div>
@@ -320,9 +387,7 @@ export default function App() {
                           <button
                             aria-label="Previous annotation"
                             disabled={position <= 0}
-                            onClick={() =>
-                              setSelected(filtered[position - 1].id)
-                            }
+                            onClick={() => navigate(filtered[position - 1].id)}
                           >
                             ←
                           </button>
@@ -334,16 +399,24 @@ export default function App() {
                             disabled={
                               position < 0 || position >= filtered.length - 1
                             }
-                            onClick={() =>
-                              setSelected(filtered[position + 1].id)
-                            }
+                            onClick={() => navigate(filtered[position + 1].id)}
                           >
                             →
                           </button>
                         </div>
                       </div>
-                      <Viewer
-                        key={selected}
+                      <ReviewWorkbench
+                        key={`${selected}:${refresh}`}
+                        onDirty={setDirty}
+                        onSaved={(next) => {
+                          setDirty(false);
+                          setSaved(
+                            `Saved review for ${selected}. Original data unchanged.`,
+                          );
+                          if (next && filtered[position + 1])
+                            setSelected(filtered[position + 1].id);
+                          setRefresh((n) => n + 1);
+                        }}
                         data={data}
                         recording={selected.split(":")[0]}
                       />
@@ -467,7 +540,8 @@ export default function App() {
           <footer>
             BOXING MOTION AI{" "}
             <span>
-              Provisional data · exact-frame inspection · read-only workspace
+              Provisional data · exact-frame inspection · versioned human
+              reviews
             </span>
           </footer>
         </main>
