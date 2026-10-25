@@ -80,9 +80,9 @@ def media(workspace):
     return root, app, client, times, arrays
 
 
-def test_api_reuses_services_and_has_no_write_routes(workspace):
+def test_api_reuses_services_and_limits_write_routes(workspace):
     client = TestClient(create_app(workspace[0]), base_url="http://127.0.0.1:8000")
-    assert client.get("/api/health").json()["mode"] == "local_read_only"
+    assert client.get("/api/health").json()["mode"] == "local_interactive_review"
     assert client.get("/api/inventory").json()["data"]["available_recordings"] == 6
     assert client.get("/api/reviews").json()["data"]["entries"][0]["id"] == "V4:1"
     case = client.get("/api/cases/V4/1").json()["data"]
@@ -94,7 +94,15 @@ def test_api_reuses_services_and_has_no_write_routes(workspace):
     assert client.get("/api/experiments/reference/metrics/seed-1").status_code == 200
     assert client.get("/api/statistics").json()["V4"]["data"]["approved_provisional_examples"] == 5
     for method in ("POST", "PUT", "DELETE", "PATCH"):
-        assert client.request(method, "/api/reviews", json={}).status_code == 405
+        assert (
+            client.request(
+                method,
+                "/api/reviews",
+                json={},
+                headers={"Origin": "http://127.0.0.1:8000", "X-Review-Client": "dashboard-v0.2"},
+            ).status_code
+            == 405
+        )
     assert client.get("/data/raw/example.mkv").status_code == 404
     assert client.get("/api/health", headers={"Origin": "http://127.0.0.1:5174"}).status_code == 200
     assert client.get("/api/health", headers={"Origin": "http://127.0.0.1:5173"}).status_code == 403
@@ -182,3 +190,40 @@ def test_corrupt_cache_does_not_silently_serve(media):
     assert client.get("/api/recordings/V4/frames/1").status_code == 200
     next((root / ".dashboard-cache").glob("*.jpg")).write_bytes(b"corrupt")
     assert client.get("/api/recordings/V4/frames/1").status_code == 409
+
+
+def test_review_api_persistence_csrf_and_exact_boundaries(media):
+    from test_review_workspace import decision
+
+    root, app, client, _, _ = media
+    headers = {"Origin": "http://127.0.0.1:8000", "X-Review-Client": "dashboard-v0.2"}
+    item = decision(
+        app.state.workspace,
+        action="confirm",
+        proposed_label="jab",
+        proposed_bounds=dict(start=4, end=5, convention="zero_based_decoded_inclusive"),
+        inspected_frames=[4, 5],
+        lead_rear_evidence="Synthetic review only",
+    )
+    payload = item.model_dump(mode="json")
+    assert client.post("/api/reviews/V4/1", json=payload).status_code == 403
+    response = client.post("/api/reviews/V4/1", json=payload, headers=headers)
+    assert response.status_code == 200, response.text
+    restarted = TestClient(create_app(root), base_url="http://127.0.0.1:8000")
+    case = restarted.get("/api/cases/V4/1").json()["data"]
+    assert case["edit"]["data"]["history"][-1]["confirmed_bounds"]["start"] == 4
+    assert case["annotation"]["raw_start"] == 100
+    assert restarted.post("/api/reviews/V9/1", json=payload, headers=headers).status_code == 422
+    crossing = decision(
+        app.state.workspace,
+        action="confirm",
+        proposed_label="jab",
+        proposed_bounds=dict(start=2, end=4, convention="zero_based_decoded_inclusive"),
+        inspected_frames=[2, 4],
+        lead_rear_evidence="Synthetic review only",
+    )
+    response = restarted.post(
+        "/api/reviews/V4/1", json=crossing.model_dump(mode="json"), headers=headers
+    )
+    assert response.status_code == 422
+    assert "confirmation_crosses_known_cut" in response.text
