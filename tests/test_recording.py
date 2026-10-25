@@ -153,6 +153,7 @@ def test_other_video_requires_explicit_recording(v4, tmp_path):
 
 
 def test_generic_full_run_has_own_identity_and_cut_inventory(v4, tmp_path):
+    pytest.importorskip("numpy")  # Preparation requires the optional pose dependencies.
     video, workbook, model, recording = v4
     run, prepared = tmp_path / "full", tmp_path / "prepared-full"
     result = extract_recording(

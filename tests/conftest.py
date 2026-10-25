@@ -68,3 +68,37 @@ def mapping(tmp_path):
     path = tmp_path / "mapping.json"
     path.write_text(json.dumps(value))
     return path
+
+
+class _RequireNoSkips:
+    """Full CI must exercise optional capabilities rather than silently skip them."""
+
+    def __init__(self):
+        self.skipped = 0
+
+    def pytest_collectreport(self, report):
+        self.skipped += int(report.skipped)
+
+    def pytest_runtest_logreport(self, report):
+        self.skipped += int(report.skipped)
+
+    def pytest_sessionfinish(self, session):
+        if self.skipped:
+            session.exitstatus = pytest.ExitCode.TESTS_FAILED
+
+    def pytest_terminal_summary(self, terminalreporter):
+        if self.skipped:
+            terminalreporter.write_sep(
+                "=", f"Full coverage required: {self.skipped} skipped reports"
+            )
+
+
+def pytest_addoption(parser):
+    parser.addoption(
+        "--require-no-skips", action="store_true", help="Fail on collection/test skips"
+    )
+
+
+def pytest_configure(config):
+    if config.getoption("--require-no-skips"):
+        config.pluginmanager.register(_RequireNoSkips(), "boxing-require-no-skips")

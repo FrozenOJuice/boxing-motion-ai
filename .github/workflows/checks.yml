@@ -1,14 +1,24 @@
-name: Phase 0 checks
+name: Python checks
 on: [push, pull_request]
 permissions:
   contents: read
 jobs:
-  check:
+  base:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
       - run: uv sync --locked
-      - run: uv run pytest
-      - run: uv run ruff check .
-      - run: uv run boxing-motion-ai --help
+      - run: uv run --locked pytest -ra
+      - run: uv run --locked ruff check .
+      - run: uv run --locked boxing-motion-ai --help
+      - run: uv run --locked boxing-motion-ai curate-annotations --help
+  full:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked --extra pose --extra train
+      - run: uv run --locked --extra pose --extra train pytest -ra --require-no-skips
+      - run: uv run --locked --extra pose --extra train ruff check .
+      - run: uv run --locked --extra pose --extra train boxing-motion-ai --help

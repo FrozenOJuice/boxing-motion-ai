@@ -42,6 +42,17 @@ uv run boxing-motion-ai --help
 uv run boxing-motion-ai audit --help
 ```
 
+The base install includes YAML for curation. Pose/training tests intentionally skip when
+optional dependencies are absent. To exercise the complete synthetic test suite:
+
+```sh
+uv sync --locked --extra pose --extra train
+uv run --locked --extra pose --extra train pytest --require-no-skips
+```
+
+CI runs both installations; the full job rejects any collection or test skips.
+See [dependency and CI verification](docs/CI.md).
+
 The project pins Python 3.11 via `.python-version` and locks dependencies in `uv.lock`.
 Install FFmpeg using your system package manager to provide `ffprobe` (e.g. `brew install ffmpeg`
 on macOS). The audit still runs without it, but video metadata/alignment checks remain incomplete.

@@ -3,7 +3,7 @@ name = "boxing-motion-ai"
 version = "0.1.0"
 description = "Local dataset auditing and pose extraction for Boxing Motion AI"
 requires-python = ">=3.11,<3.12"
-dependencies = ["typer>=0.16,<1", "openpyxl>=3.1,<4", "pydantic>=2.11,<3"]
+dependencies = ["typer>=0.16,<1", "openpyxl>=3.1,<4", "pydantic>=2.11,<3", "pyyaml>=6,<7"]
 
 [project.scripts]
 boxing-motion-ai = "boxing_motion_ai.cli:app"
@@ -14,12 +14,10 @@ pose = [
     "mediapipe>=0.10.30,<0.11",
     "numpy>=2,<3",
     "pillow>=12,<14",
-    "pyyaml>=6,<7",
 ]
 train = [
     "matplotlib>=3.10,<4",
     "numpy>=2,<3",
-    "pyyaml>=6,<7",
     "torch>=2.6,<3",
     "torchvision>=0.26,<1",
 ]
