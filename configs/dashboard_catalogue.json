@@ -1,0 +1,92 @@
+{
+  "schema_version": "dashboard-catalogue-1.0",
+  "curation": {
+    "path": "configs/level1_curated_proposed.json",
+    "sha256": "bb1dd7cbe3db1bdfb137176bdd630243cb32a1317575d78721952c93a36a071c"
+  },
+  "proposal": {
+    "path": "reports/boxingvi/annotation-curation-v2/curated-selection.json",
+    "sha256": "31b7e691e9354061130212849166fad40a08711e8395eda62d7decb6784947cf"
+  },
+  "experiments": {
+    "velocity-reference": {
+      "summary": {
+        "path": "reports/boxingvi/level1-velocity-v1/summary.json",
+        "sha256": "00240f56e1c2991168e88a40c6732198ae46995e6fbebd230c1c0d45321eecf9"
+      },
+      "format": "velocity-study-result-1.0",
+      "status": "reference",
+      "description": "V4 training; V5 development. XY versus XY+velocity and mask controls, three seeds.",
+      "metrics": {
+        "20261021-xy-tcn": {
+          "path": "reports/boxingvi/level1-velocity-v1/seed-20261021/xy/tcn/metrics.json",
+          "sha256": "bdc4339e9498f12bb6e5930e4a4bc305da48f05ac9c7dcfae471a723dc5ea87a"
+        },
+        "20261021-xy-tcn_mask_only": {
+          "path": "reports/boxingvi/level1-velocity-v1/seed-20261021/xy/tcn_mask_only/metrics.json",
+          "sha256": "b2bf67eeabd7d1cf0b6c9e09a347f0a3b7f09b9637b268afef666e4e63455b53"
+        },
+        "20261021-xy_velocity-tcn": {
+          "path": "reports/boxingvi/level1-velocity-v1/seed-20261021/xy_velocity/tcn/metrics.json",
+          "sha256": "a056feb37c0eefe11b56fd85818bc7327ea0f69be28936f12000b873ac423cca"
+        },
+        "20261021-xy_velocity-tcn_mask_only": {
+          "path": "reports/boxingvi/level1-velocity-v1/seed-20261021/xy_velocity/tcn_mask_only/metrics.json",
+          "sha256": "41cda5938874526acc4b9b639e93e7313a8c4f12079a04ad87f62be945f155c1"
+        },
+        "20261022-xy-tcn": {
+          "path": "reports/boxingvi/level1-velocity-v1/seed-20261022/xy/tcn/metrics.json",
+          "sha256": "07afc4cee341e89807f784013aa6f0949d41c83500f5a47a45a2f330c3573b08"
+        },
+        "20261022-xy-tcn_mask_only": {
+          "path": "reports/boxingvi/level1-velocity-v1/seed-20261022/xy/tcn_mask_only/metrics.json",
+          "sha256": "31bf08597ade02c69b7aa8e2a43a110cd310652862e5af35e997c568cc433c7a"
+        },
+        "20261022-xy_velocity-tcn": {
+          "path": "reports/boxingvi/level1-velocity-v1/seed-20261022/xy_velocity/tcn/metrics.json",
+          "sha256": "61d3a6680fe54f53e190e2642317d883d6e924e4291209a50209d777e9fd198b"
+        },
+        "20261022-xy_velocity-tcn_mask_only": {
+          "path": "reports/boxingvi/level1-velocity-v1/seed-20261022/xy_velocity/tcn_mask_only/metrics.json",
+          "sha256": "005c6063a15c5d77fe13d5246bb4114040d511ef5e85bda11d399306342b0532"
+        },
+        "20261023-xy-tcn": {
+          "path": "reports/boxingvi/level1-velocity-v1/seed-20261023/xy/tcn/metrics.json",
+          "sha256": "ce60ba7da1eaf3845563a62fcfa7f1c6a77efd59e47945baf9f58e602fb76198"
+        },
+        "20261023-xy-tcn_mask_only": {
+          "path": "reports/boxingvi/level1-velocity-v1/seed-20261023/xy/tcn_mask_only/metrics.json",
+          "sha256": "6bae60bc1326ba888a088d3f40e45c77ab3addaec9d0cfbfc7046b0feccf18c6"
+        },
+        "20261023-xy_velocity-tcn": {
+          "path": "reports/boxingvi/level1-velocity-v1/seed-20261023/xy_velocity/tcn/metrics.json",
+          "sha256": "5bdd7969d82783d35d5e573a313a96bd005b791bae746c3d3722b25cdf3569a0"
+        },
+        "20261023-xy_velocity-tcn_mask_only": {
+          "path": "reports/boxingvi/level1-velocity-v1/seed-20261023/xy_velocity/tcn_mask_only/metrics.json",
+          "sha256": "b8c54f63978b40b95af7a25286ca4d7399b68a201c19db7527055cd46f374591"
+        }
+      }
+    },
+    "multi-recording": {
+      "summary": {
+        "path": "reports/boxingvi/level1-multi-recording-v1/summary.json",
+        "sha256": "169873ebb30a4a02d4c363569e2ecb3f6954e13e6c1eba841af711099e719e27"
+      },
+      "format": "multi-recording-result-1.0",
+      "status": "historical",
+      "description": "Combined sources and recording-group holdouts; pilot folds are not boxer-independent.",
+      "metrics": {}
+    },
+    "rgb-feasibility": {
+      "summary": {
+        "path": "reports/boxingvi/level1-rgb-study-v1/summary.json",
+        "sha256": "e60a5a6316b092cf374282f41db1b7a1af755b9cbfed19f6cde929b7c4889b8b"
+      },
+      "format": "rgb-legacy-1",
+      "status": "historical",
+      "description": "Negative RGB feasibility study; preserve pose/RGB/hybrid group-holdout metrics.",
+      "metrics": {}
+    }
+  }
+}

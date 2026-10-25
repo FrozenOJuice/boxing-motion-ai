@@ -13,7 +13,10 @@ benchmark are preserved. No curated training experiment has been run.
 
 Preparation for the FastAPI backend and React development dashboard begins with the
 [repository cleanup assessment](docs/CLEANUP_ASSESSMENT.md). It records the current
-check baseline, preservation requirements and cleanup proposals awaiting approval.
+check baseline and preservation requirements. P0 and the read-only part of P1 are
+now implemented; see [dashboard service interfaces](docs/DASHBOARD_SERVICES.md) for
+queries, artifact status semantics and the intentionally limited integration scope.
+Other cleanup, review writes and dashboard UI work remain deferred.
 
 The provisional Level 1 reference is now **V4-only XY + validity-gated velocities +
 50% mirror augmentation**, selected on V5 development. The

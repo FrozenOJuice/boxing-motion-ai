@@ -1,7 +1,12 @@
 # Repository cleanup assessment before the development dashboard
 
 Assessment date: **2026-10-25**. Baseline commit: **ff6bb5e**.
-Status: **plan for approval; no cleanup, refactor, archive or dashboard implementation performed**.
+Status at assessment: **plan for approval; no cleanup, refactor, archive or dashboard implementation performed**.
+
+**Implementation update (2026-10-25):** approved P0 and read-only P1 are complete; see
+[CI verification](CI.md) and [dashboard service boundary](DASHBOARD_SERVICES.md).
+The assessment below remains the historical baseline. No archive/removal, review-write
+API or broader P2/P3 refactor has been performed.
 The only changes in this assessment are this document and a current-status/navigation
 addition to the README.
 
