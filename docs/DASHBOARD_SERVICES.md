@@ -1,5 +1,8 @@
 # Read-only dashboard boundary
 
+**v0.1 update:** [the local dashboard](DASHBOARD_V01.md) now wraps these unchanged query
+contracts with FastAPI and React. Frame retrieval is a separate explicit API capability.
+
 P1 implemented 2026-10-25. This is a Python metadata service, not an HTTP server,
 media server or review editor. P0 is documented in [CI.md](CI.md).
 

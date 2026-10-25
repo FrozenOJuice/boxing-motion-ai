@@ -16,7 +16,7 @@ Preparation for the FastAPI backend and React development dashboard begins with 
 check baseline and preservation requirements. P0 and the read-only part of P1 are
 now implemented; see [dashboard service interfaces](docs/DASHBOARD_SERVICES.md) for
 queries, artifact status semantics and the intentionally limited integration scope.
-Other cleanup, review writes and dashboard UI work remain deferred.
+Dashboard v0.1 now supplies the read-only UI. Other cleanup and review writes remain deferred.
 
 The provisional Level 1 reference is now **V4-only XY + validity-gated velocities +
 50% mirror augmentation**, selected on V5 development. The
@@ -32,6 +32,23 @@ The [multi-recording study](docs/LEVEL1_MULTI_RECORDING.md) substantially improv
 V5 development recognition, but group-held-out rear-punch failures remain. It compares
 both existing representations with training-only balancing and mask/duration controls.
 The accepted V4-only XY+velocity+mirror reference remains unchanged.
+
+## Local development dashboard
+
+The read-only **[Dashboard v0.1](docs/DASHBOARD_V01.md)** provides annotation review,
+exact-frame MKV previews with existing pose overlays, dataset statistics and frozen
+experiment/model metrics. Original annotations and V9 protections remain unchanged.
+
+```sh
+uv sync --locked --extra dashboard
+npm --prefix web ci
+npm --prefix web run build
+uv run --locked --extra dashboard python -m boxing_motion_ai.api
+```
+
+Open **http://127.0.0.1:8000**. For frontend development, use
+`npm --prefix web run dev` at port 5174 with the backend running. See the dashboard
+notes for dependencies, tests, cache behavior and current limitations.
 
 ## Setup and checks
 
