@@ -1805,20 +1805,27 @@ footer span {
 }
 .original-punch {
   display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 3px 8px;
-  font-size: 12px;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 18px;
 }
 .original-punch small {
-  font-size: 10px;
+  font-size: 12px;
 }
 .original-punch strong {
   text-transform: capitalize;
   font-weight: 500;
 }
-.playback-context .playback-position {
-  font-size: 11px;
+.playback-options {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  min-width: 0;
+}
+.playback-options .playback-position {
+  white-space: nowrap;
 }
 @media (max-width: 780px) {
   .review-screen main {

@@ -277,11 +277,6 @@ export default function Viewer({
             <small>Original punch</small>
             <strong>{title(data.annotation.punch_type_provisional)}</strong>
           </span>
-          <span className="playback-position">
-            {loaded === null
-              ? "Loading frame…"
-              : `Frame ${loaded.toLocaleString()}`}
-          </span>
         </div>
         <div className="playback-buttons">
           <button
@@ -306,14 +301,21 @@ export default function Viewer({
             ›
           </button>
         </div>
-        <label className="toggle">
-          <input
-            type="checkbox"
-            checked={overlay}
-            onChange={(e) => setOverlay(e.target.checked)}
-          />
-          Skeleton
-        </label>
+        <div className="playback-options">
+          <span className="playback-position">
+            {loaded === null
+              ? "Loading frame…"
+              : `Frame ${loaded.toLocaleString()}`}
+          </span>
+          <label className="toggle">
+            <input
+              type="checkbox"
+              checked={overlay}
+              onChange={(e) => setOverlay(e.target.checked)}
+            />
+            Skeleton
+          </label>
+        </div>
       </div>
       <div className="review-timeline">
         {bounds && (
