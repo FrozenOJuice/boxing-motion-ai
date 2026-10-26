@@ -272,11 +272,17 @@ export default function Viewer({
         onFailure={() => setPlaying(false)}
       />
       <div className="playback-controls">
-        <span className="playback-position">
-          {loaded === null
-            ? "Loading frame…"
-            : `Frame ${loaded.toLocaleString()}`}
-        </span>
+        <div className="playback-context">
+          <span className="original-punch">
+            <small>Original punch</small>
+            <strong>{title(data.annotation.punch_type_provisional)}</strong>
+          </span>
+          <span className="playback-position">
+            {loaded === null
+              ? "Loading frame…"
+              : `Frame ${loaded.toLocaleString()}`}
+          </span>
+        </div>
         <div className="playback-buttons">
           <button
             aria-label="Previous frame"

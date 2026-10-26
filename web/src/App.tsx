@@ -148,8 +148,9 @@ export default function App() {
               <div className="review-layout">
                 <section className="queue-panel panel">
                   <div className="panel-header">
-                    <h2>Punches</h2>
-                    <span className="count">{filtered.length}</span>
+                    <h2>
+                      Punches <span className="count">{filtered.length}</span>
+                    </h2>
                   </div>
                   <div className="queue-filters">
                     <input
@@ -250,35 +251,6 @@ export default function App() {
                     <Notice>Loading source annotation…</Notice>
                   ) : (
                     <>
-                      <div className="case-heading">
-                        <div>
-                          <small>Original punch</small>
-                          <h2>
-                            {title(data.annotation.punch_type_provisional)}
-                          </h2>
-                        </div>
-                        <div className="button-group">
-                          <button
-                            aria-label="Previous annotation"
-                            disabled={position <= 0}
-                            onClick={() => navigate(filtered[position - 1].id)}
-                          >
-                            ←
-                          </button>
-                          <span>
-                            {position + 1} / {filtered.length}
-                          </span>
-                          <button
-                            aria-label="Next annotation"
-                            disabled={
-                              position < 0 || position >= filtered.length - 1
-                            }
-                            onClick={() => navigate(filtered[position + 1].id)}
-                          >
-                            →
-                          </button>
-                        </div>
-                      </div>
                       <ReviewWorkbench
                         key={`${selected}:${refresh}`}
                         onDirty={setDirty}

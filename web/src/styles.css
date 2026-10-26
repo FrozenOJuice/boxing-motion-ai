@@ -1754,3 +1754,80 @@ footer span {
     flex-wrap: wrap;
   }
 }
+
+/* Give the footage the top edge; keep queue filters compact and slightly lower. */
+.review-screen main {
+  padding-inline: 24px;
+}
+.review-screen .review-layout {
+  gap: 24px;
+}
+.review-screen .queue-panel {
+  margin-top: 28px;
+  top: 44px;
+}
+.review-screen .queue-panel .panel-header {
+  padding-bottom: 10px;
+}
+.review-screen .queue-panel h2 {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.review-screen .queue-panel .count {
+  font-size: 12px;
+  font-weight: 400;
+  padding: 0;
+}
+.review-screen .queue-filters {
+  padding-bottom: 10px;
+}
+.review-screen .queue-filters > div {
+  grid-template-columns: 1.1fr 1fr;
+  gap: 6px;
+}
+.review-screen .queue-filters input {
+  padding: 8px 10px;
+  font-size: 12px;
+}
+.review-screen .queue-filters select {
+  padding: 7px 4px;
+  font-size: 11px;
+}
+.review-screen .image-stage {
+  --stage-cap: clamp(180px, calc(100dvh - 270px), 720px);
+}
+.playback-context {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.original-punch {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 3px 8px;
+  font-size: 12px;
+}
+.original-punch small {
+  font-size: 10px;
+}
+.original-punch strong {
+  text-transform: capitalize;
+  font-weight: 500;
+}
+.playback-context .playback-position {
+  font-size: 11px;
+}
+@media (max-width: 780px) {
+  .review-screen main {
+    padding-inline: 16px;
+  }
+  .review-screen .queue-panel {
+    margin-top: 4px;
+  }
+  .review-screen .image-stage {
+    --stage-cap: clamp(180px, calc(100dvh - 320px), 460px);
+  }
+}

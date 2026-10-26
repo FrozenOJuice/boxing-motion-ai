@@ -371,7 +371,7 @@ it("preserves a draft on conflict and guards navigation", async () => {
   expect(screen.getByLabelText("What did you observe?")).toHaveValue(
     "Mixed actions",
   );
-  fireEvent.click(screen.getByRole("button", { name: "Next annotation" }));
+  fireEvent.click(screen.getByRole("button", { name: /V5 · Punch 2/ }));
   expect(window.confirm).toHaveBeenCalled();
   expect(screen.getByLabelText("What did you observe?")).toHaveValue(
     "Mixed actions",
@@ -594,7 +594,9 @@ it.each(["load", "decode"])(
     await screen.findByRole("alert");
     expect(old).toBeVisible();
     expect(old.closest(".image-stage")).toBe(stage);
-    expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "Play" }),
+    ).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Retry frame" }));
     const retry = await screen.findByAltText("V4, native frame 3");
     fireEvent.load(retry);
