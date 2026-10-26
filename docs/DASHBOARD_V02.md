@@ -1,5 +1,8 @@
 # Dashboard v0.2 — Interactive Annotation Review
 
+The [simplified Review experience](DASHBOARD_REVIEW_REDESIGN.md) supersedes the UI
+workflow below. The persistence, safety and launch instructions remain current.
+
 Implemented 2026-10-25. This adds human decisions to the local v0.1 viewer; it does
 not run training, change original annotations or materialize corrected datasets.
 The six disputes and twelve proposed anchors retain their original priorities.

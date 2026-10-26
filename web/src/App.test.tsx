@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { frameBounds, type Source } from "./api";
+import { frameBounds, reviewCategory, type Source } from "./api";
 import { Skeleton } from "./Viewer";
 const source: Source = {
   source_row: 1,
@@ -24,7 +24,7 @@ const revision = {
   reasons: ["Needs human review"],
   unresolved_uncertainty: ["Unverified stance"],
 };
-const ok = (data: unknown) => ({ status: "available", issues: [], data });
+const ok = <T,>(data: T) => ({ status: "available", issues: [], data });
 const review = { source, latest: revision, human_accepted: false };
 const frame = {
   frame_index: 2,
@@ -140,12 +140,20 @@ describe("interactive dashboard", () => {
   it("shows real response labels, uncertainty and model confidence with explicit human review controls", async () => {
     mockApi();
     render(<App />);
-    expect(await screen.findByText("80.0%")).toBeInTheDocument();
-    expect(screen.getByText("ambiguous / mixed action")).toBeInTheDocument();
+    await screen.findByRole("button", { name: "Yes" });
+    expect(
+      screen.queryByLabelText("Correct punch label"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Your name")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Save & Next" })).toBeDisabled();
+    expect(
+      screen.getByText("Advanced details").closest("details"),
+    ).not.toHaveAttribute("open");
+    fireEvent.click(screen.getByText("Advanced details"));
+    expect(screen.getByText(/cross · 80.0%/)).toBeVisible();
     expect(
       screen.getByText(/Model confidence is not annotation evidence/),
-    ).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Save review" })).toBeDisabled();
+    ).toBeVisible();
     expect(screen.getByRole("navigation")).toBeInTheDocument();
   });
   it("steps integer frames and filters to V5 without touching V9", async () => {
@@ -255,21 +263,24 @@ it("clears the viewer when no annotation matches the filters", async () => {
 it("saves an explicitly attested hold and refreshes review history", async () => {
   const fetchMock = mockApi();
   render(<App />);
-  await screen.findByRole("button", { name: "Hold" });
-  fireEvent.click(screen.getByRole("button", { name: "Hold" }));
-  fireEvent.change(screen.getByLabelText("Reviewer"), {
+  await screen.findByRole("button", { name: "Not sure" });
+  fireEvent.click(screen.getByRole("button", { name: "Not sure" }));
+  fireEvent.change(screen.getByLabelText("What should happen to this punch?"), {
+    target: { value: "hold" },
+  });
+  fireEvent.change(screen.getByLabelText("Your name"), {
     target: { value: "Human tester" },
   });
-  fireEvent.change(screen.getByLabelText("Evidence and notes"), {
+  fireEvent.change(screen.getByLabelText("What did you observe?"), {
     target: { value: "Unclear movement" },
   });
-  fireEvent.change(screen.getByLabelText(/Unresolved uncertainty/), {
+  fireEvent.change(screen.getByLabelText(/What is still uncertain/), {
     target: { value: "Stance not established" },
   });
-  expect(screen.getByRole("button", { name: "Save review" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   fireEvent.click(screen.getByLabelText(/I personally reviewed/));
-  fireEvent.click(screen.getByRole("button", { name: "Save review" }));
-  await screen.findByText(/Saved review for V4:1/);
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await screen.findByText(/Review saved/);
   const call = fetchMock.mock.calls.find(
     ([url, init]) =>
       String(url) === "/api/reviews/V4/1" &&
@@ -284,29 +295,34 @@ it("saves an explicitly attested hold and refreshes review history", async () =>
     inspected_frames: [],
     expected_ledger_sha256: "a".repeat(64),
   });
-  expect(screen.queryByLabelText(/I personally reviewed/)).not.toBeChecked();
+  await waitFor(() =>
+    expect(
+      screen.queryByLabelText(/I personally reviewed/),
+    ).not.toBeInTheDocument(),
+  );
 });
 
 it("requires displayed boundary frames and stance evidence for confirmation", async () => {
   mockApi();
   render(<App />);
   fireEvent.load(await screen.findByAltText("V4, native frame 2"));
-  fireEvent.click(screen.getByRole("button", { name: "Confirm" }));
-  fireEvent.change(screen.getByLabelText("Reviewer"), {
+  fireEvent.click(screen.getByRole("button", { name: "Yes" }));
+  fireEvent.change(screen.getByLabelText("Your name"), {
     target: { value: "Human tester" },
   });
-  fireEvent.change(screen.getByLabelText("Evidence and notes"), {
+  fireEvent.change(screen.getByLabelText("What did you observe?"), {
     target: { value: "Punch reviewed" },
   });
-  fireEvent.change(screen.getByLabelText(/Lead\/rear or stance evidence/), {
+  fireEvent.change(screen.getByLabelText(/How did you identify/), {
     target: { value: "Observed stance" },
   });
   fireEvent.click(screen.getByLabelText(/I personally reviewed/));
-  expect(screen.getByRole("button", { name: "Save review" })).toBeDisabled();
-  fireEvent.click(screen.getByRole("button", { name: "Inspect proposed end" }));
+  expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
   fireEvent.load(await screen.findByAltText("V4, native frame 4"));
-  expect(screen.getByRole("button", { name: "Save review" })).toBeEnabled();
-  fireEvent.change(screen.getByLabelText("Proposed punch label"), {
+  expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "Change it" }));
+  fireEvent.change(screen.getByLabelText("Correct punch label"), {
     target: { value: "cross" },
   });
   expect(screen.getByLabelText(/I personally reviewed/)).not.toBeChecked();
@@ -326,24 +342,153 @@ it("preserves a draft on conflict and guards navigation", async () => {
   );
   vi.spyOn(window, "confirm").mockReturnValue(false);
   render(<App />);
-  await screen.findByRole("button", { name: "Exclude" });
-  fireEvent.click(screen.getByRole("button", { name: "Exclude" }));
-  fireEvent.change(screen.getByLabelText("Reviewer"), {
+  await screen.findByRole("button", { name: "Not sure" });
+  fireEvent.click(screen.getByRole("button", { name: "Not sure" }));
+  fireEvent.change(screen.getByLabelText("What should happen to this punch?"), {
+    target: { value: "exclude" },
+  });
+  fireEvent.change(screen.getByLabelText("Your name"), {
     target: { value: "Human tester" },
   });
-  fireEvent.change(screen.getByLabelText("Evidence and notes"), {
+  fireEvent.change(screen.getByLabelText("What did you observe?"), {
     target: { value: "Mixed actions" },
   });
   fireEvent.click(screen.getByLabelText(/I personally reviewed/));
-  fireEvent.click(screen.getByRole("button", { name: "Save review" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
   await screen.findByText(/Review changed or source verification failed/);
-  expect(screen.getByLabelText("Evidence and notes")).toHaveValue(
+  expect(screen.getByLabelText("What did you observe?")).toHaveValue(
     "Mixed actions",
   );
   fireEvent.click(screen.getByRole("button", { name: "Next annotation" }));
   expect(window.confirm).toHaveBeenCalled();
-  expect(screen.getByLabelText("Evidence and notes")).toHaveValue(
+  expect(screen.getByLabelText("What did you observe?")).toHaveValue(
     "Mixed actions",
   );
   vi.restoreAllMocks();
+});
+
+it.each(["ambiguous", "hold", "exclude"])(
+  "preserves the %s backend decision under Not sure",
+  async (action) => {
+    const fetchMock = mockApi();
+    render(<App />);
+    fireEvent.click(await screen.findByRole("button", { name: "Not sure" }));
+    fireEvent.change(
+      screen.getByLabelText("What should happen to this punch?"),
+      { target: { value: action } },
+    );
+    fireEvent.change(screen.getByLabelText("Your name"), {
+      target: { value: "Tester" },
+    });
+    fireEvent.change(screen.getByLabelText("What did you observe?"), {
+      target: { value: "Synthetic review" },
+    });
+    if (action !== "exclude")
+      fireEvent.change(screen.getByLabelText("What is still uncertain?"), {
+        target: { value: "Unclear arm" },
+      });
+    fireEvent.click(screen.getByLabelText(/I personally reviewed/));
+    fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
+    await screen.findByText(/Review saved/);
+    const call = fetchMock.mock.calls.find(
+      ([, init]) => init?.method === "POST",
+    );
+    expect(JSON.parse(call![1]!.body as string).action).toBe(action);
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/cases/V5/2",
+        expect.anything(),
+      ),
+    );
+  },
+);
+
+it("Yes resets a proposed correction and preserves the original label and bounds", async () => {
+  const mock = mockApi();
+  render(<App />);
+  fireEvent.load(await screen.findByAltText("V4, native frame 2"));
+  fireEvent.click(screen.getByRole("button", { name: "Change it" }));
+  fireEvent.change(screen.getByLabelText("Correct punch label"), {
+    target: { value: "cross" },
+  });
+  fireEvent.change(screen.getByLabelText("Start frame"), {
+    target: { value: "1" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Yes" }));
+  expect(screen.queryByLabelText("Start frame")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
+  fireEvent.load(await screen.findByAltText("V4, native frame 4"));
+  fireEvent.change(screen.getByLabelText("Your name"), {
+    target: { value: "Tester" },
+  });
+  fireEvent.change(screen.getByLabelText("What did you observe?"), {
+    target: { value: "Synthetic review" },
+  });
+  fireEvent.change(screen.getByLabelText(/How did you identify/), {
+    target: { value: "Observed stance" },
+  });
+  fireEvent.click(screen.getByLabelText(/I personally reviewed/));
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await screen.findByText(/Review saved/);
+  const call = mock.mock.calls.find(([, init]) => init?.method === "POST");
+  expect(JSON.parse(call![1]!.body as string)).toMatchObject({
+    action: "confirm",
+    proposed_label: "jab",
+    proposed_bounds: { start: 2, end: 4 },
+  });
+});
+
+it("groups for display without certifying automated observations", () => {
+  const entry = { id: "V4:1", priority: "anchor", review: ok(review) };
+  expect(reviewCategory(entry)).toBe("Needs attention");
+  const accepted = {
+    ...review,
+    latest: {
+      ...revision,
+      disposition: "accept",
+      label_status: "confirmed",
+      boundary_status: "confirmed",
+    },
+  };
+  expect(reviewCategory({ ...entry, review: ok(accepted) })).toBe("To review");
+  expect(
+    reviewCategory({
+      ...entry,
+      review: ok({
+        ...accepted,
+        latest: { ...accepted.latest, actor_type: "human" },
+      }),
+    }),
+  ).toBe("Reviewed");
+  expect(
+    reviewCategory({
+      ...entry,
+      review: ok({
+        ...review,
+        latest: { ...revision, actor_type: "human", disposition: "exclude" },
+      }),
+    }),
+  ).toBe("Reviewed");
+});
+
+it("waits for displayed frames, pauses on stepping, and stops at the window end", async () => {
+  mockApi();
+  render(<App />);
+  const first = await screen.findByAltText("V4, native frame 2");
+  fireEvent.click(screen.getByRole("button", { name: "Play" }));
+  await new Promise((resolve) => setTimeout(resolve, 160));
+  expect(screen.queryByAltText("V4, native frame 3")).not.toBeInTheDocument();
+  fireEvent.load(first);
+  await screen.findByAltText("V4, native frame 3");
+  fireEvent.click(screen.getByRole("button", { name: "Next frame" }));
+  expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
+  fireEvent.change(screen.getByRole("slider", { name: "Native frame" }), {
+    target: { value: "8" },
+  });
+  fireEvent.load(await screen.findByAltText("V4, native frame 8"));
+  fireEvent.click(screen.getByRole("button", { name: "Play" }));
+  fireEvent.load(await screen.findByAltText("V4, native frame 9"));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument(),
+  );
 });

@@ -220,3 +220,25 @@ export async function saveReview(
     );
   return value;
 }
+
+/** Display grouping only. Never used as a persisted curation disposition. */
+export function reviewCategory(
+  entry: QueueEntry,
+): "To review" | "Reviewed" | "Needs attention" {
+  const review = entry.review.data;
+  if (entry.review.status !== "available" || !review) return "Needs attention";
+  const latest = review.latest;
+  if (
+    latest?.actor_type === "human" &&
+    ["accept", "exclude"].includes(latest.disposition)
+  )
+    return "Reviewed";
+  if (
+    entry.priority === "dispute" ||
+    (latest && ["hold", "exclude"].includes(latest.disposition)) ||
+    latest?.label_status === "ambiguous" ||
+    ["ambiguous", "mixed_action"].includes(latest?.boundary_status ?? "")
+  )
+    return "Needs attention";
+  return "To review";
+}

@@ -5,7 +5,7 @@ import {
   type Inventory,
   type Result,
   type Reviews,
-  percent,
+  reviewCategory,
   title,
   useRequest,
 } from "./api";
@@ -68,13 +68,9 @@ export default function App() {
         return (
           (recording === "all" || e.id.split(":")[0] === recording) &&
           (status === "all" ||
-            (status === "dispute"
-              ? e.priority === "dispute"
-              : status === "anchor"
-                ? e.priority === "anchor"
-                : status === "ambiguous"
-                  ? e.review.data?.latest_action === "ambiguous"
-                  : e.review.data?.latest?.disposition === status)) &&
+            (status === "dispute" || status === "anchor"
+              ? e.priority === status
+              : reviewCategory(e) === status)) &&
           `${e.id} ${source?.source_class ?? ""} ${source?.punch_type_provisional ?? ""}`
             .toLowerCase()
             .includes(search.toLowerCase())
@@ -99,32 +95,22 @@ export default function App() {
   };
   const data = current.data?.data;
   const position = filtered.findIndex((e) => e.id === selected);
-  const selectedEntry = entries.find((e) => e.id === selected);
-  const prediction = data?.evidence.data?.case.prediction;
-  const confidence = prediction
-    ? prediction.probabilities[
-        data?.labels.indexOf(prediction.prediction) ?? -1
-      ]
-    : undefined;
-  const review = data?.review.data?.latest;
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell ${section === "Review Queue" ? "review-screen" : ""}`}
+    >
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark">
             B<span>↗</span>
           </div>
-          <div>
-            BOXING MOTION<span>AI DEVELOPMENT STUDIO</span>
-          </div>
+          <div>Boxing Motion AI</div>
         </div>
-        <div className="workspace-label">
-          WORKSPACE <span>LOCAL</span>
-        </div>
+
         <nav aria-label="Main navigation">
           {sections.map((s, i) => (
             <button
-              key={s}
+              key={s === "Review Queue" ? "Review" : s}
               className={section === s ? "active" : ""}
               aria-current={section === s ? "page" : undefined}
               onClick={() => {
@@ -138,7 +124,7 @@ export default function App() {
               }}
             >
               <NavIcon index={i} />
-              {s}
+              {s === "Review Queue" ? "Review" : s}
               {s === "Review Queue" && queue.data?.data && (
                 <small>{queue.data.data.summary.case_count}</small>
               )}
@@ -146,60 +132,13 @@ export default function App() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="connection">
-            <i />
-            Local workspace
-          </div>
-          <p>
-            Read-only review
-            <br />
-            Original data preserved
-          </p>
-          <div className="version">
-            DASHBOARD <b>v0.2</b>
-          </div>
+          <small>Local workspace</small>
         </div>
       </aside>
       <div className="main-shell">
-        <header className="topbar">
-          <span>
-            BOXINGVI <span className="slash">/</span> {section}
-          </span>
-          <div>
-            <span className="status-dot" />
-            LOCAL SESSION{" "}
-            <span className="read-only">▣ INTERACTIVE REVIEW</span>
-          </div>
-        </header>
         <main>
           <div className="page-heading">
-            <div>
-              <div className="eyebrow">
-                DEVELOPMENT /{" "}
-                {section === "Review Queue"
-                  ? "ANNOTATION CURATION"
-                  : "RESEARCH INVENTORY"}
-              </div>
-              <h1>
-                {section === "Review Queue"
-                  ? "Annotation review"
-                  : section === "Dataset"
-                    ? "Dataset overview"
-                    : section === "Experiments"
-                      ? "Experiment library"
-                      : "Model reference"}
-              </h1>
-              <p>
-                {section === "Review Queue"
-                  ? "Inspect the movement. Preserve the evidence."
-                  : section === "Dataset"
-                    ? "Source coverage, class balance and review readiness."
-                    : section === "Experiments"
-                      ? "Reproducible studies. Preserved results."
-                      : "Frozen model results, with their evaluation context."}
-              </p>
-            </div>
-            <span className="outline-badge">● V9 RESERVED</span>
+            <h1>{section === "Review Queue" ? "Review" : section}</h1>
           </div>
           {(queue.error || inventory.error) && (
             <Notice>
@@ -209,40 +148,16 @@ export default function App() {
           )}
           {section === "Review Queue" ? (
             <>
-              <div className="review-summary">
-                <span>
-                  <b>{queue.data?.data?.summary.case_count ?? "—"}</b>{" "}
-                  diagnostic cases
-                </span>
-                <span>
-                  <b>
-                    {entries.filter((e) => e.priority === "dispute").length}
-                  </b>{" "}
-                  priority disputes
-                </span>
-                <span>
-                  <b>{queue.data?.data?.summary.human_accepted ?? "—"}</b> human
-                  accepted
-                </span>
-                <span>
-                  <b>{queue.data?.data?.summary.human_reviewed ?? 0}</b> human
-                  reviewed (includes unresolved)
-                </span>
-                <span className="muted-text">
-                  Corrections are separately versioned; source annotations stay
-                  unchanged
-                </span>
-              </div>
               <div className="review-layout">
                 <section className="queue-panel panel">
                   <div className="panel-header">
-                    <h2>Review queue</h2>
+                    <h2>Punches</h2>
                     <span className="count">{filtered.length}</span>
                   </div>
                   <div className="queue-filters">
                     <input
                       aria-label="Search cases"
-                      placeholder="Search class or source row…"
+                      placeholder="Find a punch…"
                       value={search}
                       onChange={(e) => {
                         if (
@@ -288,14 +203,12 @@ export default function App() {
                           }
                         }}
                       >
-                        <option value="all">All states</option>
+                        <option value="all">All punches</option>
+                        <option value="To review">To review</option>
+                        <option value="Reviewed">Reviewed</option>
+                        <option value="Needs attention">Needs attention</option>
+                        <option value="dispute">Disputed punches</option>
                         <option value="anchor">Proposed anchors</option>
-                        <option value="ambiguous">Human ambiguous</option>
-                        <option value="dispute">Priority disputes</option>
-                        <option value="hold">On hold</option>
-                        <option value="provisional">Provisional</option>
-                        <option value="accept">Accepted</option>
-                        <option value="exclude">Excluded</option>
                       </select>
                     </div>
                   </div>
@@ -306,40 +219,24 @@ export default function App() {
                     {!filtered.length && queue.data && (
                       <Notice>No cases match these filters.</Notice>
                     )}
-                    {filtered.map((e) => (
+                    {filtered.map((e, index) => (
                       <button
                         className={`case-item ${selected === e.id ? "selected" : ""}`}
                         key={e.id}
                         onClick={() => navigate(e.id)}
                       >
-                        <div>
-                          <span className="case-recording">
-                            {e.id.split(":")[0]}
-                          </span>
-                          <span
-                            className={`case-status ${e.priority === "dispute" ? "amber" : ""}`}
-                          >
-                            {e.review.data?.latest?.actor_type === "human"
-                              ? (
-                                  e.review.data.latest_action ??
-                                  e.review.data.latest.disposition
-                                ).toUpperCase()
-                              : e.priority === "dispute"
-                                ? "DISPUTED"
-                                : (e.review.data?.latest?.disposition?.toUpperCase() ??
-                                  e.review.status.toUpperCase())}
-                          </span>
-                        </div>
                         <strong>
                           {title(
                             e.review.data?.source.punch_type_provisional ??
                               "Unavailable",
                           )}
                         </strong>
-                        <div>
-                          <span>Source row {e.id.split(":")[1]}</span>
-                          <span>↗</span>
-                        </div>
+                        <span className="queue-meta">
+                          <span>
+                            {e.id.split(":")[0]} · Punch {index + 1}
+                          </span>
+                          <span>{reviewCategory(e)}</span>
+                        </span>
                       </button>
                     ))}
                   </div>
@@ -358,29 +255,9 @@ export default function App() {
                     <>
                       <div className="case-heading">
                         <div>
-                          <span className="eyebrow">
-                            {selected.split(":")[0]}{" "}
-                            <span className="slash">/</span> SOURCE ROW{" "}
-                            {data.annotation.source_row}
-                          </span>
+                          <small>Original punch</small>
                           <h2>
-                            {title(data.annotation.punch_type_provisional)}{" "}
-                            <span className="badge amber">
-                              {review?.actor_type === "human"
-                                ? title(
-                                    data.review.data?.latest_action ??
-                                      review.disposition,
-                                  )
-                                : selectedEntry?.priority === "dispute"
-                                  ? "Disputed"
-                                  : review?.disposition === "hold"
-                                    ? "On hold"
-                                    : review?.disposition === "exclude"
-                                      ? "Excluded"
-                                      : data.review.data?.human_accepted
-                                        ? "Human accepted"
-                                        : "Provisional"}
-                            </span>
+                            {title(data.annotation.punch_type_provisional)}
                           </h2>
                         </div>
                         <div className="button-group">
@@ -411,7 +288,7 @@ export default function App() {
                         onSaved={(next) => {
                           setDirty(false);
                           setSaved(
-                            `Saved review for ${selected}. Original data unchanged.`,
+                            `Review saved${next && !filtered[position + 1] ? " · End of queue" : ""}.`,
                           );
                           if (next && filtered[position + 1])
                             setSelected(filtered[position + 1].id);
@@ -420,109 +297,9 @@ export default function App() {
                         data={data}
                         recording={selected.split(":")[0]}
                       />
-                      <section className="panel padded evidence-note">
-                        <span className="eyebrow">REVIEW EVIDENCE</span>
-                        <h3>
-                          {review?.reasons.map(title).join(" · ") ||
-                            "No review decision recorded"}
-                        </h3>
-                        <p>
-                          {review?.unresolved_uncertainty.join(" · ") ||
-                            "Labels and boundaries remain provisional."}
-                        </p>
-                        <div className="note-footer">
-                          <span>
-                            {review
-                              ? `${title(review.actor_type)} observation · ${review.reviewer}`
-                              : "Unreviewed source annotation"}
-                          </span>
-                          <span>Human verification required</span>
-                        </div>
-                      </section>
                     </>
                   )}
                 </div>
-                <aside className="detail-panel panel">
-                  <div className="panel-header">
-                    <h2>Annotation details</h2>
-                  </div>
-                  {data ? (
-                    <div className="detail-content">
-                      <span className="eyebrow">SOURCE ANNOTATION</span>
-                      <h3>{data.annotation.source_class}</h3>
-                      <dl>
-                        <dt>Canonical label</dt>
-                        <dd>{title(data.annotation.punch_type_provisional)}</dd>
-                        <dt>Raw start / end</dt>
-                        <dd className="mono">
-                          {data.annotation.raw_start ?? "Unknown"} →{" "}
-                          {data.annotation.raw_end ?? "Unknown"}
-                        </dd>
-                        <dt>Mapped frames</dt>
-                        <dd className="mono">
-                          {data.annotation.candidate_start_index ?? "Unknown"} →{" "}
-                          {data.annotation.candidate_end_index ?? "Unknown"}
-                        </dd>
-                        <dt>End convention</dt>
-                        <dd>{data.annotation.annotation_end_assumption}</dd>
-                        <dt>Review state</dt>
-                        <dd className="amber-text">
-                          {title(review?.disposition ?? data.review.status)}
-                        </dd>
-                        <dt>Label / boundary</dt>
-                        <dd>
-                          {title(review?.label_status ?? "unreviewed")} /{" "}
-                          {title(review?.boundary_status ?? "unreviewed")}
-                        </dd>
-                      </dl>
-                      <hr />
-                      <span className="eyebrow">FROZEN MODEL PREDICTION</span>
-                      <h3>
-                        {prediction
-                          ? title(prediction.prediction)
-                          : "Unavailable"}
-                      </h3>
-                      <div className="confidence-row">
-                        <span>Class probability</span>
-                        <b>{percent(confidence)}</b>
-                      </div>
-                      <div className="progress-track">
-                        <i style={{ width: `${(confidence ?? 0) * 100}%` }} />
-                      </div>
-                      <p className="caption">
-                        {data.evidence.data?.case.selection ??
-                          "No diagnostic prediction registered for this case."}{" "}
-                        · {data.evidence.data?.case.selection_fold ?? "No fold"}
-                        <br />
-                        Model confidence is not annotation evidence.
-                      </p>
-                      <hr />
-                      <span className="eyebrow">PROVENANCE & UNCERTAINTY</span>
-                      <div className="flag-list">
-                        {[
-                          ...(data.annotation.flags ?? []),
-                          ...(data.annotation.exclusion_reasons ?? []),
-                        ].map((flag, i) => (
-                          <span key={`${flag}-${i}`}>{title(flag)}</span>
-                        ))}
-                      </div>
-                      <p className="caption">
-                        Boxer: {data.recording.data?.boxer_id ?? "unknown"}
-                        <br />
-                        Session: {data.recording.data?.session_id ?? "unknown"}
-                      </p>
-                      <details>
-                        <summary>Prediction provenance</summary>
-                        <p className="break-all caption">
-                          {data.evidence.data?.case.prediction_source ??
-                            "Not available"}
-                        </p>
-                      </details>
-                    </div>
-                  ) : (
-                    <Notice>Select a source annotation.</Notice>
-                  )}
-                </aside>
               </div>
             </>
           ) : section === "Dataset" ? (
@@ -537,13 +314,6 @@ export default function App() {
           ) : (
             <Models experiments={experiments.data?.data ?? undefined} />
           )}
-          <footer>
-            BOXING MOTION AI{" "}
-            <span>
-              Provisional data · exact-frame inspection · versioned human
-              reviews
-            </span>
-          </footer>
         </main>
       </div>
     </div>
