@@ -52,8 +52,8 @@ HMR remains available with `npm --prefix web run dev` (loopback port 5174).
 
 Unsaved navigation prompts before discarding a draft. A concurrent save or changed
 source produces an error and keeps the draft. Reload to obtain the current head,
-then recheck and resubmit. A retry of the identical request is idempotent. A name is
-self-reported, not an authenticated identity; this remains a single-machine tool.
+then recheck and resubmit. A retry of the identical request is idempotent. Current
+reviews record a manual source without a name; historical names remain preserved.
 
 ## Persistence and provenance
 
@@ -77,7 +77,7 @@ pointer is necessary. Restart replays and validates the contiguous committed his
 
 The new config pins the new ledger while retaining original sources, group guards,
 exclusions and policy hashes. Receipts include the original candidate fingerprint,
-source input hashes, proposed fields, reviewer and explicit attestation, server UTC
+source input hashes, proposed fields, manual source and explicit attestation, server UTC
 time, and verified native indices, exact PTS/time bases, scenes and segments for
 attested displayed frames. The revision binds this audit content by hash. Displayed
 frames are tracked only after image load (up to the last 512 unique frames); users

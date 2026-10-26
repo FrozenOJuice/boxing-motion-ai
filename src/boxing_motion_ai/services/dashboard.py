@@ -3,7 +3,13 @@
 from collections import Counter
 from functools import wraps
 
-from boxing_motion_ai.data.annotation_review import LABELS, RECORDINGS, ReviewLedger, digest
+from boxing_motion_ai.data.annotation_review import (
+    LABELS,
+    RECORDINGS,
+    ReviewLedger,
+    digest,
+    review_source,
+)
 from boxing_motion_ai.data.curation import CurationConfig, latest
 
 from .artifacts import MetadataStore, ServiceError, strict_json
@@ -233,6 +239,7 @@ class DashboardService:
             "ledger_version": ledger.ledger_version,
             "case": case.model_dump(mode="json"),
             "latest": revision.model_dump(mode="json") if revision else None,
+            "review_source": review_source(revision),
             "human_accepted": bool(
                 revision and revision.actor_type == "human" and revision.disposition == "accept"
             ),

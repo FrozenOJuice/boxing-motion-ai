@@ -39,8 +39,8 @@ The accepted V4-only XY+velocity+mirror reference remains unchanged.
 exact-frame MKV previews with existing pose overlays, dataset statistics and frozen
 experiment/model metrics. The [simplified Review workflow](docs/DASHBOARD_REVIEW_REDESIGN.md)
 uses **Yes, Change it, Not sure → Save & Next**, with [independent type, hand and timing
-confirmations](docs/INDEPENDENT_ANNOTATION_VERIFICATION.md). Partial reviews can be saved;
-technical information stays under Advanced details. Proposed corrections and revision history remain separate from originals. V9 remains inaccessible.
+confirmations](docs/INDEPENDENT_ANNOTATION_VERIFICATION.md). Partial reviews can be saved without providing a name; explicit saves are recorded as
+manual, separately from automated observations. Technical information stays under Advanced details. Proposed corrections and revision history remain separate from originals. V9 remains inaccessible.
 Back up `reports/boxingvi/dashboard-reviews-v1/`: it contains durable human decisions, not disposable previews.
 
 ```sh

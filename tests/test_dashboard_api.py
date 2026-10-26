@@ -271,3 +271,32 @@ def test_independent_http_verification_and_human_history(media):
     bad["verification"]["hand"] = "true"
     assert restarted.post("/api/reviews/V4/1", json=bad, headers=headers).status_code == 422
     assert restarted.post("/api/reviews/V9/1", json=bad, headers=headers).status_code == 422
+
+
+def test_anonymous_dashboard_save_assigns_manual_source_server_side(media):
+    from test_independent_verification import verify
+
+    root, app, client, _, _ = media
+    headers = {"Origin": "http://127.0.0.1:8000", "X-Review-Client": "dashboard-v0.2"}
+    payload = verify(
+        app.state.workspace,
+        {"punch_type"},
+        reviewer=None,
+        proposed_bounds=dict(start=4, end=5, convention="zero_based_decoded_inclusive"),
+        inspected_frames=[4],
+    ).model_dump(mode="json")
+    assert "reviewer" not in payload
+    assert (
+        client.post(
+            "/api/reviews/V4/1", json={**payload, "source": "automated"}, headers=headers
+        ).status_code
+        == 422
+    )
+    response = client.post("/api/reviews/V4/1", json=payload, headers=headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["data"]["source"] == "manual"
+    restarted = TestClient(create_app(root), base_url="http://127.0.0.1:8000")
+    history = restarted.get("/api/cases/V4/1").json()["data"]["edit"]["data"]["history"]
+    assert history[-1]["source"] == "manual" and "reviewer" not in history[-1]
+    assert history[-1]["verification"]["punch_type"] is True
+    assert history[0]["actor_type"] == "assistant"

@@ -89,6 +89,12 @@ class Verification(VerificationSelection):
         return self
 
 
+def review_source(revision):
+    if revision is None:
+        return None
+    return revision.source or ("manual" if revision.actor_type == "human" else "automated")
+
+
 def verified_axes(revision):
     if not revision or revision.actor_type != "human":
         return set()
@@ -105,7 +111,8 @@ class Revision(StrictModel):
     revision_id: str = Field(min_length=1)
     supersedes_sha256: str | None = Field(pattern=r"^[0-9a-f]{64}$")
     actor_type: Literal["assistant", "human"]
-    reviewer: str = Field(min_length=1)
+    source: Literal["manual", "automated"] | None = None
+    reviewer: str | None = Field(default=None, min_length=1)
     reviewed_at: str
     disposition: Literal["provisional", "hold", "exclude", "accept"]
     label_status: Literal["unreviewed", "ambiguous", "confirmed"]
@@ -120,12 +127,21 @@ class Revision(StrictModel):
     @model_serializer(mode="wrap")
     def preserve_legacy_hashes(self, handler):
         data = handler(self)
-        if self.verification is None:
-            data.pop("verification", None)
+        for key in ("verification", "source", "reviewer"):
+            if getattr(self, key) is None:
+                data.pop(key, None)
         return data
 
     @model_validator(mode="after")
     def honest_confirmation(self):
+        if self.source is not None and self.source != (
+            "manual" if self.actor_type == "human" else "automated"
+        ):
+            raise ValueError("Manual and automated sources must match the review actor")
+        if self.reviewer is not None and not self.reviewer.strip():
+            raise ValueError("Legacy reviewer names cannot be blank")
+        if self.source is None and self.reviewer is None:
+            raise ValueError("Anonymous records require explicit manual/automated source")
         checks = self.verification
         if checks is not None:
             if self.actor_type != "human":
@@ -145,8 +161,8 @@ class Revision(StrictModel):
             ):
                 raise ValueError("Each human confirmation requires exact-frame evidence")
         when = datetime.fromisoformat(self.reviewed_at.replace("Z", "+00:00"))
-        if when.utcoffset() is None or not self.reviewer.strip():
-            raise ValueError("Named reviewer and timezone-aware review time required")
+        if when.utcoffset() is None:
+            raise ValueError("Timezone-aware review time required")
         if any(not r.strip() for r in self.reasons + self.unresolved_uncertainty):
             raise ValueError("Reasons cannot be empty")
         if (self.label_status == "confirmed") != (self.confirmed_label is not None):

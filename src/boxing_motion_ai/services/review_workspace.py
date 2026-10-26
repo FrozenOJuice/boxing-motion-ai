@@ -49,7 +49,7 @@ class Decision(StrictModel):
     expected_revision_sha256: str | None = Field(pattern=r"^[0-9a-f]{64}$")
     source_candidate_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     action: Literal["confirm", "verify", "ambiguous", "hold", "exclude"]
-    reviewer: str = Field(min_length=1, max_length=160)
+    reviewer: str | None = Field(default=None, min_length=1, max_length=160)
     notes: str = Field(min_length=1, max_length=4000)
     uncertainty: str = Field(max_length=4000)
     lead_rear_evidence: str = Field(max_length=2000)
@@ -61,8 +61,9 @@ class Decision(StrictModel):
     @model_serializer(mode="wrap")
     def preserve_legacy_payload(self, handler):
         data = handler(self)
-        if self.verification is None:
-            data.pop("verification", None)
+        for key in ("verification", "reviewer"):
+            if getattr(self, key) is None:
+                data.pop(key, None)
         return data
 
     @model_validator(mode="after")
@@ -81,8 +82,10 @@ class Decision(StrictModel):
     @field_validator("reviewer", "notes")
     @classmethod
     def not_blank(cls, value):
+        if value is None:
+            return None
         if not value.strip():
-            raise ValueError("Reviewer and notes cannot be blank")
+            raise ValueError("Legacy reviewer and notes cannot be blank")
         return value.strip()
 
     @field_validator("inspected_frames")
@@ -280,6 +283,8 @@ class ReviewWorkspace:
                 and revision.revision_id == decision.request_id
                 and revision.actor_type == "human"
                 and revision.reviewer == decision.reviewer
+                and receipt.get("source") == revision.source
+                and revision.source in (None, "manual")
                 and receipt["saved_at"] == revision.reviewed_at
                 and revision.evidence[0].description
                 == decision.notes + "\nDashboard audit SHA256: " + digest(audit),
@@ -471,6 +476,7 @@ class ReviewWorkspace:
                 revision_id=decision.request_id,
                 supersedes_sha256=previous_hash,
                 actor_type="human",
+                source="manual",
                 reviewer=decision.reviewer,
                 reviewed_at=datetime.now(UTC).isoformat(),
                 disposition="accept"
@@ -520,6 +526,7 @@ class ReviewWorkspace:
             config_raw = encode(CurationConfig.model_validate(config_data).model_dump(mode="json"))
             receipt = dict(
                 schema_version="dashboard-review-save-1.0",
+                source="manual",
                 case_id=key,
                 base_config_sha256=self.base.catalogue.curation.sha256,
                 ledger_sha256=sha(ledger_raw),

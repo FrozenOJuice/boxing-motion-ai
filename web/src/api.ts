@@ -31,7 +31,8 @@ export type Revision = {
   confirmed_label?: string | null;
   confirmed_bounds?: Bounds | null;
   actor_type: string;
-  reviewer: string;
+  reviewer?: string;
+  source?: "manual" | "automated";
   disposition: string;
   label_status: string;
   boundary_status: string;
@@ -250,7 +251,7 @@ export async function saveReview(
         ? "Review changed or source verification failed. Reload the case before retrying; your draft has not been saved."
         : (messages[code] ??
             (response.status === 422
-              ? "Review could not be saved. Check your name, reason and frame boundaries."
+              ? "Review could not be saved. Check your reason, confirmations and frame boundaries."
               : "Review could not be saved. Please try again; your draft has been kept.")),
     );
   }
@@ -279,4 +280,12 @@ export function reviewCategory(
   )
     return "Needs attention";
   return "To review";
+}
+
+/** Legacy records keep their original bytes/names; origin is derived for display only. */
+export function reviewSource(revision: Revision): "manual" | "automated" {
+  return (
+    revision.source ??
+    (revision.actor_type === "human" ? "manual" : "automated")
+  );
 }

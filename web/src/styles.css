@@ -1839,23 +1839,6 @@ footer span {
   }
 }
 
-.reviewer-identity {
-  margin: 16px 0;
-  color: var(--muted);
-}
-.reviewer-identity label {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-.reviewer-identity button {
-  border: 0;
-  background: transparent;
-  padding: 4px 8px;
-  text-decoration: underline;
-  font-size: 12px;
-}
 .review-note {
   display: flex;
   flex-direction: column;

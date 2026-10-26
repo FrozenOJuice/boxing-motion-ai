@@ -55,8 +55,9 @@ Disposition is independent:
   evidence and a stance/lead-rear explanation. An original quality/annotation
   exclusion still takes precedence. Acceptance does not restore an excluded row.
 
-Any confirmed axis requires a named human, timezone-aware review time and native
-frame evidence. A class confirmation additionally requires lead/rear evidence;
+Any confirmed axis requires an explicit manual review, timezone-aware review time and
+native frame evidence. New manual records require no personal name; old names remain
+in history. Automated observations cannot confirm any axis. A class confirmation additionally requires lead/rear evidence;
 "model predicted this" or estimated left/right channels alone do not suffice.
 The append command requires `--attest-human-review` for human attribution. This is
 an explicit provenance assertion by the person entering the decision, not identity
@@ -180,7 +181,8 @@ counts, baseline exclusions and reasons, shadow holds, proposed selected row IDs
 unapplied confirmations, pending cases and provenance. Old outputs are not overwritten.
 
 1. Copy the relevant `decision-templates/V4-497.json` (or another queued ID) into a
-   new local decision file. Fill reviewer, timezone-aware `reviewed_at`, actual
+   new local decision file. Set `source: manual` (a legacy reviewer name is optional),
+   timezone-aware `reviewed_at`, actual
    evidence description/frame indices, reasons and uncertainty. The default is an
    unresolved hold, not acceptance. For acceptance, explicitly set both statuses to
    `confirmed`, supply `confirmed_label`, `lead_rear_evidence`, and

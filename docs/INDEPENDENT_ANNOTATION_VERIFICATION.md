@@ -23,7 +23,7 @@ statement; it never silently asserts any of the three confirmations.
 
 Checkboxes start unchecked for new/automated cases. The form can restore prior human
 checks only for the same reviewed label and interval. Restored checks show their
-original reviewer, and keep that reviewer's revision as the evidence origin if carried
+original manual-review provenance, and keep that revision as the evidence origin if carried
 forward. Editing the label or interval clears all checks; new verification is required.
 Identity preferences never restore confirmations. A legacy human confirmation with
 matching explicit label/boundaries can be restored; unscoped legacy assertions are
@@ -68,8 +68,8 @@ The dashboard uses a new `verify` request action with a strict boolean selection
 
 Each new revision's optional `verification` block stores those fields, the reviewed
 label/bounds and an `origins` mapping from each verified aspect to its actual human
-revision ID. That origin resolves to the reviewer's name, UTC timestamp and native-frame
-evidence in the preserved case history. A carry-forward never credits a different
+revision ID. That origin resolves to the manual source, UTC timestamp and native-frame
+evidence in the preserved case history; any legacy reviewer name is retained. A carry-forward never credits a different
 reviewer with the original assertion. Revoked checks have no active origin; their past
 assertions remain in history. The API derives origins from the ledger, never client paths
 or claimed reviewer metadata. Inherited frame evidence is reverified against pinned
@@ -104,3 +104,25 @@ flags. No genuine review was saved during verification. Browser visual inspectio
 remains subject to the previously documented computer-use restriction; no browser
 window is opened automatically. After updating, restart the local backend and refresh
 the existing dashboard tab so the frontend and API both support `verify`.
+
+
+## Anonymous manual source
+
+The dashboard no longer requests or remembers reviewer names. New saves assign
+`source: manual` on the server, retaining internal `actor_type: human` compatibility.
+Automated records have `source: automated` and assistant actor type; they cannot verify
+any aspect. The source fields must agree with actor type. Manual is a record of explicit
+review input, not authenticated identity or proof of correctness.
+
+New dashboard records omit the optional legacy `reviewer` field. Old records and
+receipts keep their names exactly, including old canonical hashes. Missing source on a
+legacy record is derived from its original actor for display only. Neither anonymous
+source nor a carried-forward check changes the original evidence origin. API clients
+cannot supply `source` or `actor_type`; spoofed fields are rejected. Old named request
+payloads remain readable/compatible, while the current dashboard sends no name.
+
+No browser name preference is read, and no browser storage is required to save reviews.
+Existing named reviews are available in history; the unused former name preference is
+left untouched. Updated tests verify anonymous history, separate automated observations,
+unchanged legacy names/receipts, strict source validation and all existing verification
+guards. Refresh after restarting the local backend to load this contract update.

@@ -7,9 +7,9 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
-import { frameBounds, reviewCategory, type Source } from "./api";
+import { frameBounds, reviewCategory, reviewSource, type Source } from "./api";
 import { Skeleton } from "./Viewer";
-import { reviewerKey } from "./reviewer";
+
 const source: Source = {
   source_row: 1,
   video_id: "V4",
@@ -298,9 +298,6 @@ it("saves an explicitly attested hold and refreshes review history", async () =>
   fireEvent.change(screen.getByLabelText("Why are you not sure?"), {
     target: { value: "later" },
   });
-  fireEvent.change(screen.getByLabelText("Your name"), {
-    target: { value: "Human tester" },
-  });
   fireEvent.click(screen.getByText("Add a note (optional)"));
   fireEvent.change(screen.getByLabelText("Additional explanation (optional)"), {
     target: { value: "Unclear movement" },
@@ -319,7 +316,7 @@ it("saves an explicitly attested hold and refreshes review history", async () =>
   const payload = JSON.parse((call![1] as RequestInit).body as string);
   expect(payload).toMatchObject({
     action: "hold",
-    reviewer: "Human tester",
+
     attest_human: true,
     inspected_frames: [],
     expected_ledger_sha256: "a".repeat(64),
@@ -336,9 +333,6 @@ it("requires displayed boundary frames and stance evidence for confirmation", as
   render(<App />);
   fireEvent.load(await screen.findByAltText("V4, native frame 2"));
   fireEvent.click(screen.getByRole("button", { name: "Yes" }));
-  fireEvent.change(screen.getByLabelText("Your name"), {
-    target: { value: "Human tester" },
-  });
   fireEvent.click(screen.getByText("Add a note (optional)"));
   fireEvent.change(screen.getByLabelText("Additional explanation (optional)"), {
     target: { value: "Punch reviewed" },
@@ -375,9 +369,6 @@ it("preserves a draft on conflict and guards navigation", async () => {
   fireEvent.change(screen.getByLabelText("Why are you not sure?"), {
     target: { value: "mixed" },
   });
-  fireEvent.change(screen.getByLabelText("Your name"), {
-    target: { value: "Human tester" },
-  });
   fireEvent.click(screen.getByText("Add a note (optional)"));
   fireEvent.change(screen.getByLabelText("Additional explanation (optional)"), {
     target: { value: "Mixed actions" },
@@ -411,9 +402,6 @@ it.each(["ambiguous", "hold", "exclude"])(
               ? "later"
               : "mixed",
       },
-    });
-    fireEvent.change(screen.getByLabelText("Your name"), {
-      target: { value: "Tester" },
     });
     fireEvent.click(screen.getByText("Add a note (optional)"));
     fireEvent.change(
@@ -459,9 +447,6 @@ it("Yes resets a proposed correction and preserves the original label and bounds
   expect(screen.queryByLabelText("Start frame")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
   fireEvent.load(await screen.findByAltText("V4, native frame 4"));
-  fireEvent.change(screen.getByLabelText("Your name"), {
-    target: { value: "Tester" },
-  });
   fireEvent.click(screen.getByText("Add a note (optional)"));
   fireEvent.change(screen.getByLabelText("Additional explanation (optional)"), {
     target: { value: "Synthetic review" },
@@ -694,16 +679,11 @@ it("keeps the initial empty stage stable on failure and removes redundant page t
   }
 });
 
-it("confirms without written notes and remembers identity across next, remount and restart", async () => {
+it("confirms anonymously without written notes across next and remount", async () => {
   const mock = mockApi();
   const first = render(<App />);
   fireEvent.click(await screen.findByRole("button", { name: "Yes" }));
-  fireEvent.change(screen.getByLabelText("Your name"), {
-    target: { value: "Alice" },
-  });
-  fireEvent.blur(screen.getByLabelText("Your name"));
   expect(screen.queryByLabelText("Your name")).not.toBeInTheDocument();
-  expect(window.localStorage.getItem(reviewerKey)).toBe("Alice");
   expect(
     screen.getByText(/Review/, { selector: "p.confirmation-scope" }),
   ).toHaveTextContent("jab");
@@ -720,13 +700,14 @@ it("confirms without written notes and remembers identity across next, remount a
   const call = mock.mock.calls.find(([, init]) => init?.method === "POST");
   const payload = JSON.parse(call![1]!.body as string);
   expect(payload).toMatchObject({
-    reviewer: "Alice",
     action: "verify",
     attest_human: true,
     proposed_label: "jab",
     proposed_bounds: { start: 2, end: 4 },
   });
-  expect(payload.notes).toContain("Selected human verification state");
+  expect(payload).not.toHaveProperty("reviewer");
+  expect(payload).not.toHaveProperty("source"); // The server chooses the source.
+  expect(payload.notes).toContain("Selected manual verification state");
   expect(payload.notes).not.toContain("Reviewer note:");
   expect(payload.lead_rear_evidence).toBe("");
   expect(payload.lead_rear_evidence).not.toMatch(/orthodox|southpaw/);
@@ -734,14 +715,12 @@ it("confirms without written notes and remembers identity across next, remount a
     expect(mock).toHaveBeenCalledWith("/api/cases/V5/2", expect.anything()),
   );
   fireEvent.click(await screen.findByRole("button", { name: "Not sure" }));
-  expect(screen.getByText("Alice")).toBeInTheDocument();
   expect(screen.queryByLabelText("Your name")).not.toBeInTheDocument();
   expect(screen.getByLabelText(/I personally reviewed/)).not.toBeChecked();
   first.unmount();
-  // A new application instance loads only the stored identity, never the old decision.
+  // A new application instance still requires no identity and restores no draft decisions.
   render(<App />);
   fireEvent.click(await screen.findByRole("button", { name: "Yes" }));
-  expect(screen.getByText("Alice")).toBeInTheDocument();
   expect(screen.queryByLabelText("Your name")).not.toBeInTheDocument();
   expect(
     screen.getByLabelText("Start/end timing is correct."),
@@ -750,7 +729,6 @@ it("confirms without written notes and remembers identity across next, remount a
 });
 
 it("requires an explanation for corrections and sends the corrected interval with original source bindings", async () => {
-  window.localStorage.setItem(reviewerKey, "Alice");
   const mock = mockApi();
   render(<App />);
   fireEvent.click(await screen.findByRole("button", { name: "Change it" }));
@@ -779,7 +757,7 @@ it("requires an explanation for corrections and sends the corrected interval wit
   const call = mock.mock.calls.find(([, init]) => init?.method === "POST");
   expect(JSON.parse(call![1]!.body as string)).toMatchObject({
     action: "verify",
-    reviewer: "Alice",
+
     proposed_label: "cross",
     proposed_bounds: { start: 3, end: 4 },
     source_candidate_sha256: "c".repeat(64),
@@ -791,7 +769,6 @@ it("requires an explanation for corrections and sends the corrected interval wit
 });
 
 it("flags uncertainty using only a selected reason, without certifying label, stance or boundaries", async () => {
-  window.localStorage.setItem(reviewerKey, "Alice");
   const mock = mockApi();
   render(<App />);
   fireEvent.click(await screen.findByRole("button", { name: "Not sure" }));
@@ -804,7 +781,6 @@ it("flags uncertainty using only a selected reason, without certifying label, st
   await screen.findByText(/Review saved/);
   const call = mock.mock.calls.find(([, init]) => init?.method === "POST");
   expect(JSON.parse(call![1]!.body as string)).toMatchObject({
-    reviewer: "Alice",
     action: "ambiguous",
     uncertainty: "Lead or rear arm is unclear",
     lead_rear_evidence: "",
@@ -814,8 +790,7 @@ it("flags uncertainty using only a selected reason, without certifying label, st
   });
 });
 
-it("validates Other reason and revised identity without reusing an attestation", async () => {
-  window.localStorage.setItem(reviewerKey, "Alice");
+it("validates Other reason without a reviewer profile", async () => {
   const mock = mockApi();
   render(<App />);
   fireEvent.click(await screen.findByRole("button", { name: "Not sure" }));
@@ -829,33 +804,26 @@ it("validates Other reason and revised identity without reusing an attestation",
     target: { value: "Two athletes overlap in the crop." },
   });
   fireEvent.click(screen.getByLabelText(/I personally reviewed/));
-  fireEvent.click(screen.getByRole("button", { name: "Change name" }));
-  fireEvent.change(screen.getByLabelText("Your name"), {
-    target: { value: "Bob" },
-  });
-  expect(screen.getByLabelText(/I personally reviewed/)).not.toBeChecked();
-  expect(window.localStorage.getItem(reviewerKey)).toBe("Bob");
-  fireEvent.click(screen.getByLabelText(/I personally reviewed/));
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   await screen.findByText(/Review saved/);
   const call = mock.mock.calls.find(([, init]) => init?.method === "POST");
-  expect(JSON.parse(call![1]!.body as string).reviewer).toBe("Bob");
+  expect(JSON.parse(call![1]!.body as string)).not.toHaveProperty("reviewer");
+  expect(
+    screen.queryByRole("button", { name: "Change name" }),
+  ).not.toBeInTheDocument();
 });
 
-it("keeps identity usable and explains when browser persistence is blocked", async () => {
+it("ignores old stored names and needs no browser profile or storage access", async () => {
+  window.localStorage.setItem("boxing-motion-ai.reviewer.v1", "Alice");
+  const read = vi.spyOn(window.localStorage, "getItem");
+  const write = vi.spyOn(window.localStorage, "setItem");
   mockApi();
   render(<App />);
-  fireEvent.click(await screen.findByRole("button", { name: "Not sure" }));
-  vi.spyOn(window.localStorage, "setItem").mockImplementation(() => {
-    throw new Error("blocked");
-  });
-  fireEvent.change(screen.getByLabelText("Your name"), {
-    target: { value: "Alice" },
-  });
-  expect(screen.getByRole("alert")).toHaveTextContent(
-    "Your browser could not remember your name",
-  );
-  expect(screen.getByLabelText("Your name")).toHaveValue("Alice");
+  fireEvent.click(await screen.findByRole("button", { name: "Yes" }));
+  expect(screen.queryByLabelText("Your name")).not.toBeInTheDocument();
+  expect(screen.queryByText("Alice")).not.toBeInTheDocument();
+  expect(read).not.toHaveBeenCalled();
+  expect(write).not.toHaveBeenCalled();
 });
 
 it("explains server boundary validation without losing the review draft", async () => {
@@ -870,7 +838,6 @@ it("explains server boundary validation without losing the review draft", async 
         } as Response)
       : original(url, init),
   );
-  window.localStorage.setItem(reviewerKey, "Alice");
   render(<App />);
   fireEvent.load(await screen.findByAltText("V4, native frame 2"));
   fireEvent.click(screen.getByRole("button", { name: "Yes" }));
@@ -885,11 +852,9 @@ it("explains server boundary validation without losing the review draft", async 
     "aria-pressed",
     "true",
   );
-  expect(screen.getByText("Alice")).toBeVisible();
 });
 
 it("blocks invalid correction intervals with a clear message", async () => {
-  window.localStorage.setItem(reviewerKey, "Alice");
   mockApi();
   render(<App />);
   fireEvent.click(await screen.findByRole("button", { name: "Change it" }));
@@ -925,7 +890,6 @@ it.each([
 ])(
   "saves %s independently without additional explanations",
   async (label, axis) => {
-    window.localStorage.setItem(reviewerKey, "Alice");
     const mock = mockApi();
     render(<App />);
     fireEvent.load(await screen.findByAltText("V4, native frame 2"));
@@ -1006,7 +970,6 @@ function mockPriorVerification(
 }
 
 it("restores only real human checks and allows withdrawing a prior check", async () => {
-  window.localStorage.setItem(reviewerKey, "Bob");
   const mock = mockPriorVerification();
   render(<App />);
   fireEvent.click(await screen.findByRole("button", { name: "Yes" }));
@@ -1015,7 +978,7 @@ it("restores only real human checks and allows withdrawing a prior check", async
   expect(
     screen.getByLabelText("Start/end timing is correct."),
   ).not.toBeChecked();
-  expect(screen.getByText("Previously verified by Alice")).toBeVisible();
+  expect(screen.getByText("Previously verified manually")).toBeVisible();
   expect(screen.getByText("Saved: Partially verified")).toBeVisible();
   fireEvent.click(screen.getByLabelText("Punch type is correct."));
   expect(screen.getByText("No confirmations selected")).toBeVisible();
@@ -1067,4 +1030,21 @@ it("keeps partially verified cases distinct from Reviewed", () => {
     }),
   };
   expect(reviewCategory(entry)).toBe("Partially verified");
+});
+
+it("labels manual and automated origins while retaining legacy names in history", async () => {
+  expect(reviewSource({ ...revision, actor_type: "assistant" })).toBe(
+    "automated",
+  );
+  expect(
+    reviewSource({ ...revision, actor_type: "human", reviewer: "Alice" }),
+  ).toBe("manual");
+  mockPriorVerification();
+  render(<App />);
+  await screen.findByRole("button", { name: "Yes" });
+  fireEvent.click(screen.getByText("Advanced details"));
+  fireEvent.click(screen.getByText(/Review history \(/));
+  expect(screen.getByText("Manual review · hold")).toBeVisible();
+  expect(screen.getByText(/Legacy reviewer: Alice/)).toBeVisible();
+  expect(screen.getByText("Automated observation · hold")).toBeVisible();
 });

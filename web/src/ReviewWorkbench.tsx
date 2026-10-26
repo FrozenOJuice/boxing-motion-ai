@@ -7,9 +7,9 @@ import {
   saveReview,
   title,
   percent,
+  reviewSource,
 } from "./api";
 import Viewer, { Notice } from "./Viewer";
-import { useReviewer } from "./reviewer";
 
 const uncertaintyReasons = [
   ["punch", "Punch type is unclear", "ambiguous"],
@@ -74,8 +74,6 @@ export default function ReviewWorkbench({
           : selectedReason[2]
         : "";
   const [visibleFrame, setVisibleFrame] = useState<Frame>();
-  const identity = useReviewer();
-  const { reviewer } = identity;
   const [notes, setNotes] = useState("");
 
   const [label, setLabel] = useState(initialLabel);
@@ -159,38 +157,34 @@ export default function ReviewWorkbench({
     (checks.hand && !inherited.hand);
   const validation = !edit
     ? "Review data is unavailable. Reload this case."
-    : !reviewer.trim()
-      ? "Enter your name once to save reviews."
-      : reviewer.trim().length > 160
-        ? "Your name must be at most 160 characters."
-        : !action
-          ? "Choose why this punch needs another look."
-          : action === "verify" && !data.labels.includes(label)
-            ? "Choose a punch label."
-            : action === "verify" &&
-                (checks.timing || choice === "change") &&
-                !boundsValid
-              ? "Enter whole-number start/end frames within the recording, with end at or after start."
-              : correcting && !notes.trim()
-                ? "Briefly explain your correction."
-                : choice === "unsure" && reason === "other" && !notes.trim()
-                  ? "Add a short explanation for Other reason."
-                  : action === "verify" && !count && !priorCount
-                    ? "Select the aspects you verified. You can save just one."
-                    : action === "verify" &&
-                        checks.timing &&
-                        !inherited.timing &&
-                        (!inspected.includes(start) || !inspected.includes(end))
-                      ? "View the start and end frames before verifying timing."
-                      : action === "verify" &&
-                          newlyCheckingMovement &&
-                          !inspected.some(
-                            (i) => !boundsValid || (i >= start && i <= end),
-                          )
-                        ? "Display a frame within the punch before verifying its type or hand."
-                        : action !== "verify" && !attest
-                          ? "Check the statement below only after you have verified it."
-                          : "";
+    : !action
+      ? "Choose why this punch needs another look."
+      : action === "verify" && !data.labels.includes(label)
+        ? "Choose a punch label."
+        : action === "verify" &&
+            (checks.timing || choice === "change") &&
+            !boundsValid
+          ? "Enter whole-number start/end frames within the recording, with end at or after start."
+          : correcting && !notes.trim()
+            ? "Briefly explain your correction."
+            : choice === "unsure" && reason === "other" && !notes.trim()
+              ? "Add a short explanation for Other reason."
+              : action === "verify" && !count && !priorCount
+                ? "Select the aspects you verified. You can save just one."
+                : action === "verify" &&
+                    checks.timing &&
+                    !inherited.timing &&
+                    (!inspected.includes(start) || !inspected.includes(end))
+                  ? "View the start and end frames before verifying timing."
+                  : action === "verify" &&
+                      newlyCheckingMovement &&
+                      !inspected.some(
+                        (i) => !boundsValid || (i >= start && i <= end),
+                      )
+                    ? "Display a frame within the punch before verifying its type or hand."
+                    : action !== "verify" && !attest
+                      ? "Check the statement below only after you have verified it."
+                      : "";
   const valid = !!choice && !validation;
   async function save(next: boolean) {
     if (!valid || !edit) return;
@@ -203,14 +197,13 @@ export default function ReviewWorkbench({
         expected_revision_sha256: edit.revision_sha256,
         source_candidate_sha256: edit.source_candidate_sha256,
         action,
-        reviewer: reviewer.trim(),
         verification:
           action === "verify"
             ? { schema_version: "annotation-verification-1.0", ...checks }
             : undefined,
         notes: [
           action === "verify"
-            ? `Selected human verification state for ${label}: ${Object.entries(
+            ? `Selected manual verification state for ${label}: ${Object.entries(
                 checks,
               )
                 .map(([axis, value]) => `${axis}=${value}`)
@@ -386,32 +379,6 @@ export default function ReviewWorkbench({
                 (end included).
               </p>
             )}
-            <div className="reviewer-identity">
-              {identity.editing ? (
-                <label>
-                  Your name
-                  <input
-                    value={reviewer}
-                    maxLength={160}
-                    onChange={(e) => identity.update(e.target.value)}
-                    onBlur={() => {
-                      if (reviewer.trim()) identity.setEditing(false);
-                    }}
-                    autoComplete="name"
-                  />
-                </label>
-              ) : (
-                <span>
-                  Reviewing as <strong>{reviewer}</strong>{" "}
-                  <button onClick={() => identity.setEditing(true)}>
-                    Change name
-                  </button>
-                </span>
-              )}
-              {identity.storageError && (
-                <p role="alert">{identity.storageError}</p>
-              )}
-            </div>
             {choice === "unsure" && (
               <>
                 <label className="decision-reason">
@@ -467,12 +434,6 @@ export default function ReviewWorkbench({
               <div className="independent-checks">
                 {(Object.keys(checkLabels) as (keyof VerificationChecks)[]).map(
                   (axis) => {
-                    const origin =
-                      prior?.verification?.origins[axis] ?? prior?.revision_id;
-                    const human = edit?.history.find(
-                      (r) =>
-                        r.revision_id === origin && r.actor_type === "human",
-                    );
                     return (
                       <label key={axis} className="toggle">
                         <input
@@ -486,10 +447,7 @@ export default function ReviewWorkbench({
                         <span>
                           {checkLabels[axis]}
                           {inherited[axis] && checks[axis] && (
-                            <small>
-                              Previously verified by{" "}
-                              {human?.reviewer ?? prior?.reviewer}
-                            </small>
+                            <small>Previously verified manually</small>
                           )}
                         </span>
                       </label>
@@ -614,13 +572,14 @@ export default function ReviewWorkbench({
           {edit?.history.map((r, i) => (
             <article key={r.revision_id ?? i}>
               <h4>
-                {r.actor_type === "human"
-                  ? "Human decision"
+                {reviewSource(r) === "manual"
+                  ? "Manual review"
                   : "Automated observation"}{" "}
                 · {r.disposition}
               </h4>
               <p>
-                {r.reviewer} · {r.reviewed_at}
+                {r.reviewed_at}
+                {r.reviewer ? ` · Legacy reviewer: ${r.reviewer}` : ""}
               </p>
               <p>
                 {r.confirmed_label ? title(r.confirmed_label) : r.label_status}{" "}

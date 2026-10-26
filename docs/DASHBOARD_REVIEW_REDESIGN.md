@@ -28,7 +28,7 @@ http://127.0.0.1:8000. To launch from a stopped session, use the commands in
    Corrections appear only after Change it, including frame inputs and “Use frame
    as start/end” buttons. Yes explicitly resets any draft correction to the original
    mapped label and boundaries, even when an older review proposed a correction.
-5. Enter your name once; the browser remembers it. Select **Punch type is correct**,
+5. Select **Punch type is correct**,
    **Lead/rear hand is correct** and/or **Start/end timing is correct** independently.
    Save any verified subset with **Save & Next**. Timing requires viewing both exact
    boundary frames; a new type/hand check requires viewing the punch. Three checks
@@ -70,7 +70,7 @@ assistant observation cannot produce a Reviewed category by itself.
 
 Not sure requires a reason; its documented mapping records an unresolved state.
 Exclusion is a separate explicit option, never selected automatically. Every
-save retains reviewer identity, explicit statements/optional notes, server timestamp, source bindings, exact frame evidence,
+save retains its manual/automated source, explicit statements/optional notes, server timestamp, source bindings, exact frame evidence,
 attestation, validation and revision history through the unchanged backend.
 
 ## Verification
@@ -140,43 +140,35 @@ check the explicit previous-frame message and Retry. These checks do not require
 saving any annotation review.
 
 
-## Simplified form and remembered reviewer
+## Manual reviews without names
 
-The browser stores only the reviewer name under `boxing-motion-ai.reviewer.v1` in
-localStorage. Once entered it appears as **Reviewing as …** with **Change name**.
-It survives page reloads and server restarts in the same browser profile/origin;
-localhost, 127.0.0.1 and different ports have separate storage. Clearing browser
-storage clears the preference. No attestation, decision, stance or notes are restored
-from this preference. Blocked storage produces a visible warning. Names remain
-self-reported; there is no authentication or automatic attribution from old reviews.
+The dashboard has no reviewer-name field, profile, account or authentication step.
+It no longer reads or writes the old browser name preference. Select the independently
+verified aspects and explicitly Save or Save & Next. The server records `source: manual`
+and a timezone-aware timestamp; the frontend cannot choose or spoof this source field.
+No name is generated or substituted. Existing named reviews and receipts remain intact,
+and their legacy names are still visible in Advanced details/history.
 
-The initial form simplification kept the backend API/contracts unchanged; the
-[independent verification extension](INDEPENDENT_ANNOTATION_VERIFICATION.md) now replaces
-the combined checkbox described here. Legacy confirmations require nonempty audit text and
-lead/rear evidence for acceptance. To avoid forcing prose, the frontend records the
-human's selected action and the exact statement they explicitly checked, plus any
-optional note. This is a structured record of human input, not a generated observation.
-It never invents orthodox/southpaw stance, screen-side interpretation or observations
-from model output. Saving a confirmation still requires loading both exact boundary
-frames and personally attesting all required facts. Watching endpoints alone does not
-check that statement. Use Not sure if timing or lead/rear interpretation is unverified;
-that path sends no confirmed label, bounds or stance evidence.
+Automated observations are displayed separately as automated and cannot acquire
+verification merely by loading the dashboard. Old records without a source field use
+their original human/assistant actor for display classification, without rewriting the
+record or changing its canonical hash. New automated records use `source: automated`;
+they cannot carry manual confirmations. The retained internal `actor_type` is an actor
+category for compatibility, not an account or personal identifier.
 
-Corrections require a written reason whenever the proposed label or interval differs
-from the original source. Previously proposed corrections still require a new personal
-review and explanation. Original source fingerprints and predecessor hashes are sent
-with every revision; existing history is preserved. Uncertainty reasons map to the
-existing ambiguous/hold decisions. Other requires a short explanation, while ordinary
-reasons need no additional prose. Optional exclusion remains under More options.
+[Independent verification](INDEPENDENT_ANNOTATION_VERIFICATION.md) is unchanged: partial
+checks remain held, full six-class labels require both type and lead/rear hand checks,
+and timing requires exact boundary evidence. New manual checks carry their originating
+revision IDs. Previously named origins keep their names in historical records; unnamed
+origins are simply manual reviews. No assertion is copied from automated observations.
 
-Validation now explains missing information inline and translates known server errors
-(such as crossing a scene cut) into plain language while keeping the draft. No new
-confirmation dialog, backend dependency, dataset operation or ML experiment is added.
+Notes are optional for unchanged annotations. Meaningful corrections retain their brief
+reason, and uncertainty offers selectable reasons with an optional note. Existing source
+fingerprints, revision links, stale-write detection, original exclusions and V9 protections
+remain in force. No real review is saved during automated verification.
 
-Verification: 370 Python tests and 29 frontend tests, Ruff, TypeScript, formatting and
-production build. Synthetic tests cover empty-note confirmations, no preselected
-attestations, browser identity restoration/change/storage failure, reasons without
-freeform text, meaningful-correction explanations, invalid intervals, and appended
-correction/uncertainty history after reopening the real curation service in a temporary
-workspace. Existing media, V9, concurrency and audit checks still pass. No genuine
-annotation review was saved by the implementation agent.
+Current checks: **427 Python tests**, **37 frontend tests**, Ruff, TypeScript, formatting
+and production build pass. New tests cover anonymous saves, server-assigned manual source,
+automated-source rejection, timestamp/verification preservation, historical named receipts
+and hashes remaining unchanged, name-free UI and ignoring old browser name preferences.
+One existing upstream Starlette/httpx TestClient deprecation warning remains.
