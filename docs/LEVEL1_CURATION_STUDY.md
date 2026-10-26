@@ -104,4 +104,148 @@ build passed. Nine new synthetic tests cover gate restrictions, unresolved/manua
 provenance, historical holds, unchanged development membership, exact tensor reuse
 and paired evaluation identity/label mismatches.
 
-Results will be recorded below after the full experiment and preservation checks.
+## Results and decision
+
+**Curation yields a modest V5 development gain, but does not establish reliable
+cross-recording generalization.** Keep the conservative exclusions as data hygiene;
+do not promote this as a solved six-class model or infer that the excluded labels
+were all wrong. Six excluded disputes were actually human-confirmed, deliberately
+kept out to preserve this experiment's approved membership.
+
+All 30 full fits completed. Full artifacts are in
+`reports/boxingvi/level1-curation-study-v1/`, smoke artifacts in
+`reports/boxingvi/level1-curation-smoke-v1/`.
+The [complete metric appendix](../reports/boxingvi/level1-curation-study-v1/metrics.md)
+contains per-recording precision/recall/support, all mean confusion matrices and
+per-seed results. Individual exact confusion counts, predictions, training curves
+and checkpoints remain in the corresponding case/seed/arm directories.
+
+### Aggregate performance
+
+Mean ± sample standard deviation across three matched seeds. A is original;
+B is curated. Held-out results are recording-group diagnostics; only V5 selects
+checkpoints. These are not independent V9 test scores.
+
+| Evaluation | A six-class F1 | B six-class F1 | A accuracy | B accuracy | F1 gains across seeds |
+|---|---:|---:|---:|---:|---|
+
+| V5 development | 0.7968 ± 0.0423 | 0.8134 ± 0.0345 | 0.8748 ± 0.0179 | 0.8696 ± 0.0206 | +0.0222, +0.0052, +0.0224 |
+| V4 held out | 0.1552 ± 0.0074 | 0.1705 ± 0.0141 | 0.1815 ± 0.0121 | 0.1954 ± 0.0356 | +0.0210, +0.0060, +0.0191 |
+| V6 held out | 0.2599 ± 0.0249 | 0.2459 ± 0.0314 | 0.4216 ± 0.0538 | 0.4128 ± 0.0670 | -0.0524, -0.0385, +0.0490 |
+| V7+V8 held out | 0.4002 ± 0.0396 | 0.4685 ± 0.0296 | 0.4624 ± 0.0246 | 0.5520 ± 0.0204 | +0.0307, +0.0262, +0.1481 |
+| V10 held out | 0.2291 ± 0.0367 | 0.1908 ± 0.0267 | 0.2955 ± 0.0391 | 0.2695 ± 0.0465 | -0.0528, -0.0293, -0.0330 |
+
+Equal-weight mean across the four held-out groups is **0.2611 → 0.2689** six-class
+F1. Per-seed gains for that equal-group mean are **−0.0134, −0.0089, +0.0458**.
+This small average is inconsistent, not robust evidence of transferable improvement.
+The V7/V8 group benefits in all three seeds; V10 regresses in all three.
+
+V6 has no jab/cross examples: its supported-class F1 is **0.3898 → 0.3688**.
+V7 has no eligible rear uppercuts and V8 no rear hooks. Individually, their
+supported F1 is **0.3237 → 0.3905** and **0.4919 → 0.5618**, respectively.
+Their combined held-out group contains all six classes, but only one rear hook
+and eight rear uppercuts; interpret large recall shifts with those small supports
+in mind. Other group and V5 supported F1 values equal six-class F1.
+
+### V5 precision, recall and seed consistency
+
+| Class | A precision | B precision | A recall | B recall |
+|---|---:|---:|---:|---:|
+| jab | 0.9826 | 0.9685 | 0.9189 | 0.8982 |
+| cross | 0.8938 | 0.8651 | 0.9710 | 0.9758 |
+| lead_hook | 0.7526 | 0.8219 | 0.7892 | 0.8137 |
+| rear_hook | 0.6770 | 0.6403 | 0.4274 | 0.7009 |
+| lead_uppercut | 0.8252 | 0.7606 | 0.7778 | 0.7179 |
+| rear_uppercut | 0.7782 | 0.8446 | 0.9269 | 0.8037 |
+
+V5 macro-F1 improves by **+0.0222/+0.0052/+0.0224**, but mean accuracy falls
+**87.48% → 86.96%**. Rear-hook recall rises **42.74% → 70.09%** (improves in two
+seeds, declines in one), while its precision falls **67.70% → 64.03%**. Lead-uppercut
+recall declines in two seeds; rear-uppercut recall declines in **all three**.
+Jab recall also declines in all three, despite no jab removal.
+
+The confusion tradeoff is explicit: mean V5 rear-hook → rear-uppercut errors fall
+from **18.0 to 9.33**, but rear-uppercut → rear-hook errors rise from **1.0 to 9.67**.
+Thus the rear-hook gain partly reflects a changed decision boundary, not a uniform
+improvement in recognizing both rear punches.
+
+### Weak-class recall on held-out groups
+
+| Held-out group | Rear hook A → B | Lead uppercut A → B | Rear uppercut A → B |
+|---|---:|---:|---:|
+| V4 | 0.0000 → 0.0000 | 0.4695 → 0.2300 | 0.0115 → 0.0536 |
+| V6 | 0.0625 → 0.0312 | 0.3573 → 0.3227 | 0.3457 → 0.3457 |
+| V7+V8 | 0.0000 → 0.0000 | 0.5965 → 0.6608 | 0.5000 → 0.8750 |
+| V10 | 0.0000 → 0.0000 | 1.0000 → 0.9167 | 0.3175 → 0.1270 |
+
+Rear hooks remain at zero recall on V4, V7/V8 and V10 for all seeds. V6 rear-hook
+recall is only **3.13%** after curation. V4 lead uppercuts and V10 rear uppercuts
+regress substantially. V7/V8 uppercuts improve, with sparse rear-uppercut support.
+These results do not support a balanced six-class transfer claim.
+
+### Overfitting and distribution effects
+
+At the final combined epoch, mean training/development F1 is **0.9010/0.6953** for
+A and **0.8895/0.7173** for B. The gap narrows but remains large; selected-epoch
+scores above are better because V5 chooses checkpoints. Selected epochs are
+**31/16/28** for A and **24/34/24** for B. Training metrics describe different-sized
+training pools and are not an identical-example accuracy comparison.
+
+Curation removes 2.85% of examples, disproportionately uppercuts (12 lead and 15
+rear), but the unchanged sampler still assigns **16.67% expected mass per class**
+in both arms. Combined expected recording mass shifts as follows:
+
+| Recording | Original | Curated |
+|---|---:|---:|
+| V4 | 38.90% | 40.04% |
+| V6 | 21.55% | 22.70% |
+| V7 | 7.33% | 6.41% |
+| V8 | 12.26% | 11.96% |
+| V10 | 19.96% | 18.88% |
+
+The training-only duration lookup has unchanged combined V5 F1 **0.0863** in both
+arms. This does not show increased utility of that simple duration shortcut, but
+cannot rule out temporal shortcuts in the TCN. Source allocation, repeated-example
+exposure, different gradient draws and slightly fewer batches remain confounders.
+This experiment therefore estimates the effect of the approved curation policy
+**under the existing sampling scheme**, not a pure label-quality effect isolated
+from all distribution changes. No distribution-matched third training arm was run.
+
+### Next direction
+
+Keep the 1,123-example manifest and its exclusions for future approved work, while
+preserving both trained arms and the prior reference. Do not automatically promote
+a new model on the strength of V5 alone. The next useful step is a bounded
+**pose-estimation reliability comparison**, concentrating on active-arm localization
+and high-confidence anatomical mistakes on the existing human-reviewed examples
+and the hardest held-out viewpoints. Compare an alternative pose estimator against
+the current one before another classifier experiment; preserve exact timing and
+masks and avoid another round of feature additions. This is a recommendation, not
+an implemented pipeline or a guarantee that pose quality is the only cause.
+
+Large-scale relabeling is not justified by this limited study. The confirmed anchors
+and held exclusions should be reused rather than requesting extensive fresh manual
+review. Frozen diagnostic labels, sparse rear punches, unknown identities and
+viewpoint differences still limit interpretation. No further training was started.
+
+## Final preservation and reproducibility
+
+- Both arms used identical eligible evaluation IDs and target labels for every seed
+  and fold. All 30 checkpoint provenance records match their approved training rows;
+  V5 alone selected checkpoints. All paired initial model tensor digests match.
+- The three combined original runs and all existing one-seed original group-holdout
+  reference metrics reproduce **exactly**, not approximately.
+- All ten smoke curves exactly equal the first two epochs of their corresponding
+  full runs, including losses and train/development metrics.
+- All **4,633** protected prior files passed post-run hashes. An additional **12**
+  raw video/workbook hashes match the historical source pins before and after the
+  experiment. Review ledger version 19 and the byte-verified backups are unchanged.
+- V9 was not opened, decoded, hashed, evaluated or used for selection. No original
+  candidates, annotations, media, model results or review decisions were rewritten.
+- `reproducibility.json`, `preservation.json` and `raw-source-preservation.json`
+  record these checks. The local `verify_results.py` alongside them reproduces the
+  result/preservation audit from the repository root. Generated outputs remain ignored.
+
+Checks remain **436 Python tests**, **42 frontend tests**, Ruff, TypeScript,
+formatting and production build passing. The implementation milestone is local
+commit `b38a63b`; final results are documented in a separate local commit. No push.

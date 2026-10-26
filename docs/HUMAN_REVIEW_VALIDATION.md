@@ -1,5 +1,8 @@
 # Human review validation — 26 October 2026
 
+Subsequent approved preparation and controlled results: [conservative curation study](LEVEL1_CURATION_STUDY.md).
+The validation snapshot and gate behavior described below are preserved as history.
+
 The 18 requested reviews are saved correctly. **16 are fully verified unchanged
 annotations; two are partial manual holds. Every class has at least one fully
 verified, originally eligible anchor.** We can prepare a conservative curated
