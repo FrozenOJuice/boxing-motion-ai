@@ -1,0 +1,30 @@
+{
+  "schema_version": "approved-curated-subset-1.0",
+  "baseline_config": {
+    "path": "configs/level1_curated_proposed.json",
+    "sha256": "bb1dd7cbe3db1bdfb137176bdd630243cb32a1317575d78721952c93a36a071c"
+  },
+  "reviewed_config": {
+    "path": "reports/boxingvi/dashboard-reviews-v1/v00000019/config.json",
+    "sha256": "eb3281936a12d3dbbe81eaa82b2b0abbc8ebee0aec35ffa434dbdbf387e63179"
+  },
+  "backup_manifest": {
+    "path": "reports/boxingvi/human-review-validation-20261026T152916Z/backup-manifest.json",
+    "sha256": "2db198568e19118c1b9da734f68b17edf0e7ef87117f9fb45532347b77bbc832"
+  },
+  "approved_unresolved_holds": [
+    "V6:264",
+    "V6:266"
+  ],
+  "baseline_count": 1156,
+  "selected_count": 1123,
+  "class_counts": {
+    "jab": 190,
+    "cross": 97,
+    "lead_hook": 301,
+    "rear_hook": 108,
+    "lead_uppercut": 245,
+    "rear_uppercut": 182
+  },
+  "selection_sha256": "a758ac1c070560f82af0e3365ecef2f9da83fd01d99303d4c14e61341365ffb4"
+}
