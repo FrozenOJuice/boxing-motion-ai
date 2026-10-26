@@ -1387,11 +1387,11 @@ footer span {
   background: #08090a;
 }
 .playback-controls {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 8px;
   align-items: center;
   padding: 14px 18px 8px;
-  flex-wrap: wrap;
 }
 .playback-controls button {
   font-size: 20px;
@@ -1400,14 +1400,17 @@ footer span {
 .playback-position {
   color: #c2c8d0;
   font-size: 12px;
-  margin: 0 8px;
+  margin: 0;
+  overflow-wrap: anywhere;
   font-variant-numeric: tabular-nums;
 }
-.playback-controls small {
-  font-size: 11px;
+.playback-buttons {
+  display: flex;
+  gap: 8px;
 }
 .playback-controls .toggle {
-  margin-left: auto;
+  margin-left: 0;
+  justify-self: end;
 }
 .review-timeline {
   position: relative;
@@ -1434,22 +1437,53 @@ footer span {
 }
 .boundary-marker {
   position: absolute;
+  z-index: 2;
+  top: 0;
+  width: 16px;
+  height: 24px;
+  transform: translateX(-50%);
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+}
+.boundary-marker::before {
+  content: "";
+  position: absolute;
   top: 1px;
+  bottom: 1px;
+  left: 7px;
   width: 2px;
-  height: 22px;
   background: #c4d3e8;
 }
-.boundary-navigation {
-  display: flex;
-  justify-content: space-between;
-  padding: 0 18px 12px;
-  gap: 12px;
+.boundary-marker:hover:not(:disabled) {
+  background: #c4d3e822;
 }
-.boundary-navigation button {
-  background: transparent;
-  border-color: transparent;
-  color: #c0c7d1;
+.boundary-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  padding: 6px 9px;
+  background: #252c36;
+  border: 1px solid #495464;
+  border-radius: 5px;
   font-size: 12px;
+  white-space: nowrap;
+  visibility: hidden;
+  pointer-events: none;
+}
+.boundary-start .boundary-tooltip {
+  left: 0;
+}
+.boundary-end .boundary-tooltip {
+  right: 0;
+}
+.boundary-marker:hover .boundary-tooltip,
+.boundary-marker:focus-visible .boundary-tooltip {
+  visibility: visible;
+}
+.boundary-status {
+  display: block;
+  padding: 0 18px 8px;
 }
 .boundary-edit-tools {
   padding: 8px 18px;
@@ -1696,9 +1730,6 @@ footer span {
 }
 .review-timeline {
   margin-top: 4px;
-}
-.boundary-navigation {
-  padding-bottom: 4px;
 }
 .viewer-options {
   padding-block: 5px;

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import {
   type Case,
   type Frame,
@@ -181,6 +181,7 @@ export default function Viewer({
   jump?: { index: number; token: number };
   proposedBounds?: [number, number];
 }) {
+  const markerId = useId();
   const count = data.recording.data?.preparation.source_frame_count ?? 0;
   const original = frameBounds(data.annotation, count);
   const bounds =
@@ -271,33 +272,34 @@ export default function Viewer({
         onFailure={() => setPlaying(false)}
       />
       <div className="playback-controls">
-        <button
-          aria-label={playing ? "Pause" : "Play"}
-          className="play-button"
-          onClick={toggle}
-        >
-          {playing ? "Ⅱ" : "▶"}
-        </button>
-        <button
-          aria-label="Previous frame"
-          disabled={index <= minimum}
-          onClick={() => seek(index - 1)}
-        >
-          ‹
-        </button>
-        <button
-          aria-label="Next frame"
-          disabled={index >= maximum}
-          onClick={() => seek(index + 1)}
-        >
-          ›
-        </button>
         <span className="playback-position">
           {loaded === null
             ? "Loading frame…"
             : `Frame ${loaded.toLocaleString()}`}
         </span>
-        <small>Frame-by-frame playback</small>
+        <div className="playback-buttons">
+          <button
+            aria-label="Previous frame"
+            disabled={index <= minimum}
+            onClick={() => seek(index - 1)}
+          >
+            ‹
+          </button>
+          <button
+            aria-label={playing ? "Pause" : "Play"}
+            className="play-button"
+            onClick={toggle}
+          >
+            {playing ? "Ⅱ" : "▶"}
+          </button>
+          <button
+            aria-label="Next frame"
+            disabled={index >= maximum}
+            onClick={() => seek(index + 1)}
+          >
+            ›
+          </button>
+        </div>
         <label className="toggle">
           <input
             type="checkbox"
@@ -317,14 +319,27 @@ export default function Viewer({
                 width: `${(100 * (bounds[1] - bounds[0])) / Math.max(1, maximum - minimum)}%`,
               }}
             />
-            <span
-              className="boundary-marker"
-              style={{ left: position(bounds[0]) }}
-            />
-            <span
-              className="boundary-marker"
-              style={{ left: position(bounds[1]) }}
-            />
+            {(bounds[0] === bounds[1] ? [0] : [0, 1]).map((end) => {
+              const label = `${proposedBounds ? "Proposed" : "Punch"} ${bounds[0] === bounds[1] ? "start/end" : end === 0 ? "start" : "end"} · ${bounds[end]}`;
+              return (
+                <button
+                  key={end}
+                  className={`boundary-marker boundary-${end === 0 ? "start" : "end"}`}
+                  style={{ left: position(bounds[end]) }}
+                  aria-label={label}
+                  aria-describedby={`${markerId}-${end}`}
+                  onClick={() => seek(bounds[end])}
+                >
+                  <span
+                    role="tooltip"
+                    id={`${markerId}-${end}`}
+                    className="boundary-tooltip"
+                  >
+                    {label}
+                  </span>
+                </button>
+              );
+            })}
           </>
         )}
         <input
@@ -339,20 +354,11 @@ export default function Viewer({
           onChange={(e) => seek(Number(e.target.value))}
         />
       </div>
-      <div className="boundary-navigation">
-        {bounds ? (
-          <>
-            <button onClick={() => seek(bounds[0])}>
-              {proposedBounds ? "Proposed start" : "Punch start"} · {bounds[0]}
-            </button>
-            <button onClick={() => seek(bounds[1])}>
-              {proposedBounds ? "Proposed end" : "Punch end"} · {bounds[1]}
-            </button>
-          </>
-        ) : (
-          <small>Source boundaries need review.</small>
-        )}
-      </div>
+      {!bounds && (
+        <small className="boundary-status">
+          Source boundaries need review.
+        </small>
+      )}
       {onBoundary && (
         <div className="boundary-edit-tools">
           <button
