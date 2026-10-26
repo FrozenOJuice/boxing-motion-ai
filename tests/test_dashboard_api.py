@@ -227,3 +227,47 @@ def test_review_api_persistence_csrf_and_exact_boundaries(media):
     )
     assert response.status_code == 422
     assert "confirmation_crosses_known_cut" in response.text
+
+
+def test_independent_http_verification_and_human_history(media):
+    from test_independent_verification import verify
+
+    root, app, client, _, _ = media
+    headers = {"Origin": "http://127.0.0.1:8000", "X-Review-Client": "dashboard-v0.2"}
+    partial = verify(
+        app.state.workspace,
+        {"punch_type"},
+        proposed_bounds=dict(start=4, end=5, convention="zero_based_decoded_inclusive"),
+        inspected_frames=[4],
+    )
+    response = client.post(
+        "/api/reviews/V4/1", json=partial.model_dump(mode="json"), headers=headers
+    )
+    assert response.status_code == 200, response.text
+    restarted = TestClient(create_app(root), base_url="http://127.0.0.1:8000")
+    case = restarted.get("/api/cases/V4/1").json()["data"]
+    assert case["edit"]["data"]["verification"] == dict(punch_type=True, hand=False, timing=False)
+    assert case["review"]["data"]["human_accepted"] is False
+    assert case["review"]["data"]["latest"]["confirmed_label"] is None
+    assert case["review"]["data"]["verification_status"] == "partially_verified"
+    full = verify(
+        app.state.workspace,
+        {"punch_type", "hand", "timing"},
+        proposed_bounds=dict(start=4, end=5, convention="zero_based_decoded_inclusive"),
+        inspected_frames=[4, 5],
+        reviewer="Another human",
+    )
+    response = restarted.post(
+        "/api/reviews/V4/1", json=full.model_dump(mode="json"), headers=headers
+    )
+    assert response.status_code == 200, response.text
+    updated = restarted.get("/api/cases/V4/1").json()["data"]
+    history = updated["edit"]["data"]["history"]
+    assert len(history) == 3
+    assert history[-1]["verification"]["origins"]["punch_type"] == partial.request_id
+    assert updated["review"]["data"]["verification_status"] == "fully_verified"
+    assert updated["annotation"]["raw_start"] == 100
+    bad = full.model_dump(mode="json")
+    bad["verification"]["hand"] = "true"
+    assert restarted.post("/api/reviews/V4/1", json=bad, headers=headers).status_code == 422
+    assert restarted.post("/api/reviews/V9/1", json=bad, headers=headers).status_code == 422

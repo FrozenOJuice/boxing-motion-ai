@@ -263,7 +263,15 @@ def build_plan(config, ledger, sources):
     verified_anchor_support = Counter()
     for key in config.priority_disputes + config.verification_anchors:
         revision = latest(ledger, key)
-        if not revision or revision.actor_type != "human" or revision.disposition == "provisional":
+        if (
+            not revision
+            or revision.actor_type != "human"
+            or (
+                revision.disposition == "provisional"
+                or revision.verification is not None
+                and len(revision.verification.selected()) < 3
+            )
+        ):
             pending.append(key)
         if key in config.verification_anchors and revision and revision.disposition == "accept":
             v, row = key.split(":")

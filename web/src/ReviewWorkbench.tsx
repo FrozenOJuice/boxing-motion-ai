@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import {
   type Case,
   type Frame,
+  type VerificationChecks,
   frameBounds,
   saveReview,
   title,
@@ -19,8 +20,16 @@ const uncertaintyReasons = [
   ["later", "Needs another review", "hold"],
   ["other", "Other reason", "hold"],
 ] as const;
-const confirmationAttestation =
-  "I personally verified the punch label, the lead/rear arm from the boxer’s stance, and the start/end frames.";
+const noChecks: VerificationChecks = {
+  punch_type: false,
+  hand: false,
+  timing: false,
+};
+const checkLabels = {
+  punch_type: "Punch type is correct.",
+  hand: "Lead/rear hand is correct.",
+  timing: "Start/end timing is correct.",
+} as const;
 const uncertaintyAttestation =
   "I personally reviewed this punch and selected the reason above.";
 
@@ -58,7 +67,7 @@ export default function ReviewWorkbench({
   const selectedReason = uncertaintyReasons.find((r) => r[0] === reason);
   const action =
     choice === "yes" || choice === "change"
-      ? "confirm"
+      ? "verify"
       : selectedReason
         ? exclude
           ? "exclude"
@@ -74,6 +83,7 @@ export default function ReviewWorkbench({
   const [end, setEnd] = useState(initialEnd);
   const [inspected, setInspected] = useState<number[]>([]);
   const [attest, setAttest] = useState(false);
+  const [checks, setChecks] = useState<VerificationChecks>(noChecks);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
@@ -111,6 +121,42 @@ export default function ReviewWorkbench({
     start >= 0 &&
     end >= start &&
     end < (data.recording.data?.preparation.source_frame_count ?? 0);
+  function previousChecks(
+    targetLabel: string,
+    targetStart: number,
+    targetEnd: number,
+  ): VerificationChecks {
+    if (prior?.actor_type !== "human") return noChecks;
+    const target =
+      targetStart >= 0 && targetEnd >= targetStart
+        ? { start: targetStart, end: targetEnd }
+        : null;
+    const saved = prior.verification;
+    const priorLabel =
+      saved?.label ??
+      prior.confirmed_label ??
+      data.annotation.punch_type_provisional;
+    const priorBounds = saved ? saved.bounds : prior.confirmed_bounds;
+    if (
+      priorLabel !== targetLabel ||
+      (priorBounds?.start ?? null) !== (target?.start ?? null) ||
+      (priorBounds?.end ?? null) !== (target?.end ?? null)
+    )
+      return noChecks;
+    return saved
+      ? { punch_type: saved.punch_type, hand: saved.hand, timing: saved.timing }
+      : {
+          punch_type: prior.label_status === "confirmed",
+          hand: prior.label_status === "confirmed",
+          timing: prior.boundary_status === "confirmed",
+        };
+  }
+  const inherited = previousChecks(label, start, end);
+  const count = Object.values(checks).filter(Boolean).length;
+  const priorCount = Object.values(inherited).filter(Boolean).length;
+  const newlyCheckingMovement =
+    (checks.punch_type && !inherited.punch_type) ||
+    (checks.hand && !inherited.hand);
   const validation = !edit
     ? "Review data is unavailable. Reload this case."
     : !reviewer.trim()
@@ -119,20 +165,32 @@ export default function ReviewWorkbench({
         ? "Your name must be at most 160 characters."
         : !action
           ? "Choose why this punch needs another look."
-          : action === "confirm" && !data.labels.includes(label)
+          : action === "verify" && !data.labels.includes(label)
             ? "Choose a punch label."
-            : action === "confirm" && !boundsValid
+            : action === "verify" &&
+                (checks.timing || choice === "change") &&
+                !boundsValid
               ? "Enter whole-number start/end frames within the recording, with end at or after start."
               : correcting && !notes.trim()
                 ? "Briefly explain your correction."
                 : choice === "unsure" && reason === "other" && !notes.trim()
                   ? "Add a short explanation for Other reason."
-                  : action === "confirm" &&
-                      (!inspected.includes(start) || !inspected.includes(end))
-                    ? "View the start and end frames before confirming."
-                    : !attest
-                      ? "Check the statement below only after you have verified it."
-                      : "";
+                  : action === "verify" && !count && !priorCount
+                    ? "Select the aspects you verified. You can save just one."
+                    : action === "verify" &&
+                        checks.timing &&
+                        !inherited.timing &&
+                        (!inspected.includes(start) || !inspected.includes(end))
+                      ? "View the start and end frames before verifying timing."
+                      : action === "verify" &&
+                          newlyCheckingMovement &&
+                          !inspected.some(
+                            (i) => !boundsValid || (i >= start && i <= end),
+                          )
+                        ? "Display a frame within the punch before verifying its type or hand."
+                        : action !== "verify" && !attest
+                          ? "Check the statement below only after you have verified it."
+                          : "";
   const valid = !!choice && !validation;
   async function save(next: boolean) {
     if (!valid || !edit) return;
@@ -146,9 +204,17 @@ export default function ReviewWorkbench({
         source_candidate_sha256: edit.source_candidate_sha256,
         action,
         reviewer: reviewer.trim(),
+        verification:
+          action === "verify"
+            ? { schema_version: "annotation-verification-1.0", ...checks }
+            : undefined,
         notes: [
-          action === "confirm"
-            ? `${choice === "yes" ? "Reviewer selected Yes for the original annotation" : "Reviewer proposed this annotation"}: ${label}, frames ${start}–${end} inclusive. Explicit attestation: ${confirmationAttestation}`
+          action === "verify"
+            ? `Selected human verification state for ${label}: ${Object.entries(
+                checks,
+              )
+                .map(([axis, value]) => `${axis}=${value}`)
+                .join(", ")}.`
             : `Reviewer selected: ${selectedReason?.[1]}.${exclude ? " Explicitly excluded this example from future candidates." : ""}`,
           notes.trim() ? `Reviewer note: ${notes.trim()}` : "",
         ]
@@ -158,17 +224,14 @@ export default function ReviewWorkbench({
           choice === "unsure"
             ? [selectedReason?.[1], notes.trim()].filter(Boolean).join(" · ")
             : "",
-        lead_rear_evidence:
-          action === "confirm"
-            ? `Reviewer explicitly attested: ${confirmationAttestation}`
-            : "",
-        proposed_label: action === "confirm" ? label : null,
+        lead_rear_evidence: "",
+        proposed_label: action === "verify" ? label : null,
         proposed_bounds:
-          action === "confirm"
+          action === "verify" && boundsValid
             ? { start, end, convention: "zero_based_decoded_inclusive" }
             : null,
         inspected_frames: inspected,
-        attest_human: attest,
+        attest_human: action === "verify" ? true : attest,
       });
       onDirty(false);
       onSaved(next);
@@ -187,6 +250,17 @@ export default function ReviewWorkbench({
     setChoice(value);
     setReason("");
     setExclude(false);
+    setChecks(
+      value === "yes"
+        ? previousChecks(
+            data.annotation.punch_type_provisional,
+            original?.[0] ?? -1,
+            original?.[1] ?? -1,
+          )
+        : value === "change"
+          ? previousChecks(initialLabel, initialStart, initialEnd)
+          : noChecks,
+    );
     if (value === "yes") {
       setLabel(data.annotation.punch_type_provisional);
       setStart(original?.[0] ?? -1);
@@ -220,6 +294,7 @@ export default function ReviewWorkbench({
           choice === "change"
             ? (kind, index) => {
                 changed();
+                setChecks(noChecks);
                 (kind === "start" ? setStart : setEnd)(index);
               }
             : undefined
@@ -227,6 +302,15 @@ export default function ReviewWorkbench({
       />
       <section className="decision-panel" aria-label="Review decision">
         <h3>Is this punch correct?</h3>
+        {data.review.data?.verification_status &&
+          data.review.data.verification_status !== "unverified" && (
+            <p className="saved-verification">
+              Saved:{" "}
+              {data.review.data.verification_status === "fully_verified"
+                ? "Fully verified"
+                : "Partially verified"}
+            </p>
+          )}
         {!edit && (
           <Notice>Review data is unavailable. Saving is disabled.</Notice>
         )}
@@ -258,7 +342,10 @@ export default function ReviewWorkbench({
                   Correct punch label
                   <select
                     value={label}
-                    onChange={(e) => setLabel(e.target.value)}
+                    onChange={(e) => {
+                      setChecks(noChecks);
+                      setLabel(e.target.value);
+                    }}
                   >
                     {data.labels.map((l) => (
                       <option key={l} value={l}>
@@ -273,7 +360,10 @@ export default function ReviewWorkbench({
                     type="number"
                     min={0}
                     value={start}
-                    onChange={(e) => setStart(Number(e.target.value))}
+                    onChange={(e) => {
+                      setChecks(noChecks);
+                      setStart(Number(e.target.value));
+                    }}
                   />
                 </label>
                 <label>
@@ -282,14 +372,17 @@ export default function ReviewWorkbench({
                     type="number"
                     min={start}
                     value={end}
-                    onChange={(e) => setEnd(Number(e.target.value))}
+                    onChange={(e) => {
+                      setChecks(noChecks);
+                      setEnd(Number(e.target.value));
+                    }}
                   />
                 </label>
               </div>
             )}
             {choice === "yes" && (
               <p className="confirmation-scope">
-                Confirm <strong>{title(label)}</strong>, frames {start}–{end}{" "}
+                Review <strong>{title(label)}</strong>, frames {start}–{end}{" "}
                 (end included).
               </p>
             )}
@@ -370,34 +463,80 @@ export default function ReviewWorkbench({
                 </label>
               </details>
             )}
-            {action === "confirm" && (
-              <div className="boundary-checks">
-                <span>Check the boundaries</span>
-                <button
-                  onClick={() => setJump({ index: start, token: Date.now() })}
-                >
-                  View start{inspected.includes(start) ? " ✓" : ""}
-                </button>
-                <button
-                  onClick={() => setJump({ index: end, token: Date.now() })}
-                >
-                  View end{inspected.includes(end) ? " ✓" : ""}
-                </button>
+            {action === "verify" ? (
+              <div className="independent-checks">
+                {(Object.keys(checkLabels) as (keyof VerificationChecks)[]).map(
+                  (axis) => {
+                    const origin =
+                      prior?.verification?.origins[axis] ?? prior?.revision_id;
+                    const human = edit?.history.find(
+                      (r) =>
+                        r.revision_id === origin && r.actor_type === "human",
+                    );
+                    return (
+                      <label key={axis} className="toggle">
+                        <input
+                          type="checkbox"
+                          aria-label={checkLabels[axis]}
+                          checked={checks[axis]}
+                          onChange={(e) =>
+                            setChecks({ ...checks, [axis]: e.target.checked })
+                          }
+                        />
+                        <span>
+                          {checkLabels[axis]}
+                          {inherited[axis] && checks[axis] && (
+                            <small>
+                              Previously verified by{" "}
+                              {human?.reviewer ?? prior?.reviewer}
+                            </small>
+                          )}
+                        </span>
+                      </label>
+                    );
+                  },
+                )}
+                <p>
+                  {count === 3
+                    ? "All three selected"
+                    : count
+                      ? `Partially verified · ${count}/3 selected`
+                      : "No confirmations selected"}
+                </p>
+                {checks.punch_type && !checks.hand && (
+                  <small>
+                    The six-class label, including jab/cross, needs lead/rear
+                    hand verification too.
+                  </small>
+                )}
+                <div className="boundary-checks">
+                  <button
+                    onClick={() => setJump({ index: start, token: Date.now() })}
+                  >
+                    View start
+                    {inspected.includes(start) || inherited.timing ? " ✓" : ""}
+                  </button>
+                  <button
+                    onClick={() => setJump({ index: end, token: Date.now() })}
+                  >
+                    View end
+                    {inspected.includes(end) || inherited.timing ? " ✓" : ""}
+                  </button>
+                </div>
               </div>
+            ) : (
+              <label
+                className="toggle attestation"
+                onChange={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  checked={attest}
+                  onChange={(e) => setAttest(e.target.checked)}
+                />
+                {uncertaintyAttestation}
+              </label>
             )}
-            <label
-              className="toggle attestation"
-              onChange={(e) => e.stopPropagation()}
-            >
-              <input
-                type="checkbox"
-                checked={attest}
-                onChange={(e) => setAttest(e.target.checked)}
-              />
-              {action === "confirm"
-                ? confirmationAttestation
-                : uncertaintyAttestation}
-            </label>
           </fieldset>
         )}
         {error && (
@@ -490,6 +629,16 @@ export default function ReviewWorkbench({
                   ? `${r.confirmed_bounds.start}–${r.confirmed_bounds.end} inclusive`
                   : r.boundary_status}
               </p>
+              {r.verification && (
+                <p>
+                  {Object.entries(checkLabels)
+                    .map(
+                      ([axis, text]) =>
+                        `${text} ${r.verification?.[axis as keyof VerificationChecks] ? "Yes" : "Unverified"}`,
+                    )
+                    .join(" · ")}
+                </p>
+              )}
               <p>{r.reasons.join(" · ")}</p>
               <p>{r.unresolved_uncertainty.join(" · ")}</p>
               <details>

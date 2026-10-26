@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_serializer, model_validator
 
 RECORDINGS = ("V4", "V5", "V6", "V7", "V8", "V10")
 LABELS = ("jab", "cross", "lead_hook", "rear_hook", "lead_uppercut", "rear_uppercut")
@@ -62,7 +62,46 @@ class Evidence(StrictModel):
         return self
 
 
+AXES = ("punch_type", "hand", "timing")
+
+
+class VerificationSelection(StrictModel):
+    schema_version: Literal["annotation-verification-1.0"] = "annotation-verification-1.0"
+    punch_type: bool
+    hand: bool
+    timing: bool
+
+    def selected(self):
+        return {axis for axis in AXES if getattr(self, axis)}
+
+
+class Verification(VerificationSelection):
+    label: Label
+    bounds: Bounds | None
+    origins: dict[str, str]
+
+    @model_validator(mode="after")
+    def scoped(self):
+        if set(self.origins) != self.selected() or any(not v for v in self.origins.values()):
+            raise ValueError("Each verified aspect needs its human revision origin")
+        if self.timing and self.bounds is None:
+            raise ValueError("Timing confirmation requires explicit boundaries")
+        return self
+
+
+def verified_axes(revision):
+    if not revision or revision.actor_type != "human":
+        return set()
+    if revision.verification is not None:
+        return revision.verification.selected()
+    # Read legacy human confirmations without rewriting their serialized history.
+    return ({"punch_type", "hand"} if revision.label_status == "confirmed" else set()) | (
+        {"timing"} if revision.boundary_status == "confirmed" else set()
+    )
+
+
 class Revision(StrictModel):
+    verification: Verification | None = None
     revision_id: str = Field(min_length=1)
     supersedes_sha256: str | None = Field(pattern=r"^[0-9a-f]{64}$")
     actor_type: Literal["assistant", "human"]
@@ -78,8 +117,33 @@ class Revision(StrictModel):
     evidence: list[Evidence] = Field(min_length=1)
     unresolved_uncertainty: list[str]
 
+    @model_serializer(mode="wrap")
+    def preserve_legacy_hashes(self, handler):
+        data = handler(self)
+        if self.verification is None:
+            data.pop("verification", None)
+        return data
+
     @model_validator(mode="after")
     def honest_confirmation(self):
+        checks = self.verification
+        if checks is not None:
+            if self.actor_type != "human":
+                raise ValueError("Independent confirmations require a human reviewer")
+            if (self.label_status == "confirmed") != (checks.punch_type and checks.hand):
+                raise ValueError("Six-class labels require both punch type AND lead/rear hand")
+            if self.confirmed_label is not None and self.confirmed_label != checks.label:
+                raise ValueError("Confirmed label must match the reviewed target")
+            if (self.boundary_status == "confirmed") != checks.timing:
+                raise ValueError("Boundary status must match independent timing verification")
+            if self.confirmed_bounds is not None and self.confirmed_bounds != checks.bounds:
+                raise ValueError("Confirmed boundaries must match the reviewed target")
+            if self.disposition == "accept" and checks.selected() != set(AXES):
+                raise ValueError("Full acceptance requires all three confirmations")
+            if checks.selected() and not any(
+                e.kind == "human_frame_review" and e.frame_indices for e in self.evidence
+            ):
+                raise ValueError("Each human confirmation requires exact-frame evidence")
         when = datetime.fromisoformat(self.reviewed_at.replace("Z", "+00:00"))
         if when.utcoffset() is None or not self.reviewer.strip():
             raise ValueError("Named reviewer and timezone-aware review time required")
@@ -117,11 +181,43 @@ class ReviewCase(StrictModel):
 
     @model_validator(mode="after")
     def chain(self):
-        previous, ids = None, set()
+        previous, ids, seen = None, set(), {}
         for r in self.revisions:
             if r.revision_id in ids or r.supersedes_sha256 != previous:
                 raise ValueError("Review history must be an append-only hash-linked chain")
+            if r.verification is not None:
+                for axis, origin in r.verification.origins.items():
+                    if origin == r.revision_id:
+                        continue
+                    ancestor = seen.get(origin)
+                    if axis not in verified_axes(ancestor):
+                        raise ValueError(
+                            "Inherited confirmation must reference a verified human origin"
+                        )
+                    old_label = (
+                        ancestor.verification.label
+                        if ancestor.verification
+                        else ancestor.confirmed_label
+                    )
+                    old_bounds = (
+                        ancestor.verification.bounds
+                        if ancestor.verification
+                        else ancestor.confirmed_bounds
+                    )
+                    if axis in ("punch_type", "hand") and (
+                        old_label != r.verification.label or old_bounds != r.verification.bounds
+                    ):
+                        raise ValueError("Cannot inherit a label/hand check for another target")
+                    if axis == "timing" and (
+                        old_bounds != r.verification.bounds
+                        or old_label is not None
+                        and old_label != r.verification.label
+                    ):
+                        raise ValueError("Cannot inherit timing for another target")
+                    if ancestor.verification and ancestor.verification.origins[axis] != origin:
+                        raise ValueError("Origin must identify the actual human assertion")
             ids.add(r.revision_id)
+            seen[r.revision_id] = r
             previous = digest(r.model_dump(mode="json"))
         return self
 

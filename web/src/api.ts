@@ -13,7 +13,19 @@ export type Source = {
   flags?: string[];
   exclusion_reasons?: string[];
 };
+export type VerificationChecks = {
+  punch_type: boolean;
+  hand: boolean;
+  timing: boolean;
+};
+export type Verification = VerificationChecks & {
+  schema_version: "annotation-verification-1.0";
+  label: string;
+  bounds: Bounds | null;
+  origins: Record<string, string>;
+};
 export type Revision = {
+  verification?: Verification;
   revision_id?: string;
   reviewed_at?: string;
   confirmed_label?: string | null;
@@ -30,6 +42,7 @@ export type Review = {
   source: Source;
   latest: Revision | null;
   human_accepted: boolean;
+  verification_status?: "fully_verified" | "partially_verified" | "unverified";
   latest_action?: string;
 };
 export type QueueEntry = {
@@ -189,6 +202,7 @@ export type Bounds = {
   convention: "zero_based_decoded_inclusive";
 };
 export type EditState = {
+  verification?: VerificationChecks;
   ledger_sha256: string;
   revision_sha256: string | null;
   source_candidate_sha256: string;
@@ -212,6 +226,10 @@ export async function saveReview(
   const value = await response.json();
   if (!response.ok) {
     const messages: Record<string, string> = {
+      inspect_punch_before_verifying:
+        "Display a frame within the punch before verifying its type or hand.",
+      select_at_least_one_confirmation:
+        "Select at least one aspect you verified.",
       inspect_both_proposed_boundaries:
         "View both start and end frames before confirming.",
       proposed_bounds_out_of_range:
@@ -242,10 +260,12 @@ export async function saveReview(
 /** Display grouping only. Never used as a persisted curation disposition. */
 export function reviewCategory(
   entry: QueueEntry,
-): "To review" | "Reviewed" | "Needs attention" {
+): "To review" | "Reviewed" | "Needs attention" | "Partially verified" {
   const review = entry.review.data;
   if (entry.review.status !== "available" || !review) return "Needs attention";
   const latest = review.latest;
+  if (review.verification_status === "partially_verified")
+    return "Partially verified";
   if (
     latest?.actor_type === "human" &&
     ["accept", "exclude"].includes(latest.disposition)

@@ -11,16 +11,20 @@ from contextlib import contextmanager
 from datetime import UTC, datetime
 from typing import Literal
 
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, model_serializer, model_validator
 
 from boxing_motion_ai.data.annotation_review import (
+    AXES,
     Bounds,
     Evidence,
     Label,
     ReviewLedger,
     Revision,
     StrictModel,
+    Verification,
+    VerificationSelection,
     digest,
+    verified_axes,
 )
 from boxing_motion_ai.data.curation import CurationConfig, build_plan, latest
 
@@ -39,11 +43,12 @@ def sha(raw):
 
 
 class Decision(StrictModel):
+    verification: VerificationSelection | None = None
     request_id: str = Field(pattern=r"^[0-9a-f]{8}-[0-9a-f-]{27}$")
     expected_ledger_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
     expected_revision_sha256: str | None = Field(pattern=r"^[0-9a-f]{64}$")
     source_candidate_sha256: str = Field(pattern=r"^[0-9a-f]{64}$")
-    action: Literal["confirm", "ambiguous", "hold", "exclude"]
+    action: Literal["confirm", "verify", "ambiguous", "hold", "exclude"]
     reviewer: str = Field(min_length=1, max_length=160)
     notes: str = Field(min_length=1, max_length=4000)
     uncertainty: str = Field(max_length=4000)
@@ -52,6 +57,19 @@ class Decision(StrictModel):
     proposed_bounds: Bounds | None = None
     inspected_frames: list[int] = Field(max_length=512)
     attest_human: Literal[True]
+
+    @model_serializer(mode="wrap")
+    def preserve_legacy_payload(self, handler):
+        data = handler(self)
+        if self.verification is None:
+            data.pop("verification", None)
+        return data
+
+    @model_validator(mode="after")
+    def verification_action(self):
+        if (self.action == "verify") != (self.verification is not None):
+            raise ValueError("Independent checks require the verify action")
+        return self
 
     @field_validator("attest_human", mode="before")
     @classmethod
@@ -77,7 +95,7 @@ class Decision(StrictModel):
 
 def action_of(revision):
     if revision and revision.actor_type == "human":
-        for action in ("confirm", "ambiguous", "hold", "exclude"):
+        for action in ("confirm", "verify", "ambiguous", "hold", "exclude"):
             if f"dashboard_{action}" in revision.reasons:
                 return action
     return None
@@ -103,6 +121,14 @@ class LiveDashboardService(DashboardService):
         if result.data:
             revision = latest(self.ledger, f"{recording_id}:{source_row}")
             result.data["latest_action"] = action_of(revision)
+            axes = verified_axes(revision)
+            result.data["verification_status"] = (
+                "fully_verified"
+                if axes == set(AXES)
+                else "partially_verified"
+                if axes
+                else "unverified"
+            )
         return result
 
     def review_status(self):
@@ -122,6 +148,7 @@ class LiveDashboardService(DashboardService):
         key = f"{recording_id}:{source_row}"
         revision = latest(self.ledger, key)
         return dict(
+            verification={axis: axis in verified_axes(revision) for axis in AXES},
             ledger_sha256=self.ledger_hash,
             revision_sha256=digest(revision.model_dump(mode="json")) if revision else None,
             source_candidate_sha256=self.ledger.cases[key].source_candidate_sha256,
@@ -224,6 +251,18 @@ class ReviewWorkspace:
             previous = latest(ledger, key)
             previous_hash = digest(previous.model_dump(mode="json")) if previous else None
             revision = updated.cases[key].revisions[-1]
+            if decision.action == "verify":
+                require(
+                    revision.verification is not None
+                    and all(
+                        getattr(revision.verification, axis) == getattr(decision.verification, axis)
+                        for axis in AXES
+                    )
+                    and revision.verification.label == decision.proposed_label
+                    and revision.verification.bounds == decision.proposed_bounds,
+                    "review_verification_changed",
+                    "stale",
+                )
             audit = {
                 k: receipt[k]
                 for k in (
@@ -311,17 +350,71 @@ class ReviewWorkspace:
             bounds = decision.proposed_bounds
             require(bounds is None or bounds.end < count, "proposed_bounds_out_of_range")
             confirm = decision.action == "confirm"
-            if confirm:
+            checks = None
+            evidence_indices = set(decision.inspected_frames)
+            if decision.action == "verify":
+                selected = decision.verification.selected()
+                require(decision.proposed_label is not None, "verification_target_label_required")
+                prior_axes = verified_axes(previous)
+                require(selected or prior_axes, "select_at_least_one_confirmation")
+                prior_label = (
+                    previous.verification.label
+                    if previous and previous.verification
+                    else previous.confirmed_label
+                    if previous
+                    else None
+                ) or checked.data["source"]["punch_type_provisional"]
+                prior_bounds = (
+                    previous.verification.bounds
+                    if previous and previous.verification
+                    else previous.confirmed_bounds
+                    if previous
+                    else None
+                )
+                same_target = prior_label == decision.proposed_label and prior_bounds == bounds
+                carried = selected & prior_axes if same_target else set()
+                origins = {}
+                for axis in selected:
+                    origins[axis] = (
+                        (
+                            previous.verification.origins[axis]
+                            if previous.verification
+                            else previous.revision_id
+                        )
+                        if axis in carried
+                        else decision.request_id
+                    )
+                checks = Verification(
+                    **decision.verification.model_dump(),
+                    label=decision.proposed_label,
+                    bounds=bounds,
+                    origins=origins,
+                )
+                by_id = {r.revision_id: r for r in live.ledger.cases[key].revisions}
+                for axis in carried:
+                    for item in by_id[origins[axis]].evidence:
+                        if item.kind == "human_frame_review":
+                            evidence_indices.update(item.frame_indices)
+                if (selected - carried) & {"punch_type", "hand"}:
+                    require(
+                        any(
+                            bounds is None or bounds.start <= i <= bounds.end
+                            for i in decision.inspected_frames
+                        ),
+                        "inspect_punch_before_verifying",
+                    )
+            timing = confirm or bool(checks and checks.timing)
+            if timing:
                 require(
                     bounds is not None and decision.proposed_label is not None,
                     "confirmation_requires_label_and_bounds",
                 )
                 require(
-                    bounds.start in decision.inspected_frames
-                    and bounds.end in decision.inspected_frames,
+                    bounds.start in evidence_indices and bounds.end in evidence_indices,
                     "inspect_both_proposed_boundaries",
                 )
-                require(decision.lead_rear_evidence.strip(), "lead_rear_evidence_required")
+                if confirm:
+                    require(decision.lead_rear_evidence.strip(), "lead_rear_evidence_required")
                 require(
                     not any(
                         bounds.start < cut <= bounds.end
@@ -332,7 +425,7 @@ class ReviewWorkspace:
             if decision.action in ("hold", "ambiguous"):
                 require(decision.uncertainty.strip(), "unresolved_uncertainty_required")
             verified = []
-            for index in decision.inspected_frames:
+            for index in sorted(evidence_indices):
                 frame, _ = frame_service.frame(recording, index)
                 verified.append(
                     {
@@ -347,7 +440,7 @@ class ReviewWorkspace:
                         )
                     }
                 )
-            if confirm:
+            if timing:
                 ends = [f for f in verified if f["frame_index"] in (bounds.start, bounds.end)]
                 require(
                     len({(f["scene_id"], f["segment_id"]) for f in ends}) == 1,
@@ -366,42 +459,54 @@ class ReviewWorkspace:
             version = live.ledger.ledger_version + 1
             name = f"v{version:08d}"
             prefix = f"{DIRECTORY}/{name}"
+            fully_verified = confirm or bool(checks and checks.selected() == set(AXES))
+            label_verified = confirm or bool(checks and checks.punch_type and checks.hand)
+            unresolved = [decision.uncertainty.strip()] if decision.uncertainty.strip() else []
+            if checks and not fully_verified:
+                unresolved += [
+                    f"Not verified: {axis}" for axis in AXES if axis not in checks.selected()
+                ]
             revision = Revision(
+                verification=checks,
                 revision_id=decision.request_id,
                 supersedes_sha256=previous_hash,
                 actor_type="human",
                 reviewer=decision.reviewer,
                 reviewed_at=datetime.now(UTC).isoformat(),
                 disposition="accept"
-                if confirm
+                if fully_verified
                 else "exclude"
                 if decision.action == "exclude"
                 else "hold",
                 label_status="confirmed"
-                if confirm
+                if label_verified
                 else "ambiguous"
                 if decision.action == "ambiguous"
                 else "unreviewed",
-                confirmed_label=decision.proposed_label if confirm else None,
-                lead_rear_evidence=decision.lead_rear_evidence.strip() or None,
+                confirmed_label=decision.proposed_label if label_verified else None,
+                lead_rear_evidence=(
+                    f"Explicit human hand confirmation; origin revision {checks.origins['hand']}"
+                    if checks and checks.hand
+                    else None
+                )
+                if checks
+                else decision.lead_rear_evidence.strip() or None,
                 boundary_status="confirmed"
-                if confirm
+                if timing
                 else "ambiguous"
                 if decision.action == "ambiguous"
                 else "unreviewed",
-                confirmed_bounds=bounds if confirm else None,
+                confirmed_bounds=bounds if timing else None,
                 reasons=[f"dashboard_{decision.action}", decision.notes],
                 evidence=[
                     Evidence(
                         kind="human_frame_review" if verified else "diagnostic_observation",
                         reference=f"{prefix}/receipt.json",
                         description=decision.notes + "\nDashboard audit SHA256: " + digest(audit),
-                        frame_indices=decision.inspected_frames,
+                        frame_indices=sorted(evidence_indices),
                     )
                 ],
-                unresolved_uncertainty=[decision.uncertainty.strip()]
-                if decision.uncertainty.strip()
-                else [],
+                unresolved_uncertainty=unresolved,
             )
             data = live.ledger.model_dump(mode="json")
             data["cases"][key]["revisions"].append(revision.model_dump(mode="json"))

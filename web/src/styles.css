@@ -1885,3 +1885,24 @@ footer span {
 .review-more-options .toggle {
   margin: 12px 0;
 }
+
+.independent-checks {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+}
+.independent-checks .toggle {
+  align-items: flex-start;
+}
+.independent-checks .toggle small {
+  display: block;
+  margin-top: 3px;
+}
+.independent-checks .boundary-checks {
+  margin: 0;
+  justify-content: flex-end;
+}
+.saved-verification {
+  margin-bottom: 12px;
+  font-size: 12px;
+}

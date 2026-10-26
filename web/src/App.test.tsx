@@ -142,6 +142,19 @@ function mockApi() {
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
+function confirmSelectedReview() {
+  if (screen.queryByLabelText("Punch type is correct.")) {
+    for (const label of [
+      "Punch type is correct.",
+      "Lead/rear hand is correct.",
+      "Start/end timing is correct.",
+    ]) {
+      const input = screen.getByLabelText(label) as HTMLInputElement;
+      if (!input.checked) fireEvent.click(input);
+    }
+  } else fireEvent.click(screen.getByLabelText(/I personally reviewed/));
+}
+
 afterEach(() => {
   vi.restoreAllMocks();
   window.localStorage.clear();
@@ -294,7 +307,7 @@ it("saves an explicitly attested hold and refreshes review history", async () =>
   });
 
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
-  fireEvent.click(screen.getByLabelText(/I personally (?:reviewed|verified)/));
+  confirmSelectedReview();
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   await screen.findByText(/Review saved/);
   const call = fetchMock.mock.calls.find(
@@ -331,7 +344,7 @@ it("requires displayed boundary frames and stance evidence for confirmation", as
     target: { value: "Punch reviewed" },
   });
 
-  fireEvent.click(screen.getByLabelText(/I personally (?:reviewed|verified)/));
+  confirmSelectedReview();
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
   fireEvent.load(await screen.findByAltText("V4, native frame 4"));
@@ -340,9 +353,7 @@ it("requires displayed boundary frames and stance evidence for confirmation", as
   fireEvent.change(screen.getByLabelText("Correct punch label"), {
     target: { value: "cross" },
   });
-  expect(
-    screen.getByLabelText(/I personally (?:reviewed|verified)/),
-  ).not.toBeChecked();
+  expect(screen.getByLabelText("Punch type is correct.")).not.toBeChecked();
 });
 
 it("preserves a draft on conflict and guards navigation", async () => {
@@ -371,7 +382,7 @@ it("preserves a draft on conflict and guards navigation", async () => {
   fireEvent.change(screen.getByLabelText("Additional explanation (optional)"), {
     target: { value: "Mixed actions" },
   });
-  fireEvent.click(screen.getByLabelText(/I personally (?:reviewed|verified)/));
+  confirmSelectedReview();
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   await screen.findByText(/Review changed or source verification failed/);
   expect(
@@ -417,9 +428,7 @@ it.each(["ambiguous", "hold", "exclude"])(
         screen.getByLabelText("Exclude this example from future candidates"),
       );
     }
-    fireEvent.click(
-      screen.getByLabelText(/I personally (?:reviewed|verified)/),
-    );
+    confirmSelectedReview();
     fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
     await screen.findByText(/Review saved/);
     const call = fetchMock.mock.calls.find(
@@ -458,12 +467,12 @@ it("Yes resets a proposed correction and preserves the original label and bounds
     target: { value: "Synthetic review" },
   });
 
-  fireEvent.click(screen.getByLabelText(/I personally (?:reviewed|verified)/));
+  confirmSelectedReview();
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   await screen.findByText(/Review saved/);
   const call = mock.mock.calls.find(([, init]) => init?.method === "POST");
   expect(JSON.parse(call![1]!.body as string)).toMatchObject({
-    action: "confirm",
+    action: "verify",
     proposed_label: "jab",
     proposed_bounds: { start: 2, end: 4 },
   });
@@ -695,31 +704,31 @@ it("confirms without written notes and remembers identity across next, remount a
   fireEvent.blur(screen.getByLabelText("Your name"));
   expect(screen.queryByLabelText("Your name")).not.toBeInTheDocument();
   expect(window.localStorage.getItem(reviewerKey)).toBe("Alice");
-  expect(screen.getByText(/Confirm/)).toHaveTextContent("jab");
+  expect(
+    screen.getByText(/Review/, { selector: "p.confirmation-scope" }),
+  ).toHaveTextContent("jab");
   fireEvent.load(await screen.findByAltText("V4, native frame 2"));
   fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
   fireEvent.load(await screen.findByAltText("V4, native frame 4"));
   expect(screen.getByRole("button", { name: "Save & Next" })).toBeDisabled();
-  const attestation = screen.getByLabelText(/I personally verified/);
+  const attestation = screen.getByLabelText("Start/end timing is correct.");
   expect(attestation).not.toBeChecked();
-  expect(attestation.closest("label")).toHaveTextContent(
-    "lead/rear arm from the boxer’s stance",
-  );
-  fireEvent.click(attestation);
+  expect(screen.getByLabelText("Lead/rear hand is correct.")).not.toBeChecked();
+  confirmSelectedReview();
   fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
   await screen.findByText(/Review saved/);
   const call = mock.mock.calls.find(([, init]) => init?.method === "POST");
   const payload = JSON.parse(call![1]!.body as string);
   expect(payload).toMatchObject({
     reviewer: "Alice",
-    action: "confirm",
+    action: "verify",
     attest_human: true,
     proposed_label: "jab",
     proposed_bounds: { start: 2, end: 4 },
   });
-  expect(payload.notes).toContain("Explicit attestation:");
+  expect(payload.notes).toContain("Selected human verification state");
   expect(payload.notes).not.toContain("Reviewer note:");
-  expect(payload.lead_rear_evidence).toContain("Reviewer explicitly attested:");
+  expect(payload.lead_rear_evidence).toBe("");
   expect(payload.lead_rear_evidence).not.toMatch(/orthodox|southpaw/);
   await waitFor(() =>
     expect(mock).toHaveBeenCalledWith("/api/cases/V5/2", expect.anything()),
@@ -734,7 +743,9 @@ it("confirms without written notes and remembers identity across next, remount a
   fireEvent.click(await screen.findByRole("button", { name: "Yes" }));
   expect(screen.getByText("Alice")).toBeInTheDocument();
   expect(screen.queryByLabelText("Your name")).not.toBeInTheDocument();
-  expect(screen.getByLabelText(/I personally verified/)).not.toBeChecked();
+  expect(
+    screen.getByLabelText("Start/end timing is correct."),
+  ).not.toBeChecked();
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
 });
 
@@ -754,7 +765,7 @@ it("requires an explanation for corrections and sends the corrected interval wit
   fireEvent.load(await screen.findByAltText("V4, native frame 3"));
   fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
   fireEvent.load(await screen.findByAltText("V4, native frame 4"));
-  fireEvent.click(screen.getByLabelText(/I personally verified/));
+  confirmSelectedReview();
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   fireEvent.change(screen.getByLabelText("Why change it?"), {
     target: {
@@ -762,13 +773,12 @@ it("requires an explanation for corrections and sends the corrected interval wit
         "The opening frame belongs to the previous movement; the punch is a cross.",
     },
   });
-  expect(screen.getByLabelText(/I personally verified/)).not.toBeChecked();
-  fireEvent.click(screen.getByLabelText(/I personally verified/));
+  expect(screen.getByLabelText("Start/end timing is correct.")).toBeChecked();
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   await screen.findByText(/Review saved/);
   const call = mock.mock.calls.find(([, init]) => init?.method === "POST");
   expect(JSON.parse(call![1]!.body as string)).toMatchObject({
-    action: "confirm",
+    action: "verify",
     reviewer: "Alice",
     proposed_label: "cross",
     proposed_bounds: { start: 3, end: 4 },
@@ -866,7 +876,7 @@ it("explains server boundary validation without losing the review draft", async 
   fireEvent.click(screen.getByRole("button", { name: "Yes" }));
   fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
   fireEvent.load(await screen.findByAltText("V4, native frame 4"));
-  fireEvent.click(screen.getByLabelText(/I personally verified/));
+  confirmSelectedReview();
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "This interval crosses a scene cut",
@@ -906,4 +916,155 @@ it("blocks invalid correction intervals with a clear message", async () => {
     screen.getByText(/Enter whole-number start\/end frames/),
   ).toBeVisible();
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+});
+
+it.each([
+  ["Punch type is correct.", "punch_type"],
+  ["Lead/rear hand is correct.", "hand"],
+  ["Start/end timing is correct.", "timing"],
+])(
+  "saves %s independently without additional explanations",
+  async (label, axis) => {
+    window.localStorage.setItem(reviewerKey, "Alice");
+    const mock = mockApi();
+    render(<App />);
+    fireEvent.load(await screen.findByAltText("V4, native frame 2"));
+    fireEvent.click(screen.getByRole("button", { name: "Yes" }));
+    for (const text of [
+      "Punch type is correct.",
+      "Lead/rear hand is correct.",
+      "Start/end timing is correct.",
+    ])
+      expect(screen.getByLabelText(text)).not.toBeChecked();
+    fireEvent.click(screen.getByLabelText(label));
+    expect(screen.getByText("Partially verified · 1/3 selected")).toBeVisible();
+    if (axis === "timing") {
+      expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+      fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
+      fireEvent.load(await screen.findByAltText("V4, native frame 4"));
+    }
+    fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
+    await screen.findByText(/Review saved/);
+    const call = mock.mock.calls.find(([, init]) => init?.method === "POST");
+    expect(JSON.parse(call![1]!.body as string).verification).toEqual({
+      schema_version: "annotation-verification-1.0",
+      punch_type: axis === "punch_type",
+      hand: axis === "hand",
+      timing: axis === "timing",
+    });
+  },
+);
+
+function mockPriorVerification(
+  actor: "human" | "assistant" = "human",
+  legacy = false,
+) {
+  const mock = mockApi();
+  const original = mock.getMockImplementation()!;
+  mock.mockImplementation(async (url, init) => {
+    const response = await original(url, init);
+    if (!String(url).startsWith("/api/cases/")) return response;
+    const value = await response.json();
+    const human = {
+      ...revision,
+      revision_id: "human-1",
+      actor_type: actor,
+      reviewer: "Alice",
+      reviewed_at: "2026-10-25T00:00:00+00:00",
+      label_status: legacy ? "confirmed" : "unreviewed",
+      boundary_status: legacy ? "confirmed" : "unreviewed",
+      confirmed_label: legacy ? "jab" : null,
+      confirmed_bounds: legacy
+        ? { start: 2, end: 4, convention: "zero_based_decoded_inclusive" }
+        : null,
+      ...(legacy
+        ? {}
+        : {
+            verification: {
+              schema_version: "annotation-verification-1.0",
+              punch_type: true,
+              hand: false,
+              timing: false,
+              label: "jab",
+              bounds: {
+                start: 2,
+                end: 4,
+                convention: "zero_based_decoded_inclusive",
+              },
+              origins: { punch_type: "human-1" },
+            },
+          }),
+    };
+    value.data.edit.data.history = [revision, human];
+    value.data.review.data.latest = human;
+    value.data.review.data.verification_status = legacy
+      ? "fully_verified"
+      : "partially_verified";
+    return { ok: true, json: async () => value } as Response;
+  });
+  return mock;
+}
+
+it("restores only real human checks and allows withdrawing a prior check", async () => {
+  window.localStorage.setItem(reviewerKey, "Bob");
+  const mock = mockPriorVerification();
+  render(<App />);
+  fireEvent.click(await screen.findByRole("button", { name: "Yes" }));
+  expect(screen.getByLabelText("Punch type is correct.")).toBeChecked();
+  expect(screen.getByLabelText("Lead/rear hand is correct.")).not.toBeChecked();
+  expect(
+    screen.getByLabelText("Start/end timing is correct."),
+  ).not.toBeChecked();
+  expect(screen.getByText("Previously verified by Alice")).toBeVisible();
+  expect(screen.getByText("Saved: Partially verified")).toBeVisible();
+  fireEvent.click(screen.getByLabelText("Punch type is correct."));
+  expect(screen.getByText("No confirmations selected")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await screen.findByText(/Review saved/);
+  const call = mock.mock.calls.find(([, init]) => init?.method === "POST");
+  expect(JSON.parse(call![1]!.body as string).verification).toMatchObject({
+    punch_type: false,
+    hand: false,
+    timing: false,
+  });
+});
+
+it("never restores assistant checks and clears checks after a target edit", async () => {
+  mockPriorVerification("assistant");
+  render(<App />);
+  fireEvent.click(await screen.findByRole("button", { name: "Change it" }));
+  expect(screen.getByLabelText("Punch type is correct.")).not.toBeChecked();
+  fireEvent.click(screen.getByLabelText("Punch type is correct."));
+  fireEvent.click(screen.getByLabelText("Lead/rear hand is correct."));
+  expect(screen.getByLabelText("Punch type is correct.")).toBeChecked();
+  fireEvent.change(screen.getByLabelText("Correct punch label"), {
+    target: { value: "cross" },
+  });
+  expect(screen.getByLabelText("Punch type is correct.")).not.toBeChecked();
+  expect(screen.getByLabelText("Lead/rear hand is correct.")).not.toBeChecked();
+});
+
+it("reads legacy human verification as three separate prior checks", async () => {
+  mockPriorVerification("human", true);
+  render(<App />);
+  fireEvent.click(await screen.findByRole("button", { name: "Yes" }));
+  for (const text of [
+    "Punch type is correct.",
+    "Lead/rear hand is correct.",
+    "Start/end timing is correct.",
+  ])
+    expect(screen.getByLabelText(text)).toBeChecked();
+  expect(screen.getByText("Saved: Fully verified")).toBeVisible();
+});
+
+it("keeps partially verified cases distinct from Reviewed", () => {
+  const entry = {
+    id: "V4:1",
+    priority: "dispute",
+    review: ok({
+      ...review,
+      verification_status: "partially_verified" as const,
+    }),
+  };
+  expect(reviewCategory(entry)).toBe("Partially verified");
 });

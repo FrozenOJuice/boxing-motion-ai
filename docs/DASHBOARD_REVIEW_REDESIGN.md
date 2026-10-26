@@ -1,8 +1,8 @@
 # Review experience redesign
 
 The Review screen now follows **Select punch → Watch → Decide → Save & Next**.
-The versioned v0.2 curation API, original data, source groups, exclusions and V9
-protections are unchanged. Dataset, Experiments and Models retain their existing
+The versioned curation API now supports [three independent confirmations](INDEPENDENT_ANNOTATION_VERIFICATION.md).
+Original data, source groups, exclusions and V9 protections are unchanged. Dataset, Experiments and Models retain their existing
 views; the shared navigation and page heading have been simplified.
 
 ## Try it locally
@@ -28,15 +28,14 @@ http://127.0.0.1:8000. To launch from a stopped session, use the commands in
    Corrections appear only after Change it, including frame inputs and “Use frame
    as start/end” buttons. Yes explicitly resets any draft correction to the original
    mapped label and boundaries, even when an older review proposed a correction.
-5. Enter your name once; the browser remembers it. **Yes** shows the original label
-   and frame interval you are confirming. View both boundary frames and check the
-   explicit statement only after verifying the label, lead/rear arm from the boxer’s
-   stance, and boundaries. Notes are optional. **Change it** requires a brief reason
-   when label/frames differ. **Not sure** offers selectable reasons; Other requires
-   an explanation. Check the appropriate personal-review statement, then **Save & Next**.
-   Save without advancing is available once a decision is selected. Editing a field
-   clears attestation. Save failures retain the draft; navigation warns before
-   discarding unsaved work.
+5. Enter your name once; the browser remembers it. Select **Punch type is correct**,
+   **Lead/rear hand is correct** and/or **Start/end timing is correct** independently.
+   Save any verified subset with **Save & Next**. Timing requires viewing both exact
+   boundary frames; a new type/hand check requires viewing the punch. Three checks
+   constitute full verification; fewer remain partially verified and held. Notes are
+   optional for unchanged annotations. Corrections retain their brief explanation.
+   Prior scoped human checks may be restored with their original reviewer attribution;
+   editing the label or interval clears them. **Not sure** keeps its selectable reasons.
 6. Open **Advanced details** for predictions, automated observations, annotation
    provenance, exact timing, landmark confidence, source quality and full review
    history. Nothing in these sections is automatically treated as a human decision.
@@ -54,6 +53,7 @@ Queue categories are presentation-only, not new backend dispositions:
 | --- | --- |
 | To review | No definitive human decision and no current attention flag |
 | Reviewed | Latest human decision accepts or excludes the punch; this does **not** mean every reviewed punch is accepted |
+| Partially verified | A human has verified some aspects, while full acceptance remains held |
 | Needs attention | Dispute, unresolved hold/ambiguous/mixed boundary, automated exclusion, or unavailable review metadata |
 
 Human holds remain Needs attention. The exact disposition is available in Advanced
@@ -62,8 +62,8 @@ assistant observation cannot produce a Reviewed category by itself.
 
 | Primary choice | Explicit outcome | Existing API action |
 | --- | --- | --- |
-| Yes | Confirm original label and mapped boundaries | `confirm` |
-| Change it | Confirm the explicitly proposed label/boundaries | `confirm` |
+| Yes | Verify selected aspects of the original annotation | `verify` |
+| Change it | Verify selected aspects of the proposed label/boundaries | `verify` |
 | Not sure | Punch/arm/timing unclear, or multiple punches | `ambiguous` |
 | Not sure | Hard to see, needs another review, or Other | `hold` |
 | Not sure + More options | Explicitly exclude from future candidates | `exclude` |
@@ -150,7 +150,9 @@ storage clears the preference. No attestation, decision, stance or notes are res
 from this preference. Blocked storage produces a visible warning. Names remain
 self-reported; there is no authentication or automatic attribution from old reviews.
 
-The backend API/contracts are unchanged. They require nonempty audit text and
+The initial form simplification kept the backend API/contracts unchanged; the
+[independent verification extension](INDEPENDENT_ANNOTATION_VERIFICATION.md) now replaces
+the combined checkbox described here. Legacy confirmations require nonempty audit text and
 lead/rear evidence for acceptance. To avoid forcing prose, the frontend records the
 human's selected action and the exact statement they explicitly checked, plus any
 optional note. This is a structured record of human input, not a generated observation.

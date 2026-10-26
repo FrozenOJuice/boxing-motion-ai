@@ -204,6 +204,9 @@ export default function App() {
                         <option value="all">All punches</option>
                         <option value="To review">To review</option>
                         <option value="Reviewed">Reviewed</option>
+                        <option value="Partially verified">
+                          Partially verified
+                        </option>
                         <option value="Needs attention">Needs attention</option>
                         <option value="dispute">Disputed punches</option>
                         <option value="anchor">Proposed anchors</option>
@@ -233,7 +236,12 @@ export default function App() {
                           <span>
                             {e.id.split(":")[0]} · Punch {index + 1}
                           </span>
-                          <span>{reviewCategory(e)}</span>
+                          <span>
+                            {e.review.data?.verification_status ===
+                            "fully_verified"
+                              ? "Fully verified"
+                              : reviewCategory(e)}
+                          </span>
                         </span>
                       </button>
                     ))}

@@ -250,3 +250,11 @@ expected; the curation command exits 1 rather than reporting a false success.
 contracts. Its versioned review workspace preserves the original ledger and every
 revision; corrections remain separate from prepared datasets. Historical counts
 above describe the original proposal, not subsequent dashboard decisions.
+
+## Independent confirmations
+
+[Independent annotation verification](INDEPENDENT_ANNOTATION_VERIFICATION.md) adds
+separate punch-type, lead/rear-hand and timing checks without rewriting old revisions
+or their hashes. A full six-class label requires both type and hand confirmation;
+acceptance requires timing too. Partial human checks remain held and pending, with
+each check retaining its actual human revision origin.
