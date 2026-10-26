@@ -1,5 +1,9 @@
 # Versioned annotation curation before further Level 1 experiments
 
+Current saved-review status: [26 October 2026 validation](HUMAN_REVIEW_VALIDATION.md).
+The original proposal and pending counts below are historical; they are preserved
+for comparison with the dashboard reviews.
+
 The review process and reproducible exclusion proposal build on the accepted
 [79-case diagnosis](LEVEL1_LABEL_POSE_DIAGNOSIS.md). The dataset
 is **not yet ready for another controlled experiment**: all 18 targeted human reviews
