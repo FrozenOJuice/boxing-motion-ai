@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type Case,
   type Experiments,
@@ -53,6 +53,15 @@ export default function App() {
   const [refresh, setRefresh] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [retained, setRetained] = useState<{
+    id: string;
+    after: string[];
+  } | null>(null);
+  const handleDirty = useCallback((value: boolean) => {
+    setDirty(value);
+    if (value) setSaved("");
+  }, []);
   const queue = useRequest<Result<Reviews>>("/api/reviews", refresh);
   const inventory = useRequest<Result<Inventory>>("/api/inventory");
   const experiments = useRequest<Result<Experiments>>("/api/experiments");
@@ -79,17 +88,22 @@ export default function App() {
     [queue.data, recording, status, search],
   );
   useEffect(() => {
+    if (retained?.id === selected && entries.some((e) => e.id === selected))
+      return;
     if (filtered.length && !filtered.some((e) => e.id === selected))
       setSelected(filtered[0].id);
     if (queue.data && !filtered.length) setSelected("");
-  }, [filtered, selected]);
+  }, [filtered, selected, retained, queue.data]);
   const current = useRequest<Result<Case>>(
     selected ? `/api/cases/${selected.replace(":", "/")}` : null,
     refresh,
   );
   const navigate = (id: string) => {
+    if (saving || id === selected) return;
     if (!dirty || window.confirm("Discard unsaved review changes?")) {
       setDirty(false);
+      setSaved("");
+      setRetained(null);
       setSelected(id);
     }
   };
@@ -113,12 +127,14 @@ export default function App() {
               key={s === "Review Queue" ? "Review" : s}
               className={section === s ? "active" : ""}
               aria-current={section === s ? "page" : undefined}
+              disabled={saving}
               onClick={() => {
                 if (
                   !dirty ||
                   window.confirm("Discard unsaved review changes?")
                 ) {
                   setDirty(false);
+                  setSaved("");
                   setSection(s);
                 }
               }}
@@ -155,6 +171,7 @@ export default function App() {
                   <div className="queue-filters">
                     <input
                       aria-label="Search cases"
+                      disabled={saving}
                       placeholder="Find a punch…"
                       value={search}
                       onChange={(e) => {
@@ -163,6 +180,8 @@ export default function App() {
                           window.confirm("Discard unsaved review changes?")
                         ) {
                           setDirty(false);
+                          setRetained(null);
+                          setSaved("");
                           setSearch(e.target.value);
                         }
                       }}
@@ -170,6 +189,7 @@ export default function App() {
                     <div>
                       <select
                         aria-label="Filter recording"
+                        disabled={saving}
                         value={recording}
                         onChange={(e) => {
                           if (
@@ -177,6 +197,8 @@ export default function App() {
                             window.confirm("Discard unsaved review changes?")
                           ) {
                             setDirty(false);
+                            setRetained(null);
+                            setSaved("");
                             setRecording(e.target.value);
                           }
                         }}
@@ -190,6 +212,7 @@ export default function App() {
                       </select>
                       <select
                         aria-label="Filter review state"
+                        disabled={saving}
                         value={status}
                         onChange={(e) => {
                           if (
@@ -197,6 +220,8 @@ export default function App() {
                             window.confirm("Discard unsaved review changes?")
                           ) {
                             setDirty(false);
+                            setRetained(null);
+                            setSaved("");
                             setStatus(e.target.value);
                           }
                         }}
@@ -224,6 +249,7 @@ export default function App() {
                       <button
                         className={`case-item ${selected === e.id ? "selected" : ""}`}
                         key={e.id}
+                        disabled={saving}
                         onClick={() => navigate(e.id)}
                       >
                         <strong>
@@ -248,7 +274,6 @@ export default function App() {
                   </div>
                 </section>
                 <div className="review-main">
-                  {saved && <Notice>{saved}</Notice>}
                   {!selected ? (
                     <Notice>
                       Select an annotation case to inspect its source frames.
@@ -261,14 +286,27 @@ export default function App() {
                     <>
                       <ReviewWorkbench
                         key={`${selected}:${refresh}`}
-                        onDirty={setDirty}
+                        onDirty={handleDirty}
+                        onSaving={setSaving}
+                        feedback={saved}
                         onSaved={(next) => {
                           setDirty(false);
+                          const after =
+                            retained?.id === selected
+                              ? retained.after.filter((id) =>
+                                  filtered.some((e) => e.id === id),
+                                )
+                              : filtered.slice(position + 1).map((e) => e.id);
+                          const nextId = after[0];
                           setSaved(
-                            `Review saved${next && !filtered[position + 1] ? " · End of queue" : ""}.`,
+                            next && !nextId
+                              ? "Review saved · End of queue."
+                              : "Review saved.",
                           );
-                          if (next && filtered[position + 1])
-                            setSelected(filtered[position + 1].id);
+                          if (next && nextId) {
+                            setSelected(nextId);
+                            setRetained(null);
+                          } else setRetained({ id: selected, after });
                           setRefresh((n) => n + 1);
                         }}
                         data={data}

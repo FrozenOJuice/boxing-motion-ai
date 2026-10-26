@@ -171,14 +171,12 @@ export default function Viewer({
   recording,
   onVisible,
   onBoundary,
-  jump,
   proposedBounds,
 }: {
   data: Case;
   recording: string;
   onVisible?: (frame: Frame) => void;
   onBoundary?: (kind: "start" | "end", index: number) => void;
-  jump?: { index: number; token: number };
   proposedBounds?: [number, number];
 }) {
   const markerId = useId();
@@ -215,9 +213,6 @@ export default function Viewer({
     if (!playing && index >= maximum) setIndex(minimum);
     setPlaying((p) => !p);
   }
-  useEffect(() => {
-    if (jump) seek(jump.index);
-  }, [jump, count]);
   useEffect(() => {
     if (!playing || loaded !== index) return;
     if (index >= maximum) {

@@ -1544,17 +1544,6 @@ footer span {
   flex-direction: column;
   gap: 10px;
 }
-.boundary-checks {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 16px 0;
-}
-.boundary-checks span {
-  margin-right: auto;
-  color: var(--muted);
-}
 .attestation {
   line-height: 1.6;
   align-items: flex-start;
@@ -1567,9 +1556,34 @@ footer span {
   gap: 12px;
   margin-top: 24px;
 }
-.review-save small {
+.save-feedback {
   flex: 1;
-  min-width: 150px;
+  min-width: 160px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.save-feedback small {
+  font-size: inherit;
+}
+.save-error {
+  color: #e4a5a5;
+}
+.save-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.review-screen .secondary-save {
+  padding: 6px 10px;
+  font-size: 12px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--muted);
+}
+.review-screen .secondary-save:hover:not(:disabled) {
+  background: #252b33;
+  color: #e5eaf0;
 }
 .review-screen .primary-action {
   background: #d2dff0;
@@ -1881,10 +1895,7 @@ footer span {
   display: block;
   margin-top: 3px;
 }
-.independent-checks .boundary-checks {
-  margin: 0;
-  justify-content: flex-end;
-}
+
 .saved-verification {
   margin-bottom: 12px;
   font-size: 12px;

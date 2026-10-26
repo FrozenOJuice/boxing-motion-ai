@@ -167,8 +167,34 @@ reason, and uncertainty offers selectable reasons with an optional note. Existin
 fingerprints, revision links, stale-write detection, original exclusions and V9 protections
 remain in force. No real review is saved during automated verification.
 
-Current checks: **427 Python tests**, **37 frontend tests**, Ruff, TypeScript, formatting
+Current checks: **427 Python tests**, **42 frontend tests**, Ruff, TypeScript, formatting
 and production build pass. New tests cover anonymous saves, server-assigned manual source,
 automated-source rejection, timestamp/verification preservation, historical named receipts
 and hashes remaining unchanged, name-free UI and ignoring old browser name preferences.
 One existing upstream Starlette/httpx TestClient deprecation warning remains.
+
+## Save actions and boundary navigation
+
+**Save & Next** is the primary action; the smaller **Save** beside it persists the
+same review and keeps the current punch open. Save & Next advances only after a
+successful write. A saved punch stays open after plain Save even if its new status
+no longer matches the current queue filter. At the final punch, Save & Next keeps
+that punch open and reports “Review saved · End of queue.” It does not wrap around.
+
+An immediate submission lock and disabled save buttons prevent concurrent writes.
+Queue navigation and filters are temporarily disabled while a save is pending, so
+an in-flight write cannot unexpectedly move a different open case. Feedback appears
+beside the actions: a quiet success status or a readable error with the draft kept
+for retry. Existing server request IDs still provide idempotency as a second layer.
+
+Separate View Start/View End buttons have been removed. Click or keyboard-activate
+the punch start/end markers on the timeline, including proposed markers when editing
+boundaries. Their hover/focus labels remain available. Timing confirmation still
+requires the exact start/end images to have been displayed, or valid inherited manual
+evidence; clicking a marker alone does not count as viewing a frame.
+
+Verification for this focused change: **427 backend tests**, **42 frontend tests**,
+Ruff, TypeScript, formatting and production build pass. New tests cover repeated clicks,
+delayed success, failure/retry, Save staying put when filters change, forward-only
+advancement, the last annotation, and proposed-marker navigation with timing gates.
+The API and curation implementation are unchanged; all writes in tests are synthetic.

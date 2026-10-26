@@ -112,7 +112,11 @@ function mockApi() {
             history: [revision],
             decisions: [],
           }),
-          annotation: source,
+          annotation: {
+            ...source,
+            video_id: path.split("/")[3],
+            source_row: Number(path.split("/")[4]),
+          },
           labels: ["jab", "cross"],
           review: ok(review),
           evidence: ok({
@@ -136,7 +140,7 @@ function mockApi() {
           image_url: `/synthetic-${index}.jpg`,
         });
       } else value = ok({});
-      return { ok: true, json: async () => value } as Response;
+      return { ok: true, json: async () => structuredClone(value) } as Response;
     },
   );
   vi.stubGlobal("fetch", fetchMock);
@@ -340,7 +344,9 @@ it("requires displayed boundary frames and stance evidence for confirmation", as
 
   confirmSelectedReview();
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
-  fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
+  fireEvent.click(
+    screen.getByRole("button", { name: /^(?:Punch|Proposed) end/ }),
+  );
   fireEvent.load(await screen.findByAltText("V4, native frame 4"));
   expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
   fireEvent.click(screen.getByRole("button", { name: "Change it" }));
@@ -445,7 +451,9 @@ it("Yes resets a proposed correction and preserves the original label and bounds
   });
   fireEvent.click(screen.getByRole("button", { name: "Yes" }));
   expect(screen.queryByLabelText("Start frame")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
+  fireEvent.click(
+    screen.getByRole("button", { name: /^(?:Punch|Proposed) end/ }),
+  );
   fireEvent.load(await screen.findByAltText("V4, native frame 4"));
   fireEvent.click(screen.getByText("Add a note (optional)"));
   fireEvent.change(screen.getByLabelText("Additional explanation (optional)"), {
@@ -688,7 +696,9 @@ it("confirms anonymously without written notes across next and remount", async (
     screen.getByText(/Review/, { selector: "p.confirmation-scope" }),
   ).toHaveTextContent("jab");
   fireEvent.load(await screen.findByAltText("V4, native frame 2"));
-  fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
+  fireEvent.click(
+    screen.getByRole("button", { name: /^(?:Punch|Proposed) end/ }),
+  );
   fireEvent.load(await screen.findByAltText("V4, native frame 4"));
   expect(screen.getByRole("button", { name: "Save & Next" })).toBeDisabled();
   const attestation = screen.getByLabelText("Start/end timing is correct.");
@@ -739,9 +749,13 @@ it("requires an explanation for corrections and sends the corrected interval wit
     target: { value: "3" },
   });
   expect(screen.getByText("Briefly explain your correction.")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: /^View start/ }));
+  fireEvent.click(
+    screen.getByRole("button", { name: /^(?:Punch|Proposed) start/ }),
+  );
   fireEvent.load(await screen.findByAltText("V4, native frame 3"));
-  fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
+  fireEvent.click(
+    screen.getByRole("button", { name: /^(?:Punch|Proposed) end/ }),
+  );
   fireEvent.load(await screen.findByAltText("V4, native frame 4"));
   confirmSelectedReview();
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
@@ -841,7 +855,9 @@ it("explains server boundary validation without losing the review draft", async 
   render(<App />);
   fireEvent.load(await screen.findByAltText("V4, native frame 2"));
   fireEvent.click(screen.getByRole("button", { name: "Yes" }));
-  fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
+  fireEvent.click(
+    screen.getByRole("button", { name: /^(?:Punch|Proposed) end/ }),
+  );
   fireEvent.load(await screen.findByAltText("V4, native frame 4"));
   confirmSelectedReview();
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
@@ -904,7 +920,9 @@ it.each([
     expect(screen.getByText("Partially verified · 1/3 selected")).toBeVisible();
     if (axis === "timing") {
       expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
-      fireEvent.click(screen.getByRole("button", { name: /^View end/ }));
+      fireEvent.click(
+        screen.getByRole("button", { name: /^(?:Punch|Proposed) end/ }),
+      );
       fireEvent.load(await screen.findByAltText("V4, native frame 4"));
     }
     fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
@@ -1047,4 +1065,189 @@ it("labels manual and automated origins while retaining legacy names in history"
   expect(screen.getByText("Manual review · hold")).toBeVisible();
   expect(screen.getByText(/Legacy reviewer: Alice/)).toBeVisible();
   expect(screen.getByText("Automated observation · hold")).toBeVisible();
+});
+
+async function selectPartialReview(recording = "V4") {
+  fireEvent.load(await screen.findByAltText(`${recording}, native frame 2`));
+  fireEvent.click(screen.getByRole("button", { name: "Yes" }));
+  fireEvent.click(screen.getByLabelText("Punch type is correct."));
+}
+
+it("submits only once and advances only after Save & Next succeeds", async () => {
+  const mock = mockApi();
+  const original = mock.getMockImplementation()!;
+  let finish!: (response: Response) => void;
+  mock.mockImplementation((url, init) =>
+    init?.method === "POST"
+      ? new Promise<Response>((r) => {
+          finish = r;
+        })
+      : original(url, init),
+  );
+  render(<App />);
+  await selectPartialReview();
+  const next = screen.getByRole("button", { name: "Save & Next" });
+  const stay = screen.getByRole("button", { name: "Save" });
+  expect(next).toHaveClass("primary-action");
+  expect(stay).toHaveClass("secondary-save");
+  act(() => {
+    fireEvent.click(next);
+    fireEvent.click(next);
+    fireEvent.click(stay);
+  });
+  expect(
+    mock.mock.calls.filter(([, init]) => init?.method === "POST"),
+  ).toHaveLength(1);
+  expect(mock.mock.calls.some(([url]) => url === "/api/cases/V5/2")).toBe(
+    false,
+  );
+  expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled();
+  expect(
+    screen.getByRole("combobox", { name: "Filter review state" }),
+  ).toBeDisabled();
+  expect(screen.getByRole("button", { name: /V5 · Punch 2/ })).toBeDisabled();
+  await act(async () =>
+    finish({
+      ok: true,
+      json: async () => ok({ source: "manual" }),
+    } as Response),
+  );
+  await screen.findByAltText("V5, native frame 2");
+  expect(screen.getByText("Review saved.")).toHaveAttribute("role", "status");
+});
+
+function mockCategoryChangeAfterSave() {
+  const mock = mockApi();
+  const original = mock.getMockImplementation()!;
+  const completed = new Set<string>();
+  mock.mockImplementation(async (url, init) => {
+    if (init?.method === "POST") {
+      const parts = String(url).split("/");
+      completed.add(`${parts[3]}:${parts[4]}`);
+      return {
+        ok: true,
+        json: async () => ok({ source: "manual" }),
+      } as Response;
+    }
+    const response = await original(url, init);
+    if (String(url) !== "/api/reviews") return response;
+    const value = await response.json();
+    for (const entry of value.data.entries)
+      if (completed.has(entry.id)) {
+        entry.review.data.latest = {
+          ...revision,
+          actor_type: "human",
+          disposition: "accept",
+        };
+        entry.review.data.verification_status = "fully_verified";
+      }
+    return { ok: true, json: async () => value } as Response;
+  });
+  return mock;
+}
+
+it("Save stays on the current punch even when its updated status leaves the filter", async () => {
+  const mock = mockCategoryChangeAfterSave();
+  render(<App />);
+  await screen.findByRole("button", { name: "Yes" });
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "Filter review state" }),
+    { target: { value: "Needs attention" } },
+  );
+  await selectPartialReview();
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await screen.findByText("Review saved.");
+  expect(await screen.findByAltText("V4, native frame 2")).toBeInTheDocument();
+  expect(mock.mock.calls.some(([url]) => url === "/api/cases/V5/2")).toBe(
+    false,
+  );
+  expect(
+    screen.queryByRole("button", { name: /V4 · Punch 1/ }),
+  ).not.toBeInTheDocument();
+  // Advance forward from the retained case, not back to the first queue entry.
+  await selectPartialReview();
+  fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
+  await screen.findByAltText("V5, native frame 2");
+});
+
+it("keeps a failed Save & Next on the current punch and allows a single retry", async () => {
+  const mock = mockApi();
+  const original = mock.getMockImplementation()!;
+  let writes = 0;
+  mock.mockImplementation(async (url, init) => {
+    if (init?.method !== "POST") return original(url, init);
+    writes++;
+    return writes === 1
+      ? ({ ok: false, status: 500, json: async () => ({}) } as Response)
+      : ({ ok: true, json: async () => ok({ source: "manual" }) } as Response);
+  });
+  render(<App />);
+  await selectPartialReview();
+  fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "your draft has been kept",
+  );
+  expect(mock.mock.calls.some(([url]) => url === "/api/cases/V5/2")).toBe(
+    false,
+  );
+  expect(screen.getByLabelText("Punch type is correct.")).toBeChecked();
+  expect(screen.getByRole("button", { name: "Save & Next" })).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
+  await screen.findByAltText("V5, native frame 2");
+  expect(writes).toBe(2);
+});
+
+it("finishes on the final punch without wrapping when the filter changes after saving", async () => {
+  const mock = mockCategoryChangeAfterSave();
+  render(<App />);
+  await screen.findByRole("button", { name: "Yes" });
+  fireEvent.change(
+    screen.getByRole("combobox", { name: "Filter review state" }),
+    { target: { value: "Needs attention" } },
+  );
+  fireEvent.click(screen.getByRole("button", { name: /V5 · Punch 2/ }));
+  await selectPartialReview("V5");
+  const before = mock.mock.calls.filter(
+    ([url]) => url === "/api/cases/V4/1",
+  ).length;
+  fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
+  expect(
+    await screen.findByText("Review saved · End of queue."),
+  ).toHaveAttribute("role", "status");
+  expect(await screen.findByAltText("V5, native frame 2")).toBeInTheDocument();
+  expect(
+    mock.mock.calls.filter(([url]) => url === "/api/cases/V4/1"),
+  ).toHaveLength(before);
+  expect(
+    mock.mock.calls.find(([url, init]) => init?.method === "POST")?.[0],
+  ).toBe("/api/reviews/V5/2");
+});
+
+it("uses accessible proposed timeline markers for boundary verification without extra buttons", async () => {
+  mockApi();
+  render(<App />);
+  fireEvent.load(await screen.findByAltText("V4, native frame 2"));
+  fireEvent.click(screen.getByRole("button", { name: "Change it" }));
+  expect(
+    screen.queryByRole("button", { name: /^View (?:start|end)/i }),
+  ).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Start frame"), {
+    target: { value: "3" },
+  });
+  fireEvent.change(screen.getByLabelText("Why change it?"), {
+    target: { value: "The original opening frame belongs to recovery." },
+  });
+  fireEvent.click(screen.getByLabelText("Start/end timing is correct."));
+  expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  const start = screen.getByRole("button", { name: "Proposed start · 3" });
+  const end = screen.getByRole("button", { name: "Proposed end · 4" });
+  expect(start).toHaveAttribute("aria-describedby");
+  expect(end).toHaveAttribute("aria-describedby");
+  fireEvent.focus(start);
+  fireEvent.click(start);
+  fireEvent.load(await screen.findByAltText("V4, native frame 3"));
+  expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
+  fireEvent.click(end);
+  fireEvent.load(await screen.findByAltText("V4, native frame 4"));
+  expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
 });

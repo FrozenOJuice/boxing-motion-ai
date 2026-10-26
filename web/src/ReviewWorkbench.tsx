@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type Case,
   type Frame,
@@ -38,11 +38,15 @@ export default function ReviewWorkbench({
   recording,
   onSaved,
   onDirty,
+  onSaving,
+  feedback,
 }: {
   data: Case;
   recording: string;
   onSaved: (next: boolean) => void;
   onDirty: (dirty: boolean) => void;
+  onSaving: (saving: boolean) => void;
+  feedback: string;
 }) {
   const edit = data.edit?.data;
   const original = frameBounds(
@@ -60,7 +64,6 @@ export default function ReviewWorkbench({
       { start: number; end: number } | undefined) ?? prior?.confirmed_bounds;
   const initialStart = initialBounds?.start ?? original?.[0] ?? -1;
   const initialEnd = initialBounds?.end ?? original?.[1] ?? -1;
-  const [jump, setJump] = useState<{ index: number; token: number }>();
   const [choice, setChoice] = useState("");
   const [reason, setReason] = useState("");
   const [exclude, setExclude] = useState(false);
@@ -82,7 +85,11 @@ export default function ReviewWorkbench({
   const [inspected, setInspected] = useState<number[]>([]);
   const [attest, setAttest] = useState(false);
   const [checks, setChecks] = useState<VerificationChecks>(noChecks);
-  const [busy, setBusy] = useState(false);
+  const [pendingAction, setPendingAction] = useState<"stay" | "next" | null>(
+    null,
+  );
+  const busy = pendingAction !== null;
+  const submitting = useRef(false);
   const [error, setError] = useState("");
   const [requestId, setRequestId] = useState(() => crypto.randomUUID());
   const dirty = !!(
@@ -187,8 +194,11 @@ export default function ReviewWorkbench({
                       : "";
   const valid = !!choice && !validation;
   async function save(next: boolean) {
-    if (!valid || !edit) return;
-    setBusy(true);
+    if (!valid || !edit || submitting.current) return;
+    submitting.current = true;
+    let succeeded = false;
+    setPendingAction(next ? "next" : "stay");
+    onSaving(true);
     setError("");
     try {
       await saveReview(recording, data.annotation.source_row, {
@@ -226,17 +236,23 @@ export default function ReviewWorkbench({
         inspected_frames: inspected,
         attest_human: action === "verify" ? true : attest,
       });
+      succeeded = true;
       onDirty(false);
       onSaved(next);
     } catch (e) {
       setError(String((e as Error).message));
     } finally {
-      setBusy(false);
+      if (!succeeded) {
+        submitting.current = false;
+        setPendingAction(null);
+      }
+      onSaving(false);
     }
   }
   function changed() {
     setRequestId(crypto.randomUUID());
     setAttest(false);
+    setError("");
   }
   function choose(value: string) {
     changed();
@@ -273,7 +289,6 @@ export default function ReviewWorkbench({
       <Viewer
         data={data}
         recording={recording}
-        jump={jump}
         proposedBounds={choice === "change" ? [start, end] : undefined}
         onVisible={(frame) => {
           setVisibleFrame(frame);
@@ -286,6 +301,7 @@ export default function ReviewWorkbench({
         onBoundary={
           choice === "change"
             ? (kind, index) => {
+                if (submitting.current) return;
                 changed();
                 setChecks(noChecks);
                 (kind === "start" ? setStart : setEnd)(index);
@@ -467,20 +483,6 @@ export default function ReviewWorkbench({
                     hand verification too.
                   </small>
                 )}
-                <div className="boundary-checks">
-                  <button
-                    onClick={() => setJump({ index: start, token: Date.now() })}
-                  >
-                    View start
-                    {inspected.includes(start) || inherited.timing ? " ✓" : ""}
-                  </button>
-                  <button
-                    onClick={() => setJump({ index: end, token: Date.now() })}
-                  >
-                    View end
-                    {inspected.includes(end) || inherited.timing ? " ✓" : ""}
-                  </button>
-                </div>
               </div>
             ) : (
               <label
@@ -497,25 +499,34 @@ export default function ReviewWorkbench({
             )}
           </fieldset>
         )}
-        {error && (
-          <div role="alert" className="notice">
-            {error}
+        <div className="review-save" aria-busy={busy}>
+          <div className="save-feedback">
+            {error ? (
+              <span role="alert" className="save-error">
+                {error}
+              </span>
+            ) : feedback ? (
+              <span role="status">{feedback}</span>
+            ) : (
+              <small>{choice ? validation : ""}</small>
+            )}
           </div>
-        )}
-        <div className="review-save">
-          <small>{choice ? validation : ""}</small>
-          {choice && (
-            <button disabled={!valid || busy} onClick={() => void save(false)}>
-              Save
+          <div className="save-actions">
+            <button
+              className="secondary-save"
+              disabled={!valid || busy}
+              onClick={() => void save(false)}
+            >
+              {pendingAction === "stay" ? "Saving…" : "Save"}
             </button>
-          )}
-          <button
-            className="primary-action"
-            disabled={!valid || busy}
-            onClick={() => void save(true)}
-          >
-            {busy ? "Saving…" : "Save & Next"}
-          </button>
+            <button
+              className="primary-action"
+              disabled={!valid || busy}
+              onClick={() => void save(true)}
+            >
+              {pendingAction === "next" ? "Saving…" : "Save & Next"}
+            </button>
+          </div>
         </div>
       </section>
       <details className="advanced-details">
