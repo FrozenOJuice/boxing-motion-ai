@@ -172,16 +172,32 @@ export default function Viewer({
   onVisible,
   onBoundary,
   proposedBounds,
+  interval,
 }: {
-  data: Case;
+  data?: Case;
+  interval?: {
+    start: number;
+    end: number;
+    count: number;
+    contextStart: number;
+    contextEnd: number;
+    delay: number;
+  };
   recording: string;
   onVisible?: (frame: Frame) => void;
   onBoundary?: (kind: "start" | "end", index: number) => void;
   proposedBounds?: [number, number];
 }) {
   const markerId = useId();
-  const count = data.recording.data?.preparation.source_frame_count ?? 0;
-  const original = frameBounds(data.annotation, count);
+  const count =
+    interval?.count ??
+    data?.recording.data?.preparation.source_frame_count ??
+    0;
+  const original: [number, number] | null = interval
+    ? [interval.start, interval.end]
+    : data
+      ? frameBounds(data.annotation, count)
+      : null;
   const bounds =
     proposedBounds &&
     proposedBounds.every(Number.isInteger) &&
@@ -195,16 +211,21 @@ export default function Viewer({
   const [playing, setPlaying] = useState(false);
   const [overlay, setOverlay] = useState(false);
   const [context, setContext] = useState(30);
-  const minimum = Math.max(
-    0,
-    Math.min(index, loaded ?? index, (bounds?.[0] ?? 0) - context),
-  );
-  const maximum = Math.min(
-    count - 1,
-    Math.max(index, loaded ?? index, (bounds?.[1] ?? 0) + context),
-  );
+  const minimum =
+    interval?.contextStart ??
+    Math.max(0, Math.min(index, loaded ?? index, (bounds?.[0] ?? 0) - context));
+  const maximum =
+    interval?.contextEnd ??
+    Math.min(
+      count - 1,
+      Math.max(index, loaded ?? index, (bounds?.[1] ?? 0) + context),
+    );
   function seek(n: number) {
-    if (Number.isInteger(n) && n >= 0 && n < count) {
+    if (
+      Number.isInteger(n) &&
+      n >= (interval?.contextStart ?? 0) &&
+      n <= (interval?.contextEnd ?? count - 1)
+    ) {
       setPlaying(false);
       setIndex(n);
     }
@@ -219,9 +240,12 @@ export default function Viewer({
       setPlaying(false);
       return;
     }
-    const timer = window.setTimeout(() => setIndex(index + 1), 120);
+    const timer = window.setTimeout(
+      () => setIndex(index + 1),
+      interval?.delay ?? 120,
+    );
     return () => window.clearTimeout(timer);
-  }, [playing, loaded, index, maximum]);
+  }, [playing, loaded, index, maximum, interval?.delay]);
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (
@@ -254,7 +278,10 @@ export default function Viewer({
   const position = (n: number) =>
     `${(100 * (n - minimum)) / Math.max(1, maximum - minimum)}%`;
   return (
-    <section className="viewer panel" aria-label="Punch viewer">
+    <section
+      className="viewer panel"
+      aria-label={interval ? "Interval viewer" : "Punch viewer"}
+    >
       <ExactFrame
         key={recording}
         recording={recording}
@@ -269,8 +296,12 @@ export default function Viewer({
       <div className="playback-controls">
         <div className="playback-context">
           <span className="original-punch">
-            <small>Original punch</small>
-            <strong>{title(data.annotation.punch_type_provisional)}</strong>
+            <small>{interval ? "Review interval" : "Original punch"}</small>
+            <strong>
+              {interval
+                ? `${interval.start}–${interval.end}`
+                : title(data?.annotation.punch_type_provisional ?? "unknown")}
+            </strong>
           </span>
         </div>
         <div className="playback-buttons">
@@ -323,7 +354,7 @@ export default function Viewer({
               }}
             />
             {(bounds[0] === bounds[1] ? [0] : [0, 1]).map((end) => {
-              const label = `${proposedBounds ? "Proposed" : "Punch"} ${bounds[0] === bounds[1] ? "start/end" : end === 0 ? "start" : "end"} · ${bounds[end]}`;
+              const label = `${proposedBounds ? "Proposed" : interval ? "Interval" : "Punch"} ${bounds[0] === bounds[1] ? "start/end" : end === 0 ? "start" : "end"} · ${bounds[end]}`;
               return (
                 <button
                   key={end}
@@ -385,29 +416,31 @@ export default function Viewer({
             Go to native frame
             <input
               type="number"
-              min={0}
-              max={count - 1}
+              min={interval?.contextStart ?? 0}
+              max={interval?.contextEnd ?? count - 1}
               value={index}
               onChange={(e) => seek(Number(e.target.value))}
             />
           </label>
-          <label>
-            Surrounding frames
-            <select
-              aria-label="Context frames"
-              value={context}
-              onChange={(e) => {
-                setPlaying(false);
-                setContext(Number(e.target.value));
-              }}
-            >
-              {[10, 30, 60].map((n) => (
-                <option key={n} value={n}>
-                  {n} before and after
-                </option>
-              ))}
-            </select>
-          </label>
+          {!interval && (
+            <label>
+              Surrounding frames
+              <select
+                aria-label="Context frames"
+                value={context}
+                onChange={(e) => {
+                  setPlaying(false);
+                  setContext(Number(e.target.value));
+                }}
+              >
+                {[10, 30, 60].map((n) => (
+                  <option key={n} value={n}>
+                    {n} before and after
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <p>
             Space: play/pause. Arrow keys: one frame. Playback waits for each
             exact frame; it is not real time.

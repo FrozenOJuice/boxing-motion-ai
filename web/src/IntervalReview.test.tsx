@@ -1,0 +1,199 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+import IntervalReview from "./IntervalReview";
+
+// Viewer decoding, stale image handling and exact stepping have separate real-viewer tests.
+vi.mock("./Viewer", () => ({
+  Notice: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  default: ({
+    onVisible,
+  }: {
+    onVisible: (f: { frame_index: number }) => void;
+  }) => (
+    <div>
+      {[10, 11, 12].map((n) => (
+        <button key={n} onClick={() => onVisible({ frame_index: n })}>
+          Show frame {n}
+        </button>
+      ))}
+    </div>
+  ),
+}));
+afterEach(() => vi.unstubAllGlobals());
+const entry = {
+  id: "V4-bg-1",
+  recording: "V4",
+  role: "train_candidate",
+  purpose: "background_candidate",
+  start: 10,
+  stop: 13,
+  frame_count: 100,
+  context_start: 9,
+  context_end: 14,
+  timing: { start: "1", stop_exclusive: "13/10" },
+};
+function api(
+  options: {
+    fail?: boolean;
+    conflict?: boolean;
+    second?: boolean;
+    pending?: Promise<Response>;
+  } = {},
+) {
+  const entries = options.second
+    ? [entry, { ...entry, id: "V4-bg-2" }]
+    : [entry];
+  const history: unknown[] = [];
+  const mock = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      if (options.pending) return options.pending;
+      if (options.fail)
+        return {
+          ok: false,
+          json: async () => ({ issues: ["interval_review_changed_reload"] }),
+        };
+      const payload = JSON.parse(String(init.body));
+      history.push({
+        interval_id: String(url).split("/").at(-1),
+        payload,
+        source: "manual",
+        reviewed_at: "2026-10-26",
+        status:
+          payload.decision === "no_punch"
+            ? "verified_background"
+            : payload.decision === "punch_present"
+              ? "needs_event_labeling"
+              : "unresolved",
+      });
+      return { ok: true, json: async () => ({ data: {} }) };
+    }
+    const data =
+      String(url) === "/api/intervals"
+        ? { manifest: { entries }, head: "a".repeat(64), history }
+        : {
+            entry: entries.find((e) => String(url).endsWith(e.id)),
+            head: "a".repeat(64),
+            history,
+            annotations: options.conflict
+              ? [
+                  {
+                    source_row: 1,
+                    punch_type_provisional: "jab",
+                    raw_start: 10,
+                    raw_end: 12,
+                  },
+                ]
+              : [],
+            status: "unknown",
+          };
+    return {
+      ok: true,
+      json: async () => ({ status: "available", issues: [], data }),
+    };
+  });
+  vi.stubGlobal("fetch", mock);
+  render(<IntervalReview onDirty={vi.fn()} onSaving={vi.fn()} />);
+  return mock;
+}
+const posts = (mock: ReturnType<typeof api>) =>
+  mock.mock.calls.filter(([, init]) => init?.method === "POST");
+async function watchAll() {
+  await screen.findByText("Show frame 10");
+  [10, 11, 12].forEach((n) =>
+    fireEvent.click(screen.getByText(`Show frame ${n}`)),
+  );
+}
+
+it("requires every frame and explicit whole-interval attestation, then saves without advancing", async () => {
+  const mock = api({ second: true });
+  await screen.findByRole("button", { name: "No punches" });
+  fireEvent.click(screen.getByRole("button", { name: "No punches" }));
+  expect(
+    screen.getByLabelText(
+      "I watched the entire interval and observed no punches.",
+    ),
+  ).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(posts(mock)).toHaveLength(0);
+  await watchAll();
+  fireEvent.click(
+    screen.getByLabelText(
+      "I watched the entire interval and observed no punches.",
+    ),
+  );
+  fireEvent.click(
+    screen.getByLabelText(
+      "The boxer is visible throughout, with no scene changes.",
+    ),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await screen.findByText("Review saved.");
+  expect(posts(mock)).toHaveLength(1);
+  const body = JSON.parse(String(posts(mock)[0][1]?.body));
+  expect(body.inspected_frames).toEqual([10, 11, 12]);
+  expect(body.decision).toBe("no_punch");
+  expect(body).not.toHaveProperty("source");
+  expect(body).not.toHaveProperty("reviewer");
+  expect(
+    screen.getByLabelText(
+      "I watched the entire interval and observed no punches.",
+    ),
+  ).not.toBeChecked();
+});
+
+it("flags unannotated punches, advances only on successful save, and handles the final item", async () => {
+  const mock = api();
+  await watchAll();
+  fireEvent.click(screen.getByRole("button", { name: "Punch present" }));
+  fireEvent.change(screen.getByRole("combobox"), { target: { value: "yes" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
+  await screen.findByText("Review saved · End of queue.");
+  expect(JSON.parse(String(posts(mock)[0][1]?.body))).toMatchObject({
+    decision: "punch_present",
+    unannotated_punches: "yes",
+    watched_entire: false,
+  });
+});
+
+it("keeps uncertainty unresolved and preserves edits after save failure", async () => {
+  const mock = api({ fail: true });
+  await watchAll();
+  fireEvent.click(screen.getByRole("button", { name: "Not sure" }));
+  fireEvent.change(screen.getByLabelText("Interval notes"), {
+    target: { value: "Arm is hidden" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Another review was saved",
+  );
+  expect(screen.getByLabelText("Interval notes")).toHaveValue("Arm is hidden");
+  expect(JSON.parse(String(posts(mock)[0][1]?.body)).decision).toBe("not_sure");
+});
+
+it("cannot certify background over a source punch", async () => {
+  const mock = api({ conflict: true });
+  await watchAll();
+  fireEvent.click(screen.getByRole("button", { name: "No punches" }));
+  expect(
+    screen.getByLabelText(
+      "I watched the entire interval and observed no punches.",
+    ),
+  ).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(posts(mock)).toHaveLength(0);
+  expect(screen.getByRole("alert")).toHaveTextContent("source punch overlaps");
+});
+
+it("prevents duplicate submissions while a save is pending", async () => {
+  const mock = api({ pending: new Promise(() => {}) });
+  await watchAll();
+  fireEvent.click(screen.getByRole("button", { name: "Not sure" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  expect(posts(mock)).toHaveLength(1);
+});

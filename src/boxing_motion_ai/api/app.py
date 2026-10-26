@@ -11,6 +11,7 @@ from boxing_motion_ai.data.annotation_review import LABELS, RECORDINGS
 from boxing_motion_ai.services import DashboardService
 from boxing_motion_ai.services.artifacts import ServiceError
 from boxing_motion_ai.services.contracts import QueryResult
+from boxing_motion_ai.services.interval_review import IntervalDecision, IntervalWorkspace
 from boxing_motion_ai.services.review_workspace import Decision, ReviewWorkspace
 
 from .media import FrameService
@@ -26,6 +27,7 @@ def create_app(root: Path):
     service = DashboardService(root)
     frames = FrameService(service)
     workspace = ReviewWorkspace(service)
+    intervals = IntervalWorkspace(service, frames)
     app = FastAPI(
         title="Boxing Motion AI — local review", version="0.2.0", docs_url=None, redoc_url=None
     )
@@ -95,6 +97,26 @@ def create_app(root: Path):
         return reply(
             QueryResult(status="available", data=dict(entries=entries, summary=status.data))
         )
+
+    def interval_reply(operation):
+        try:
+            return reply(QueryResult(status="available", data=operation()))
+        except ServiceError:
+            raise
+        except (ValueError, KeyError, TypeError, OSError, IndexError) as exc:
+            raise ServiceError("invalid", "interval_validation_or_storage_failed") from exc
+
+    @app.get("/api/intervals")
+    def interval_queue():
+        return interval_reply(intervals.snapshot)
+
+    @app.get("/api/intervals/{key}")
+    def interval_detail(key: str):
+        return interval_reply(lambda: intervals.detail(key))
+
+    @app.post("/api/intervals/{key}")
+    def interval_save(key: str, decision: IntervalDecision):
+        return interval_reply(lambda: intervals.save(key, decision))
 
     @app.get("/api/curation")
     def curation():

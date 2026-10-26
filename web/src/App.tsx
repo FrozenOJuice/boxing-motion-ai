@@ -11,6 +11,7 @@ import {
 } from "./api";
 import { Notice } from "./Viewer";
 import ReviewWorkbench from "./ReviewWorkbench";
+import IntervalReview from "./IntervalReview";
 import { Dataset, ExperimentsView, Models } from "./Overview";
 const sections = ["Review Queue", "Dataset", "Experiments", "Models"] as const;
 type Section = (typeof sections)[number];
@@ -49,6 +50,7 @@ function NavIcon({ index }: { index: number }) {
   );
 }
 export default function App() {
+  const [reviewMode, setReviewMode] = useState("punches");
   const [section, setSection] = useState<Section>("Review Queue");
   const [refresh, setRefresh] = useState(0);
   const [dirty, setDirty] = useState(false);
@@ -159,7 +161,31 @@ export default function App() {
               Start the local backend and check registered artifacts.
             </Notice>
           )}
-          {section === "Review Queue" ? (
+          {section === "Review Queue" && (
+            <div className="review-modes" aria-label="Review type">
+              {["punches", "intervals"].map((mode) => (
+                <button
+                  key={mode}
+                  className={reviewMode === mode ? "active" : ""}
+                  disabled={saving}
+                  onClick={() => {
+                    if (
+                      !dirty ||
+                      window.confirm("Discard unsaved review changes?")
+                    ) {
+                      setReviewMode(mode);
+                      setDirty(false);
+                    }
+                  }}
+                >
+                  {mode === "punches" ? "Punches" : "Video intervals"}
+                </button>
+              ))}
+            </div>
+          )}
+          {section === "Review Queue" && reviewMode === "intervals" ? (
+            <IntervalReview onDirty={handleDirty} onSaving={setSaving} />
+          ) : section === "Review Queue" ? (
             <>
               <div className="review-layout">
                 <section className="queue-panel panel">

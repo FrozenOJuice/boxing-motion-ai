@@ -193,7 +193,7 @@ class ReviewWorkspace:
         self.base = base
 
     @contextmanager
-    def _locked(self):
+    def _locked(self, directory=DIRECTORY):
         fd = os.open("/", os.O_RDONLY | os.O_DIRECTORY)
         lock = None
         try:
@@ -201,7 +201,7 @@ class ReviewWorkspace:
                 child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
                 os.close(fd)
                 fd = child
-            for part in DIRECTORY.split("/"):
+            for part in directory.split("/"):
                 try:
                     os.mkdir(part, 0o700, dir_fd=fd)
                 except FileExistsError:

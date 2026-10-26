@@ -1900,3 +1900,49 @@ footer span {
   margin-bottom: 12px;
   font-size: 12px;
 }
+
+.review-modes {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+.review-modes .active,
+.decision-options .active {
+  background: var(--accent, #315d4f);
+  color: #fff;
+}
+.interval-form {
+  padding: 1rem 1.25rem;
+}
+.interval-form h2 {
+  margin: 0 0 0.5rem;
+}
+.interval-form .decision-options {
+  display: flex;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+.interval-checks {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0.8rem 0;
+}
+.interval-checks label {
+  display: block;
+}
+.interval-save {
+  display: flex;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  align-items: center;
+}
+.interval-save .primary {
+  padding: 0.8rem 1.4rem;
+  background: #acd8bc;
+  color: #15231b;
+  font-weight: 650;
+}
+.interval-references {
+  padding: 0.8rem 1rem;
+  margin-top: 0.7rem;
+}
