@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
 import { frameBounds, reviewCategory, type Source } from "./api";
@@ -175,7 +181,7 @@ describe("interactive dashboard", () => {
       fetchMock.mock.calls.some(([url]) => String(url).includes("/V9")),
     ).toBe(false);
   });
-  it("does not show an old frame or fabricate pixels after a retrieval error", async () => {
+  it("retains the displayed frame and identifies a failed requested frame", async () => {
     const fetchMock = mockApi();
     const original = fetchMock.getMockImplementation()!;
     fetchMock.mockImplementation(async (url, ...args) =>
@@ -187,12 +193,18 @@ describe("interactive dashboard", () => {
         : original(url, ...args),
     );
     render(<App />);
-    await screen.findByAltText("V4, native frame 2");
+    const old = await screen.findByAltText("V4, native frame 2");
+    fireEvent.load(old);
+    const stage = old.closest(".image-stage");
     fireEvent.click(screen.getByRole("button", { name: "Next frame" }));
-    expect(
-      await screen.findByText(/No approximate frame substituted/),
-    ).toBeInTheDocument();
-    expect(screen.queryByAltText("V4, native frame 2")).not.toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Frame 3 unavailable",
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent("Showing frame 2");
+    expect(old).toBeVisible();
+    expect(old.closest(".image-stage")).toBe(stage);
+    expect(screen.getByText("Frame 2")).toBeVisible();
+    expect(screen.queryByAltText("V4, native frame 3")).not.toBeInTheDocument();
   });
   it("shows an actionable backend failure", async () => {
     vi.stubGlobal(
@@ -491,4 +503,163 @@ it("waits for displayed frames, pauses on stepping, and stops at the window end"
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument(),
   );
+});
+
+it("atomically swaps decoded pixels, frame label, timestamp and overlay; late decodes cannot win", async () => {
+  const mock = mockApi();
+  const original = mock.getMockImplementation()!;
+  mock.mockImplementation(async (url, init) => {
+    if (!String(url).includes("/frames/")) return original(url, init);
+    const index = Number(String(url).split("/").at(-1));
+    return {
+      ok: true,
+      json: async () =>
+        ok({
+          ...frame,
+          frame_index: index,
+          pts: String(index * 40),
+          exact_timestamp: `${index}/25`,
+          image_url: `/synthetic-${index}.jpg`,
+          landmarks: frame.landmarks.map((p) => ({
+            ...p,
+            xyz: [index / 10, 0.4, 0],
+          })),
+        }),
+    } as Response;
+  });
+  const { container } = render(<App />);
+  fireEvent.load(await screen.findByAltText("V4, native frame 2"));
+  fireEvent.click(screen.getByLabelText("Skeleton"));
+  fireEvent.click(screen.getByRole("button", { name: "Next frame" }));
+  const third = await screen.findByAltText("V4, native frame 3");
+  let resolveThird!: () => void;
+  Object.defineProperty(third, "decode", {
+    value: () =>
+      new Promise<void>((r) => {
+        resolveThird = r;
+      }),
+  });
+  fireEvent.load(third);
+  expect(third).not.toBeVisible();
+  expect(screen.getByAltText("V4, native frame 2")).toBeVisible();
+  expect(screen.getByText("Frame 2")).toBeVisible();
+  expect(container.querySelector(".skeleton line")).toHaveAttribute(
+    "x1",
+    "0.2",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Next frame" }));
+  const fourth = await screen.findByAltText("V4, native frame 4");
+  let resolveFourth!: () => void;
+  Object.defineProperty(fourth, "decode", {
+    value: () =>
+      new Promise<void>((r) => {
+        resolveFourth = r;
+      }),
+  });
+  fireEvent.load(fourth);
+  await act(async () => resolveThird());
+  expect(screen.getByText("Frame 2")).toBeVisible();
+  expect(screen.queryByAltText("V4, native frame 3")).not.toBeInTheDocument();
+  await act(async () => resolveFourth());
+  expect(fourth).toBeVisible();
+  expect(screen.queryByAltText("V4, native frame 2")).not.toBeInTheDocument();
+  expect(screen.getByText("Frame 4")).toBeVisible();
+  expect(container.querySelector(".skeleton line")).toHaveAttribute(
+    "x1",
+    "0.4",
+  );
+  expect(screen.getByText(/"pts": "160"/)).toHaveTextContent(
+    '"exact_timestamp": "4/25"',
+  );
+  expect(screen.getByRole("slider", { name: "Native frame" })).toHaveValue("4");
+});
+
+it.each(["load", "decode"])(
+  "keeps the stage and old image after a %s failure, then retries",
+  async (kind) => {
+    mockApi();
+    render(<App />);
+    const old = await screen.findByAltText("V4, native frame 2");
+    fireEvent.load(old);
+    const stage = old.closest(".image-stage");
+    fireEvent.click(screen.getByRole("button", { name: "Play" }));
+    const next = await screen.findByAltText("V4, native frame 3");
+    if (kind === "load") fireEvent.error(next);
+    else {
+      Object.defineProperty(next, "decode", {
+        value: () => Promise.reject(new Error("decode failed")),
+      });
+      fireEvent.load(next);
+    }
+    await screen.findByRole("alert");
+    expect(old).toBeVisible();
+    expect(old.closest(".image-stage")).toBe(stage);
+    expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry frame" }));
+    const retry = await screen.findByAltText("V4, native frame 3");
+    fireEvent.load(retry);
+    expect(retry).toBeVisible();
+    expect(retry.closest(".image-stage")).toBe(stage);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  },
+);
+
+it("ignores late metadata during rapid stepping and retains pixels across viewport changes", async () => {
+  const mock = mockApi();
+  const original = mock.getMockImplementation()!;
+  let resolveThird!: (r: Response) => void;
+  mock.mockImplementation((url, init) =>
+    String(url).endsWith("/frames/3")
+      ? new Promise<Response>((r) => {
+          resolveThird = r;
+        })
+      : original(url, init),
+  );
+  render(<App />);
+  const old = await screen.findByAltText("V4, native frame 2");
+  fireEvent.load(old);
+  const stage = old.closest(".image-stage");
+  fireEvent.click(screen.getByRole("button", { name: "Next frame" }));
+  fireEvent.click(screen.getByRole("button", { name: "Next frame" }));
+  const fourth = await screen.findByAltText("V4, native frame 4");
+  fireEvent.load(fourth);
+  await act(async () =>
+    resolveThird({
+      ok: true,
+      json: async () =>
+        ok({ ...frame, frame_index: 3, image_url: "/late.jpg" }),
+    } as Response),
+  );
+  expect(fourth).toBeVisible();
+  expect(screen.queryByAltText("V4, native frame 3")).not.toBeInTheDocument();
+  for (const [width, height] of [
+    [1440, 900],
+    [1366, 768],
+    [1280, 720],
+    [390, 844],
+  ]) {
+    vi.stubGlobal("innerWidth", width);
+    vi.stubGlobal("innerHeight", height);
+    fireEvent(window, new Event("resize"));
+    expect(fourth.closest(".image-stage")).toBe(stage);
+    expect(fourth).toBeVisible();
+    expect(screen.getByText("Frame 4")).toBeVisible();
+  }
+});
+
+it("keeps the initial empty stage stable on failure and removes redundant page titles", async () => {
+  mockApi();
+  render(<App />);
+  const image = await screen.findByAltText("V4, native frame 2");
+  const stage = image.closest(".image-stage");
+  fireEvent.error(image);
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "No frame displayed",
+  );
+  expect(document.querySelector(".image-stage")).toBe(stage);
+  expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+  for (const name of ["Dataset", "Experiments", "Models"]) {
+    fireEvent.click(screen.getByRole("button", { name }));
+    expect(screen.queryByRole("heading", { level: 1 })).not.toBeInTheDocument();
+  }
 });

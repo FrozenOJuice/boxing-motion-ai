@@ -86,3 +86,50 @@ attestation, validation and revision history through the unchanged backend.
 
 The backend and prepared data are unchanged. Generated previews and production build
 outputs remain ignored; only frontend source, tests and documentation are committed.
+
+## Stable playback and compact layout refinement
+
+The viewer now retains its displayed frame while a hidden replacement image loads
+and completes `HTMLImageElement.decode()`. The same decoded image element is promoted
+into view; pixels, skeleton, displayed frame number, timeline position and exact timing
+metadata update together before paint. Requested navigation remains separate from the
+displayed frame. Aborted metadata requests and superseded image-decode generations
+cannot replace a newer selection. Boundary edits remain disabled while the requested
+frame is not displayed.
+
+The stage has a fixed 16:9 shape sized from the available viewport, independent of
+loading, error messages or source-frame dimensions. Footage and overlays share a
+letterboxed plane preserving the source aspect ratio. Error/loading notices overlay
+the stage rather than replacing it. A failed request pauses playback and states which
+previous frame remains visible; Retry fetches the requested frame again. No approximate
+frame is substituted. Before the first successful frame, the same reserved stage stays
+empty with an actionable error.
+
+Only the displayed image and its pending replacement are retained by the component.
+The existing server preview cache and browser image handling remain in use. Speculative
+adjacent-frame requests were deliberately omitted: they can trigger expensive exact
+video decoding and contend with active navigation. No dependency or unbounded image
+cache was added.
+
+Redundant section page titles are removed. Reduced vertical spacing and a
+viewport-dependent footage-height cap make room for the viewer, controls and three
+decisions on common laptop/desktop sizes. Correction forms and advanced details can
+still extend below the fold. Small screens keep the responsive stacked layout and
+may require scrolling.
+
+Verification for this refinement: 22 frontend tests cover delayed image decoding,
+out-of-order metadata/decode completion, retained frame/overlay/timestamp correspondence,
+load and decode errors, retries, playback stopping, initial loading, and resize events
+at 1440×900, 1366×768, 1280×720 and 390×844. Resize checks verify retained DOM/state;
+jsdom does not perform physical layout or paint. TypeScript, formatting, production
+build, Ruff and the 369-test Python suite pass (the existing TestClient deprecation
+warning remains). Browser visual inspection remains unverified because computer-use
+inspection of the current browser URL was restricted; no browser was opened.
+
+To visually verify, refresh the local dashboard, select a punch, rapidly step in
+both directions and scrub while frames load. The old footage should remain visible
+until replaced; its label and skeleton must agree. Resize the window through the
+sizes above and check that the primary decision buttons fit on desktop. Under slow
+network conditions, verify loading does not change the stage size. If a frame fails,
+check the explicit previous-frame message and Retry. These checks do not require
+saving any annotation review.

@@ -137,9 +137,6 @@ export default function App() {
       </aside>
       <div className="main-shell">
         <main>
-          <div className="page-heading">
-            <h1>{section === "Review Queue" ? "Review" : section}</h1>
-          </div>
           {(queue.error || inventory.error) && (
             <Notice>
               Could not load project metadata: {queue.error || inventory.error}.

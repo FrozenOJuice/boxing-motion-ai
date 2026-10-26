@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   type Case,
   type Frame,
@@ -65,56 +65,103 @@ function ExactFrame({
   onVisible: (frame: Frame) => void;
   onFailure: () => void;
 }) {
+  const [retry, setRetry] = useState(0);
   const result = useRequest<Result<Frame>>(
     `/api/recordings/${recording}/frames/${index}`,
+    retry,
   );
-  const [ready, setReady] = useState(false);
-  const [imageError, setImageError] = useState(false);
+  const [displayed, setDisplayed] = useState<Frame | null>(null);
+  const [failure, setFailure] = useState<{
+    key: string;
+    message: string;
+  } | null>(null);
+  const key = `${recording}:${index}:${retry}`;
+  const latest = useRef({ key, generation: 0 });
+  if (latest.current.key !== key)
+    latest.current = { key, generation: latest.current.generation + 1 };
+  const generation = latest.current.generation;
+  const callbacks = useRef({ onVisible, onFailure });
+  callbacks.current = { onVisible, onFailure };
   const frame = result.data?.data;
+  const mismatch = frame && frame.frame_index !== index;
+  const error =
+    result.error ||
+    (mismatch ? "Frame identity mismatch" : undefined) ||
+    (failure?.key === key ? failure.message : undefined);
   useEffect(() => {
-    if (result.error) onFailure();
-  }, [result.error]);
-  if (result.error)
-    return (
-      <Notice>
-        Frame unavailable: {result.error}. No approximate frame substituted.
-      </Notice>
-    );
-  if (!frame)
-    return (
-      <div className="frame-loading" role="status">
-        Loading frame…
-      </div>
-    );
+    if (error) callbacks.current.onFailure();
+  }, [error]);
+  // Publish metadata before paint, in the same commit as the decoded image and overlay.
+  useLayoutEffect(() => {
+    if (displayed) callbacks.current.onVisible(displayed);
+  }, [displayed]);
+  const candidate =
+    !error && frame && frame.image_url !== displayed?.image_url ? frame : null;
+  const images = [displayed, candidate].filter((f): f is Frame => !!f);
+  const pending = displayed?.frame_index !== index || !!candidate;
   return (
-    <div
-      className="image-stage"
-      style={{ aspectRatio: `${frame.width}/${frame.height}` }}
-    >
-      {!ready && !imageError && (
-        <div className="frame-loading" role="status">
-          Loading frame…
+    <div className="image-stage" aria-busy={!error && pending}>
+      {images.map((f) => (
+        <div
+          className="frame-plane"
+          key={f.image_url}
+          style={
+            {
+              "--frame-ratio": f.width / f.height,
+              visibility: f === displayed ? "visible" : "hidden",
+            } as React.CSSProperties
+          }
+        >
+          <img
+            src={f.image_url}
+            alt={`${recording}, native frame ${f.frame_index}`}
+            onLoad={async (e) => {
+              if (f === displayed) return;
+              const element = e.currentTarget;
+              try {
+                if (element.decode) await element.decode();
+                if (
+                  latest.current.generation !== generation ||
+                  latest.current.key !== key
+                )
+                  return;
+                setDisplayed(f);
+              } catch {
+                if (
+                  latest.current.generation === generation &&
+                  latest.current.key === key
+                )
+                  setFailure({ key, message: "Image could not be decoded" });
+              }
+            }}
+            onError={() => {
+              if (
+                f !== displayed &&
+                latest.current.generation === generation &&
+                latest.current.key === key
+              )
+                setFailure({ key, message: "Image could not be loaded" });
+            }}
+          />
+          {f === displayed && overlay && <Skeleton frame={f} />}
         </div>
+      ))}
+      {error ? (
+        <div className="frame-status frame-error" role="alert">
+          Frame {index} unavailable: {error}.{" "}
+          {displayed
+            ? `Showing frame ${displayed.frame_index}.`
+            : "No frame displayed."}
+          <button onClick={() => setRetry((n) => n + 1)}>Retry frame</button>
+        </div>
+      ) : (
+        pending && (
+          <div className="frame-status" role="status">
+            Loading frame {index}…
+            {displayed && ` Showing frame ${displayed.frame_index}.`}
+          </div>
+        )
       )}
-      {imageError && (
-        <Notice>
-          Frame unavailable. Select another frame or reload to retry.
-        </Notice>
-      )}
-      <img
-        src={frame.image_url}
-        alt={`${recording}, native frame ${index}`}
-        style={{ visibility: ready ? "visible" : "hidden" }}
-        onLoad={() => {
-          setReady(true);
-          onVisible(frame);
-        }}
-        onError={() => {
-          setImageError(true);
-          onFailure();
-        }}
-      />
-      {ready && overlay && <Skeleton frame={frame} />}
     </div>
   );
 }
@@ -149,10 +196,13 @@ export default function Viewer({
   const [playing, setPlaying] = useState(false);
   const [overlay, setOverlay] = useState(false);
   const [context, setContext] = useState(30);
-  const minimum = Math.max(0, Math.min(index, (bounds?.[0] ?? 0) - context));
+  const minimum = Math.max(
+    0,
+    Math.min(index, loaded ?? index, (bounds?.[0] ?? 0) - context),
+  );
   const maximum = Math.min(
     count - 1,
-    Math.max(index, (bounds?.[1] ?? 0) + context),
+    Math.max(index, loaded ?? index, (bounds?.[1] ?? 0) + context),
   );
   function seek(n: number) {
     if (Number.isInteger(n) && n >= 0 && n < count) {
@@ -210,7 +260,7 @@ export default function Viewer({
   return (
     <section className="viewer panel" aria-label="Punch viewer">
       <ExactFrame
-        key={`${recording}-${index}`}
+        key={recording}
         recording={recording}
         index={index}
         overlay={overlay}
@@ -243,7 +293,9 @@ export default function Viewer({
           ›
         </button>
         <span className="playback-position">
-          Frame {index.toLocaleString()}
+          {loaded === null
+            ? "Loading frame…"
+            : `Frame ${loaded.toLocaleString()}`}
         </span>
         <small>Frame-by-frame playback</small>
         <label className="toggle">
@@ -280,7 +332,10 @@ export default function Viewer({
           type="range"
           min={minimum}
           max={maximum}
-          value={index}
+          value={loaded ?? index}
+          aria-valuetext={
+            loaded === null ? "No frame displayed" : `Showing frame ${loaded}`
+          }
           onChange={(e) => seek(Number(e.target.value))}
         />
       </div>
