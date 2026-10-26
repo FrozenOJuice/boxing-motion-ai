@@ -1,0 +1,63 @@
+{
+  "schema_version": "pose-estimator-audit-1.0",
+  "case_ids": [
+    "V10:142",
+    "V10:146",
+    "V10:147",
+    "V10:44",
+    "V10:57",
+    "V10:71",
+    "V10:78",
+    "V4:135",
+    "V4:144",
+    "V4:181",
+    "V4:343",
+    "V4:497",
+    "V4:51",
+    "V5:121",
+    "V5:262",
+    "V5:387",
+    "V5:432",
+    "V5:58",
+    "V5:92",
+    "V6:264",
+    "V6:266",
+    "V6:46",
+    "V6:613",
+    "V6:7",
+    "V7:136",
+    "V7:38",
+    "V7:51",
+    "V7:52",
+    "V7:8",
+    "V8:159",
+    "V8:31",
+    "V8:51",
+    "V8:82",
+    "V8:98"
+  ],
+  "context_frames": 2,
+  "max_frames_per_case": 100,
+  "common_joints": [
+    "left_shoulder",
+    "right_shoulder",
+    "left_elbow",
+    "right_elbow",
+    "left_wrist",
+    "right_wrist",
+    "left_hip",
+    "right_hip"
+  ],
+  "review_ledger": {
+    "path": "reports/boxingvi/dashboard-reviews-v1/v00000019/ledger.json",
+    "sha256": "f5d8ef1e437fa7f50beec40e81b9bb526b1a3422dd2d5b7d4f7426e30f90ce5c"
+  },
+  "cases_sha256": "0d688c9bc1b998c9cbf3fd12764266ae85375f7919591023f8165a0a62719f1f",
+  "rtmpose_input_size": [
+    192,
+    256
+  ],
+  "rtmpose_backend": "opencv",
+  "box_policy": "fixed_case_union_of_valid_mediapipe_landmarks_plus_15_percent",
+  "score_policy": "separate_uncalibrated_scores_no_rtmpose_validity_threshold"
+}

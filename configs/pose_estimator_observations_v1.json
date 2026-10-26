@@ -1,0 +1,20 @@
+{
+  "schema_version": "pose-estimator-observations-1.0",
+  "source": "automated",
+  "status": "assistant_visual_diagnostic_not_human_keypoint_ground_truth",
+  "annotation_changes": [],
+  "pose_changes": [],
+  "observations": [
+    {"case": "V6:7", "frames": [493, 494], "finding": "MediaPipe off-hand elbow lies near the overlapping gloves instead of the visible lower elbow; RTMPose restores the bent off-hand chain. Blur still limits precise punching-elbow localization.", "comparison": "rtmpose_better_on_off_hand"},
+    {"case": "V6:46", "frames": [8370, 8375], "finding": "MediaPipe left wrist falls near elbow/crossing forearm rather than the raised glove. RTMPose places the wrist nearer the glove and the elbow nearer the visible bend. Active hook path remains broadly similar.", "comparison": "rtmpose_better_on_off_hand"},
+    {"case": "V6:613", "frames": [41095], "finding": "MediaPipe right wrist floats above the visibly lowered glove; RTMPose follows the lowered wrist/elbow. Human-confirmed class and interval are not reclassified.", "comparison": "rtmpose_better"},
+    {"case": "V7:51", "frames": [7993], "finding": "MediaPipe elevated-arm elbow overlaps the lower opposite-arm bend. RTMPose separates the elevated arm and guard arm closer to the visible sleeves.", "comparison": "rtmpose_better"},
+    {"case": "V7:38", "frames": [6510], "finding": "MediaPipe right wrist projects into empty space to the right while the visible hand is raised near the face. RTMPose follows the raised hand; jacket and blur limit exact elbow assessment.", "comparison": "rtmpose_better_on_wrist"},
+    {"case": "V10:78", "frames": [5811], "finding": "Both estimates confuse overlapping arms. Both wrists cluster around the raised hand while the other hand is across the chest. RTMPose also changes shoulder/arm channel placement; no global side swap inferred.", "comparison": "both_problematic"},
+    {"case": "V10:78", "frames": [5812], "finding": "RTMPose duplicates the left chain onto the raised right arm; MediaPipe better separates the across-chest arm. Disagreement is not proof MediaPipe is wrong.", "comparison": "mediapipe_better"},
+    {"case": "V5:387", "frames": [8149], "finding": "MediaPipe extended-arm elbow is nearer the visible elbow; RTMPose elbow is displaced toward the shoulder. Hidden off-arm landmarks cannot be certified.", "comparison": "mediapipe_better"},
+    {"case": "V4:343", "frames": [18201], "finding": "The far elbow is hidden by gloves/near arm. Large disagreement is insufficient to establish its true location; neither estimate is certified.", "comparison": "ambiguous_occlusion"},
+    {"case": "V6:264", "frames": [20097, 20100, 20104, 20107], "finding": "Both skeletons reflect small guard movements. Preserve human no-punch-observed note and partial hold; higher landmark confidence does not validate the source punch label.", "comparison": "similar"},
+    {"case": "V6:266", "frames": [20288, 20291, 20294, 20297], "finding": "Both skeletons reflect small guard movements. Preserve human no-punch-observed note and partial hold; no no_punch label is created.", "comparison": "similar"}
+  ]
+}
