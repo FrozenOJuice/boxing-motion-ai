@@ -187,3 +187,75 @@ def test_interrupted_transaction_never_published(workspace, monkeypatch):
     with pytest.raises(ServiceError):
         store.save("V4", 1, item, Frames())
     assert store.snapshot().ledger.ledger_version == 1
+
+
+def test_structured_human_attestation_and_uncertainty_preserve_correction_history(workspace):
+    """No freeform prose required; explicit human assertions still bind exact evidence."""
+    root = workspace[0]
+    originals = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
+    store = ReviewWorkspace(DashboardService(root))
+    assertion = (
+        "I personally verified the punch label, the lead/rear arm from the boxer’s stance, "
+        "and the start/end frames."
+    )
+    first = decision(
+        store,
+        action="confirm",
+        reviewer="Alice",
+        notes=(
+            f"Reviewer selected Yes for the original annotation. Explicit attestation: {assertion}"
+        ),
+        lead_rear_evidence=f"Reviewer explicitly attested: {assertion}",
+        uncertainty="",
+        proposed_label="jab",
+        proposed_bounds=dict(start=100, end=103, convention="zero_based_decoded_inclusive"),
+        inspected_frames=[100, 103],
+    )
+    receipt = store.save("V4", 1, first, Frames())
+    first_bytes = (root / receipt["ledger_path"]).read_bytes()
+    corrected = decision(
+        store,
+        action="confirm",
+        reviewer="Bob",
+        notes="Reviewer correction: the opening frame belongs to the preceding movement.",
+        lead_rear_evidence=f"Reviewer explicitly attested: {assertion}",
+        uncertainty="",
+        proposed_label="cross",
+        proposed_bounds=dict(start=101, end=104, convention="zero_based_decoded_inclusive"),
+        inspected_frames=[101, 104],
+    )
+    store.save("V4", 1, corrected, Frames())
+    unsure = decision(
+        store,
+        reviewer="Bob",
+        action="ambiguous",
+        notes="Reviewer selected: Lead or rear arm is unclear.",
+        uncertainty="Lead or rear arm is unclear",
+        proposed_label=None,
+        proposed_bounds=None,
+    )
+    store.save("V4", 1, unsure, Frames())
+    reopened = ReviewWorkspace(DashboardService(root)).snapshot()
+    history = reopened.edit_state("V4", 1).data["history"]
+    assert [r["reviewer"] for r in history[-3:]] == ["Alice", "Bob", "Bob"]
+    assert history[-3]["confirmed_label"] == "jab"
+    assert history[-2]["confirmed_label"] == "cross"
+    assert history[-2]["confirmed_bounds"]["start"] == 101
+    assert history[-1]["disposition"] == "hold"
+    assert history[-1]["confirmed_label"] is None
+    assert history[-1]["confirmed_bounds"] is None
+    assert history[-1]["lead_rear_evidence"] is None
+    assert reopened.review("V4", 1).data["human_accepted"] is False
+    assert (root / receipt["ledger_path"]).read_bytes() == first_bytes
+    assert all(p.read_bytes() == raw for p, raw in originals.items())
+    # The backend still rejects empty evidence/notes and missing native boundaries.
+    with pytest.raises(ValueError):
+        decision(store, notes="")
+    invalid = decision(
+        store,
+        action="confirm",
+        proposed_label="jab",
+        proposed_bounds=dict(start=100, end=103, convention="zero_based_decoded_inclusive"),
+    )
+    with pytest.raises(ServiceError):
+        store.save("V4", 1, invalid, Frames())

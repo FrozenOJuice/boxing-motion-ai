@@ -14,11 +14,12 @@ http://127.0.0.1:8000. To launch from a stopped session, use the commands in
 1. Open **Review**. Use the queue filters for **Disputed punches** (six) or
    **Proposed anchors** (twelve), or choose a recording/search for a punch.
 2. For reproducible checks, search **V4:497**, a dispute, or **V4:144**, an anchor.
-   The original punch label is above the large viewer. Search **V6:613** and **V6:7**
+   The original punch label is beside the playback controls. Search **V6:613** and **V6:7**
    for another dispute/anchor pair. Queue punch numbers are positions in the filtered
    list; source-row identifiers are in Advanced details.
-3. Play/pause, step a frame, or scrub the timeline. Start/end buttons mark the
-   annotated interval; the highlighted range includes surrounding footage.
+3. Play/pause, step a frame, or scrub the timeline. Hover/focus the timeline markers
+   for start/end frame labels; clicking a marker jumps there. The highlighted range
+   marks the punch within surrounding footage.
    Toggle **Skeleton** if useful. **Playback options** contains direct frame entry
    and context length. Space toggles playback; arrows step when focus is outside
    form controls. Playback waits for every decoded image, pauses on manual seeking,
@@ -27,8 +28,12 @@ http://127.0.0.1:8000. To launch from a stopped session, use the commands in
    Corrections appear only after Change it, including frame inputs and “Use frame
    as start/end” buttons. Yes explicitly resets any draft correction to the original
    mapped label and boundaries, even when an older review proposed a correction.
-5. Enter your name and evidence. Confirmation also requires lead/rear evidence and
-   viewing both boundary frames. Explicitly attest your review, then **Save & Next**.
+5. Enter your name once; the browser remembers it. **Yes** shows the original label
+   and frame interval you are confirming. View both boundary frames and check the
+   explicit statement only after verifying the label, lead/rear arm from the boxer’s
+   stance, and boundaries. Notes are optional. **Change it** requires a brief reason
+   when label/frames differ. **Not sure** offers selectable reasons; Other requires
+   an explanation. Check the appropriate personal-review statement, then **Save & Next**.
    Save without advancing is available once a decision is selected. Editing a field
    clears attestation. Save failures retain the draft; navigation warns before
    discarding unsaved work.
@@ -59,13 +64,13 @@ assistant observation cannot produce a Reviewed category by itself.
 | --- | --- | --- |
 | Yes | Confirm original label and mapped boundaries | `confirm` |
 | Change it | Confirm the explicitly proposed label/boundaries | `confirm` |
-| Not sure | Can't tell what the punch is | `ambiguous` |
-| Not sure | Leave it for a later review | `hold` |
-| Not sure | Don't use this punch | `exclude` |
+| Not sure | Punch/arm/timing unclear, or multiple punches | `ambiguous` |
+| Not sure | Hard to see, needs another review, or Other | `hold` |
+| Not sure + More options | Explicitly exclude from future candidates | `exclude` |
 
-Not sure requires selecting one of its three outcomes; it never silently chooses
-an internal state. Ambiguous and Hold still require unresolved uncertainty. Every
-save retains reviewer notes, server timestamp, source bindings, exact frame evidence,
+Not sure requires a reason; its documented mapping records an unresolved state.
+Exclusion is a separate explicit option, never selected automatically. Every
+save retains reviewer identity, explicit statements/optional notes, server timestamp, source bindings, exact frame evidence,
 attestation, validation and revision history through the unchanged backend.
 
 ## Verification
@@ -133,3 +138,43 @@ sizes above and check that the primary decision buttons fit on desktop. Under sl
 network conditions, verify loading does not change the stage size. If a frame fails,
 check the explicit previous-frame message and Retry. These checks do not require
 saving any annotation review.
+
+
+## Simplified form and remembered reviewer
+
+The browser stores only the reviewer name under `boxing-motion-ai.reviewer.v1` in
+localStorage. Once entered it appears as **Reviewing as …** with **Change name**.
+It survives page reloads and server restarts in the same browser profile/origin;
+localhost, 127.0.0.1 and different ports have separate storage. Clearing browser
+storage clears the preference. No attestation, decision, stance or notes are restored
+from this preference. Blocked storage produces a visible warning. Names remain
+self-reported; there is no authentication or automatic attribution from old reviews.
+
+The backend API/contracts are unchanged. They require nonempty audit text and
+lead/rear evidence for acceptance. To avoid forcing prose, the frontend records the
+human's selected action and the exact statement they explicitly checked, plus any
+optional note. This is a structured record of human input, not a generated observation.
+It never invents orthodox/southpaw stance, screen-side interpretation or observations
+from model output. Saving a confirmation still requires loading both exact boundary
+frames and personally attesting all required facts. Watching endpoints alone does not
+check that statement. Use Not sure if timing or lead/rear interpretation is unverified;
+that path sends no confirmed label, bounds or stance evidence.
+
+Corrections require a written reason whenever the proposed label or interval differs
+from the original source. Previously proposed corrections still require a new personal
+review and explanation. Original source fingerprints and predecessor hashes are sent
+with every revision; existing history is preserved. Uncertainty reasons map to the
+existing ambiguous/hold decisions. Other requires a short explanation, while ordinary
+reasons need no additional prose. Optional exclusion remains under More options.
+
+Validation now explains missing information inline and translates known server errors
+(such as crossing a scene cut) into plain language while keeping the draft. No new
+confirmation dialog, backend dependency, dataset operation or ML experiment is added.
+
+Verification: 370 Python tests and 29 frontend tests, Ruff, TypeScript, formatting and
+production build. Synthetic tests cover empty-note confirmations, no preselected
+attestations, browser identity restoration/change/storage failure, reasons without
+freeform text, meaningful-correction explanations, invalid intervals, and appended
+correction/uncertainty history after reopening the real curation service in a temporary
+workspace. Existing media, V9, concurrency and audit checks still pass. No genuine
+annotation review was saved by the implementation agent.

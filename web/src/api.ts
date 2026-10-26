@@ -210,14 +210,32 @@ export async function saveReview(
     body: JSON.stringify(decision),
   });
   const value = await response.json();
-  if (!response.ok)
+  if (!response.ok) {
+    const messages: Record<string, string> = {
+      inspect_both_proposed_boundaries:
+        "View both start and end frames before confirming.",
+      proposed_bounds_out_of_range:
+        "The start/end frames must be within the recording.",
+      confirmation_crosses_known_cut:
+        "This interval crosses a scene cut. Adjust the boundaries or flag it as uncertain.",
+      confirmation_crosses_scene_or_segment:
+        "The boundaries belong to different scenes. Adjust them or flag uncertainty.",
+      lead_rear_evidence_required:
+        "Explicitly verify the lead/rear arm before confirming.",
+      unresolved_uncertainty_required: "Choose a reason for uncertainty.",
+      review_source_unavailable:
+        "The source annotation is unavailable. Reload the case.",
+    };
+    const code = value.issues?.[0];
     throw new Error(
       response.status === 409
         ? "Review changed or source verification failed. Reload the case before retrying; your draft has not been saved."
-        : value.issues?.join(", ") ||
-            JSON.stringify(value.detail) ||
-            `HTTP ${response.status}`,
+        : (messages[code] ??
+            (response.status === 422
+              ? "Review could not be saved. Check your name, reason and frame boundaries."
+              : "Review could not be saved. Please try again; your draft has been kept.")),
     );
+  }
   return value;
 }
 

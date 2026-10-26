@@ -8,6 +8,21 @@ import {
   percent,
 } from "./api";
 import Viewer, { Notice } from "./Viewer";
+import { useReviewer } from "./reviewer";
+
+const uncertaintyReasons = [
+  ["punch", "Punch type is unclear", "ambiguous"],
+  ["arm", "Lead or rear arm is unclear", "ambiguous"],
+  ["timing", "Start or end is unclear", "ambiguous"],
+  ["mixed", "More than one punch in the interval", "ambiguous"],
+  ["visibility", "Movement is hard to see", "hold"],
+  ["later", "Needs another review", "hold"],
+  ["other", "Other reason", "hold"],
+] as const;
+const confirmationAttestation =
+  "I personally verified the punch label, the lead/rear arm from the boxer’s stance, and the start/end frames.";
+const uncertaintyAttestation =
+  "I personally reviewed this punch and selected the reason above.";
 
 export default function ReviewWorkbench({
   data,
@@ -34,18 +49,26 @@ export default function ReviewWorkbench({
   const initialBounds =
     (savedProposal?.proposed_bounds as
       { start: number; end: number } | undefined) ?? prior?.confirmed_bounds;
-  const initialStart = initialBounds?.start ?? original?.[0] ?? 0;
-  const initialEnd = initialBounds?.end ?? original?.[1] ?? 0;
+  const initialStart = initialBounds?.start ?? original?.[0] ?? -1;
+  const initialEnd = initialBounds?.end ?? original?.[1] ?? -1;
   const [jump, setJump] = useState<{ index: number; token: number }>();
   const [choice, setChoice] = useState("");
-  const [unresolvedAction, setUnresolvedAction] = useState("");
+  const [reason, setReason] = useState("");
+  const [exclude, setExclude] = useState(false);
+  const selectedReason = uncertaintyReasons.find((r) => r[0] === reason);
   const action =
-    choice === "yes" || choice === "change" ? "confirm" : unresolvedAction;
+    choice === "yes" || choice === "change"
+      ? "confirm"
+      : selectedReason
+        ? exclude
+          ? "exclude"
+          : selectedReason[2]
+        : "";
   const [visibleFrame, setVisibleFrame] = useState<Frame>();
-  const [reviewer, setReviewer] = useState("");
+  const identity = useReviewer();
+  const { reviewer } = identity;
   const [notes, setNotes] = useState("");
-  const [uncertainty, setUncertainty] = useState("");
-  const [stance, setStance] = useState("");
+
   const [label, setLabel] = useState(initialLabel);
   const [start, setStart] = useState(initialStart);
   const [end, setEnd] = useState(initialEnd);
@@ -57,8 +80,8 @@ export default function ReviewWorkbench({
   const dirty = !!(
     choice ||
     notes ||
-    uncertainty ||
-    stance ||
+    reason ||
+    exclude ||
     attest ||
     label !== initialLabel ||
     start !== initialStart ||
@@ -77,22 +100,40 @@ export default function ReviewWorkbench({
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [dirty]);
-  const valid =
-    !!edit &&
-    !!action &&
-    !!reviewer.trim() &&
-    !!notes.trim() &&
-    attest &&
+  const correcting =
+    choice === "change" &&
+    (label !== data.annotation.punch_type_provisional ||
+      start !== original?.[0] ||
+      end !== original?.[1]);
+  const boundsValid =
     Number.isInteger(start) &&
     Number.isInteger(end) &&
     start >= 0 &&
     end >= start &&
-    end < (data.recording.data?.preparation.source_frame_count ?? 0) &&
-    (action !== "confirm" ||
-      (!!stance.trim() &&
-        inspected.includes(start) &&
-        inspected.includes(end))) &&
-    (!["ambiguous", "hold"].includes(action) || !!uncertainty.trim());
+    end < (data.recording.data?.preparation.source_frame_count ?? 0);
+  const validation = !edit
+    ? "Review data is unavailable. Reload this case."
+    : !reviewer.trim()
+      ? "Enter your name once to save reviews."
+      : reviewer.trim().length > 160
+        ? "Your name must be at most 160 characters."
+        : !action
+          ? "Choose why this punch needs another look."
+          : action === "confirm" && !data.labels.includes(label)
+            ? "Choose a punch label."
+            : action === "confirm" && !boundsValid
+              ? "Enter whole-number start/end frames within the recording, with end at or after start."
+              : correcting && !notes.trim()
+                ? "Briefly explain your correction."
+                : choice === "unsure" && reason === "other" && !notes.trim()
+                  ? "Add a short explanation for Other reason."
+                  : action === "confirm" &&
+                      (!inspected.includes(start) || !inspected.includes(end))
+                    ? "View the start and end frames before confirming."
+                    : !attest
+                      ? "Check the statement below only after you have verified it."
+                      : "";
+  const valid = !!choice && !validation;
   async function save(next: boolean) {
     if (!valid || !edit) return;
     setBusy(true);
@@ -104,16 +145,28 @@ export default function ReviewWorkbench({
         expected_revision_sha256: edit.revision_sha256,
         source_candidate_sha256: edit.source_candidate_sha256,
         action,
-        reviewer,
-        notes,
-        uncertainty,
-        lead_rear_evidence: stance,
-        proposed_label: label,
-        proposed_bounds: {
-          start,
-          end,
-          convention: "zero_based_decoded_inclusive",
-        },
+        reviewer: reviewer.trim(),
+        notes: [
+          action === "confirm"
+            ? `${choice === "yes" ? "Reviewer selected Yes for the original annotation" : "Reviewer proposed this annotation"}: ${label}, frames ${start}–${end} inclusive. Explicit attestation: ${confirmationAttestation}`
+            : `Reviewer selected: ${selectedReason?.[1]}.${exclude ? " Explicitly excluded this example from future candidates." : ""}`,
+          notes.trim() ? `Reviewer note: ${notes.trim()}` : "",
+        ]
+          .filter(Boolean)
+          .join("\n"),
+        uncertainty:
+          choice === "unsure"
+            ? [selectedReason?.[1], notes.trim()].filter(Boolean).join(" · ")
+            : "",
+        lead_rear_evidence:
+          action === "confirm"
+            ? `Reviewer explicitly attested: ${confirmationAttestation}`
+            : "",
+        proposed_label: action === "confirm" ? label : null,
+        proposed_bounds:
+          action === "confirm"
+            ? { start, end, convention: "zero_based_decoded_inclusive" }
+            : null,
         inspected_frames: inspected,
         attest_human: attest,
       });
@@ -132,7 +185,8 @@ export default function ReviewWorkbench({
   function choose(value: string) {
     changed();
     setChoice(value);
-    setUnresolvedAction("");
+    setReason("");
+    setExclude(false);
     if (value === "yes") {
       setLabel(data.annotation.punch_type_provisional);
       setStart(original?.[0] ?? -1);
@@ -233,63 +287,89 @@ export default function ReviewWorkbench({
                 </label>
               </div>
             )}
-            {choice === "unsure" && (
-              <label className="decision-reason">
-                What should happen to this punch?
-                <select
-                  value={unresolvedAction}
-                  onChange={(e) => setUnresolvedAction(e.target.value)}
-                >
-                  <option value="">Choose an outcome…</option>
-                  <option value="ambiguous">
-                    Can't tell what the punch is
-                  </option>
-                  <option value="hold">Leave it for a later review</option>
-                  <option value="exclude">Don't use this punch</option>
-                </select>
-              </label>
+            {choice === "yes" && (
+              <p className="confirmation-scope">
+                Confirm <strong>{title(label)}</strong>, frames {start}–{end}{" "}
+                (end included).
+              </p>
             )}
-            <div className="review-fields">
-              <label>
-                Your name
-                <input
-                  value={reviewer}
-                  onChange={(e) => setReviewer(e.target.value)}
-                  maxLength={160}
-                />
-              </label>
-              <label>
-                What did you observe?
+            <div className="reviewer-identity">
+              {identity.editing ? (
+                <label>
+                  Your name
+                  <input
+                    value={reviewer}
+                    maxLength={160}
+                    onChange={(e) => identity.update(e.target.value)}
+                    onBlur={() => {
+                      if (reviewer.trim()) identity.setEditing(false);
+                    }}
+                    autoComplete="name"
+                  />
+                </label>
+              ) : (
+                <span>
+                  Reviewing as <strong>{reviewer}</strong>{" "}
+                  <button onClick={() => identity.setEditing(true)}>
+                    Change name
+                  </button>
+                </span>
+              )}
+              {identity.storageError && (
+                <p role="alert">{identity.storageError}</p>
+              )}
+            </div>
+            {choice === "unsure" && (
+              <>
+                <label className="decision-reason">
+                  Why are you not sure?
+                  <select
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                  >
+                    <option value="">Choose a reason…</option>
+                    {uncertaintyReasons.map(([value, text]) => (
+                      <option key={value} value={value}>
+                        {text}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <details className="review-more-options">
+                  <summary>More options</summary>
+                  <label className="toggle">
+                    <input
+                      type="checkbox"
+                      checked={exclude}
+                      onChange={(e) => setExclude(e.target.checked)}
+                    />
+                    Exclude this example from future candidates
+                  </label>
+                </details>
+              </>
+            )}
+            {correcting || (choice === "unsure" && reason === "other") ? (
+              <label className="review-note">
+                {correcting ? "Why change it?" : "Additional explanation"}
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  maxLength={4000}
+                  maxLength={2000}
                 />
               </label>
-              {action === "confirm" && (
-                <label>
-                  How did you identify the lead or rear arm?
+            ) : (
+              <details className="optional-notes">
+                <summary>Add a note (optional)</summary>
+                <label className="review-note">
+                  Additional explanation (optional)
                   <textarea
-                    value={stance}
-                    onChange={(e) => setStance(e.target.value)}
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
                     maxLength={2000}
                   />
-                  <small>
-                    Use the boxer's stance, not screen left or right.
-                  </small>
                 </label>
-              )}
-              {["hold", "ambiguous"].includes(action) && (
-                <label>
-                  What is still uncertain?
-                  <textarea
-                    value={uncertainty}
-                    onChange={(e) => setUncertainty(e.target.value)}
-                    maxLength={4000}
-                  />
-                </label>
-              )}
-            </div>
+              </details>
+            )}
             {action === "confirm" && (
               <div className="boundary-checks">
                 <span>Check the boundaries</span>
@@ -314,17 +394,19 @@ export default function ReviewWorkbench({
                 checked={attest}
                 onChange={(e) => setAttest(e.target.checked)}
               />
-              I personally reviewed this punch and the evidence above.
+              {action === "confirm"
+                ? confirmationAttestation
+                : uncertaintyAttestation}
             </label>
           </fieldset>
         )}
-        {error && <Notice>{error} Reload to review the latest version.</Notice>}
+        {error && (
+          <div role="alert" className="notice">
+            {error}
+          </div>
+        )}
         <div className="review-save">
-          <small>
-            {choice && !valid
-              ? "Complete your evidence, boundary checks and confirmation to save."
-              : ""}
-          </small>
+          <small>{choice ? validation : ""}</small>
           {choice && (
             <button disabled={!valid || busy} onClick={() => void save(false)}>
               Save
