@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { type Frame, type Result, useRequest } from "./api";
 import { ExactFrame } from "./Viewer";
 import {
@@ -32,6 +32,9 @@ export default function BufferedIntervalViewer({
   onViewing,
   seenFrames,
   annotations = [],
+  humanEvents = [],
+  onHumanSelect,
+  inspectionControls,
 }: {
   intervalId: string;
   pilot?: "original" | "motion-v2";
@@ -41,6 +44,19 @@ export default function BufferedIntervalViewer({
   onViewing: (view: ViewingUpdate) => void;
   seenFrames: Set<number>;
   annotations?: IntervalAnnotation[];
+  humanEvents?: {
+    event_id: string;
+    start: number;
+    stop: number;
+    punch_type: string;
+    type_uncertain: boolean;
+  }[];
+  onHumanSelect?: (id: string) => void;
+  inspectionControls?: (
+    frame: number,
+    ready: boolean,
+    inspect: () => void,
+  ) => ReactNode;
 }) {
   const [frameRetry, setFrameRetry] = useState(0);
   const [mediaReady, setMediaReady] = useState(false);
@@ -340,6 +356,15 @@ export default function BufferedIntervalViewer({
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, [position, index, minimum, maximum]);
+  function inspectLoaded() {
+    const frame = lastExact.current;
+    if (!frame || !exactMode.current || !exactReady || playing) return;
+    stage.current?.scrollIntoView({ block: "start", behavior: "instant" });
+    requestAnimationFrame(() => {
+      if (exactMode.current && frame.frame_index === target.current && canSee())
+        callbacks.current.onVisible(frame);
+    });
+  }
   const displayed = position ?? index;
   const slot = clip?.frames.indexOf(displayed) ?? -1;
   const remaining = Array.from(
@@ -589,6 +614,50 @@ export default function BufferedIntervalViewer({
           </label>
         </div>
       </div>
+      {inspectionControls?.(
+        displayed,
+        exact && exactReady && !playing,
+        inspectLoaded,
+      )}
+      {humanEvents.length > 0 && (
+        <div
+          className="annotation-summary"
+          aria-label="Human annotation summary"
+        >
+          <strong>{humanEvents.length} punches you added</strong>
+          <span>Human labels</span>
+        </div>
+      )}
+      {humanEvents.length > 0 && (
+        <div
+          className="human-event-track"
+          aria-label="Human punch timeline"
+          style={{ height: `${humanEvents.length * 20 + 4}px` }}
+        >
+          {humanEvents.map((event, lane) => (
+            <button
+              key={event.event_id}
+              className={`source-annotation-segment human-event-segment${event.start < interval.start || event.stop > interval.end + 1 ? " partial" : ""}`}
+              style={{
+                left: percent(event.start),
+                width: `${(100 * (event.stop - event.start)) / Math.max(1, maximum - minimum + 1)}%`,
+                top: `${lane * 20 + 2}px`,
+              }}
+              title={`Human · ${event.type_uncertain ? "Type uncertain" : event.punch_type.replaceAll("_", " ")} · ${event.start}–${event.stop - 1}${event.start < interval.start || event.stop > interval.end + 1 ? " · Partial overlap" : ""}`}
+              aria-label={`Human punch ${lane + 1}: ${event.type_uncertain ? "Type uncertain" : event.punch_type.replaceAll("_", " ")}`}
+              onClick={() => {
+                seek(event.start);
+                onHumanSelect?.(event.event_id);
+              }}
+            />
+          ))}
+          <span
+            className="annotation-playhead"
+            aria-hidden="true"
+            style={{ left: percent(displayed) }}
+          />
+        </div>
+      )}
       <div
         className="annotation-summary"
         aria-label="Original annotation summary"

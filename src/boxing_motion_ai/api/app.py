@@ -11,6 +11,7 @@ from boxing_motion_ai.data.annotation_review import LABELS, RECORDINGS
 from boxing_motion_ai.services import DashboardService
 from boxing_motion_ai.services.artifacts import ServiceError
 from boxing_motion_ai.services.contracts import QueryResult
+from boxing_motion_ai.services.interval_events import SCOPE, EventDecision, IntervalEvents
 from boxing_motion_ai.services.interval_review import IntervalDecision, IntervalWorkspace, Pilot
 from boxing_motion_ai.services.review_workspace import Decision, ReviewWorkspace
 
@@ -111,6 +112,29 @@ def create_app(root: Path):
     @app.get("/api/intervals")
     def interval_queue(pilot: Pilot = "original"):
         return interval_reply(intervals[pilot].snapshot)
+
+    @app.get("/api/interval-event-status")
+    def interval_event_status():
+        def statuses():
+            events = IntervalEvents(intervals["original"])
+            return {
+                key: {
+                    k: v
+                    for k, v in events.detail(key).items()
+                    if k in ("complete", "uncertain_types", "events")
+                }
+                for key in SCOPE
+            }
+
+        return interval_reply(statuses)
+
+    @app.get("/api/intervals/{key}/events")
+    def interval_events(key: str):
+        return interval_reply(lambda: IntervalEvents(intervals["original"]).detail(key))
+
+    @app.post("/api/intervals/{key}/events")
+    def interval_event_save(key: str, decision: EventDecision):
+        return interval_reply(lambda: IntervalEvents(intervals["original"]).save(key, decision))
 
     @app.get("/api/intervals/{key}/playback")
     def interval_playback(key: str, pilot: Pilot = "original"):

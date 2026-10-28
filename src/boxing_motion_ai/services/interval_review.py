@@ -2,7 +2,6 @@
 
 import os
 import re
-import uuid
 from datetime import UTC, datetime
 from fractions import Fraction
 from typing import Literal
@@ -14,7 +13,7 @@ from ..data.annotation_review import RECORDINGS, StrictModel
 from .artifacts import strict_json
 from .contracts import Artifact
 from .dashboard import require
-from .review_workspace import ReviewWorkspace, encode, sha
+from .review_workspace import ReviewWorkspace, append_review_bundle
 from .viewing_coverage import PlaybackCoverage, validate_viewing
 
 DIRECTORY = "reports/boxingvi/interval-reviews-v1"
@@ -345,24 +344,4 @@ class IntervalWorkspace:
             )
             if viewing is not None:
                 record["viewing_validation"] = viewing
-            raw = encode(record)
-            temporary = "pending-" + uuid.uuid4().hex
-            os.mkdir(temporary, 0o700, dir_fd=fd)
-            bundle = os.open(temporary, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
-            try:
-                target = os.open(
-                    "review.json",
-                    os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
-                    0o600,
-                    dir_fd=bundle,
-                )
-                with os.fdopen(target, "wb") as stream:
-                    stream.write(raw)
-                    stream.flush()
-                    os.fsync(stream.fileno())
-                os.fsync(bundle)
-                os.rename(temporary, f"v{len(records) + 1:08d}", src_dir_fd=fd, dst_dir_fd=fd)
-                os.fsync(fd)
-            finally:
-                os.close(bundle)
-        return record | {"sha256": sha(raw)}
+            return append_review_bundle(fd, len(records) + 1, record)

@@ -2114,3 +2114,46 @@ footer span {
   font-size: 11px;
   font-weight: 400;
 }
+
+.human-event-track {
+  position: relative;
+  margin: 0.5rem 1.25rem;
+}
+.human-event-segment {
+  background: #91bba3;
+  min-width: 6px;
+}
+.event-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.event-boundaries {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  padding: 0.5rem 1.25rem;
+}
+.event-boundaries span {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+}
+.event-editor {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+.human-event-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.human-event-row span {
+  flex: 1;
+  min-width: 12rem;
+}

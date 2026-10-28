@@ -42,6 +42,31 @@ def sha(raw):
     return hashlib.sha256(raw).hexdigest()
 
 
+def append_review_bundle(fd, version, record):
+    """Publish one fsynced immutable revision while the caller holds the ledger lock."""
+    raw = encode(record)
+    temporary = "pending-" + uuid.uuid4().hex
+    os.mkdir(temporary, 0o700, dir_fd=fd)
+    bundle = os.open(temporary, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+    try:
+        target = os.open(
+            "review.json",
+            os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+            0o600,
+            dir_fd=bundle,
+        )
+        with os.fdopen(target, "wb") as stream:
+            stream.write(raw)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.fsync(bundle)
+        os.rename(temporary, f"v{version:08d}", src_dir_fd=fd, dst_dir_fd=fd)
+        os.fsync(fd)
+    finally:
+        os.close(bundle)
+    return record | {"sha256": sha(raw)}
+
+
 class Decision(StrictModel):
     verification: VerificationSelection | None = None
     request_id: str = Field(pattern=r"^[0-9a-f]{8}-[0-9a-f-]{27}$")

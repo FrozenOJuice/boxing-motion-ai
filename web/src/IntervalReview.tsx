@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { type Result, useRequest } from "./api";
 import { Notice } from "./Viewer";
+import PunchLabeling, { type HumanPunch } from "./PunchLabeling";
 import BufferedIntervalViewer from "./BufferedIntervalViewer";
 import { type IntervalAnnotation } from "./intervalAnnotations";
 import { type ViewingUpdate } from "./playback";
@@ -70,7 +71,9 @@ export default function IntervalReview({
   onDirty: (value: boolean) => void;
   onSaving: (value: boolean) => void;
 }) {
-  const [pilot, setPilot] = useState<"original" | "motion-v2">("original");
+  const [pilot, setPilot] = useState<"original" | "motion-v2" | "events">(
+    "original",
+  );
   return (
     <IntervalQueue
       key={pilot}
@@ -90,17 +93,26 @@ function IntervalQueue({
 }: {
   onDirty: (value: boolean) => void;
   onSaving: (value: boolean) => void;
-  pilot: "original" | "motion-v2";
-  onPilot: (pilot: "original" | "motion-v2") => void;
+  pilot: "original" | "motion-v2" | "events";
+  onPilot: (pilot: "original" | "motion-v2" | "events") => void;
 }) {
-  const query = pilot === "original" ? "" : "?pilot=motion-v2";
+  const query = pilot === "motion-v2" ? "?pilot=motion-v2" : "";
+  const labeling = pilot === "events";
+  const statuses = useRequest<
+    Result<Record<string, { complete: boolean; events: HumanPunch[] }>>
+  >(labeling ? "/api/interval-event-status" : null);
+  const [progress, setProgress] = useState<
+    Record<string, { complete: boolean; events: HumanPunch[] }>
+  >({});
   const [refresh, setRefresh] = useState(0),
     [selected, setSelected] = useState("");
   const [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
     [feedback, setFeedback] = useState("");
   const queue = useRequest<Result<Queue>>(`/api/intervals${query}`, refresh);
-  const entries = queue.data?.data?.manifest.entries ?? [];
+  const entries = (queue.data?.data?.manifest.entries ?? []).filter(
+    (e) => !labeling || /^V4-bg-[1-5]$/.test(e.id),
+  );
   useEffect(() => {
     if (!selected && entries.length) setSelected(entries[0].id);
   }, [selected, entries]);
@@ -130,10 +142,13 @@ function IntervalQueue({
             onChange={(event) => {
               if (!dirty || window.confirm("Discard unsaved review changes?")) {
                 change(false);
-                onPilot(event.target.value as "original" | "motion-v2");
+                onPilot(
+                  event.target.value as "original" | "motion-v2" | "events",
+                );
               }
             }}
           >
+            <option value="events">Label missing punches · V4</option>
             <option value="original">Original pilot</option>
             <option value="motion-v2">Motion pilot 2 · V4/V6</option>
           </select>
@@ -162,9 +177,11 @@ function IntervalQueue({
               >
                 <strong>
                   {e.recording} ·{" "}
-                  {e.purpose === "evaluation_block"
-                    ? "Continuous review"
-                    : "Background candidate"}{" "}
+                  {labeling
+                    ? "Punch interval"
+                    : e.purpose === "evaluation_block"
+                      ? "Continuous review"
+                      : "Background candidate"}{" "}
                   {i + 1}
                 </strong>
                 {e.discovery_hint && (
@@ -180,7 +197,14 @@ function IntervalQueue({
                         ? "Development only"
                         : "Training candidate"}
                   </span>
-                  <span>{statusName(history.at(-1)?.status)}</span>
+                  <span>
+                    {labeling
+                      ? (progress[e.id] ?? statuses.data?.data?.[e.id])
+                          ?.complete
+                        ? "Completely labeled"
+                        : "Punches to label"
+                      : statusName(history.at(-1)?.status)}
+                  </span>
                 </span>
               </button>
             );
@@ -192,11 +216,31 @@ function IntervalQueue({
           <Notice>{queue.error || current.error}</Notice>
         ) : !data ? (
           <Notice>Loading interval…</Notice>
+        ) : labeling ? (
+          <PunchLabeling
+            key={selected}
+            entry={data.entry}
+            annotations={data.annotations}
+            onDirty={change}
+            onSaving={(v) => {
+              setBusy(v);
+              onSaving(v);
+            }}
+            onProgress={(state) =>
+              setProgress((old) => ({ ...old, [selected]: state }))
+            }
+            onNext={() => {
+              change(false);
+              const next =
+                entries[entries.findIndex((e) => e.id === selected) + 1];
+              if (next) setSelected(next.id);
+            }}
+          />
         ) : (
           <IntervalForm
             key={`${selected}:${refresh}`}
             data={data}
-            pilot={pilot}
+            pilot={pilot === "motion-v2" ? "motion-v2" : "original"}
             feedback={feedback}
             onDirty={change}
             onSaving={(v) => {

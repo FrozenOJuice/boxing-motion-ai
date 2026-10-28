@@ -20,6 +20,13 @@ afterEach(() => {
 function mount(
   annotations: IntervalAnnotation[] = [],
   pilot: "original" | "motion-v2" = "original",
+  humanEvents: {
+    event_id: string;
+    start: number;
+    stop: number;
+    punch_type: string;
+    type_uncertain: boolean;
+  }[] = [],
 ) {
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
     x: 0,
@@ -107,12 +114,15 @@ function mount(
   });
   vi.stubGlobal("fetch", fetchMock);
   const viewing = vi.fn(),
-    visible = vi.fn();
+    visible = vi.fn(),
+    humanSelect = vi.fn();
   render(
     <BufferedIntervalViewer
       intervalId={pilot === "original" ? "V4-bg-1" : "V4-motion-1"}
       pilot={pilot}
       annotations={annotations}
+      humanEvents={humanEvents}
+      onHumanSelect={humanSelect}
       recording="V4"
       interval={{
         start: 10,
@@ -127,7 +137,7 @@ function mount(
       onViewing={viewing}
     />,
   );
-  return { viewing, visible, fetchMock };
+  return { viewing, visible, fetchMock, humanSelect };
 }
 async function readyPlayer() {
   const v = await screen.findByLabelText("Buffered interval video");
@@ -391,3 +401,39 @@ for (const event of ["visibilitychange", "blur"] as const) {
     expect(before.complete).toBe(false);
   });
 }
+
+it("keeps overlapping human events clickable separately from original source marks", async () => {
+  const { humanSelect, visible } = mount([], "original", [
+    {
+      event_id: "first",
+      start: 10,
+      stop: 12,
+      punch_type: "jab",
+      type_uncertain: false,
+    },
+    {
+      event_id: "second",
+      start: 11,
+      stop: 13,
+      punch_type: "unknown",
+      type_uncertain: true,
+    },
+  ]);
+  await readyPlayer();
+  expect(screen.getByLabelText("Human annotation summary")).toHaveTextContent(
+    "2 punches you added",
+  );
+  expect(
+    screen.getByLabelText("Original annotation summary"),
+  ).toHaveTextContent("0 annotated punches");
+  fireEvent.click(
+    screen.getByRole("button", { name: "Human punch 2: Type uncertain" }),
+  );
+  expect(humanSelect).toHaveBeenCalledWith("second");
+  fireEvent.load(await screen.findByAltText("V4, native frame 11"));
+  await waitFor(() =>
+    expect(visible).toHaveBeenCalledWith(
+      expect.objectContaining({ frame_index: 11 }),
+    ),
+  );
+});
