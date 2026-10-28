@@ -56,6 +56,7 @@ def events(pilot, workspace):
     e.update(
         start=1,
         stop=5,
+        source_group_guard=["V4"],
         context_start=0,
         context_end=4,
         source_inputs=spec["inputs"],

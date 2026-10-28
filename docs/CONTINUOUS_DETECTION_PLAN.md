@@ -1,5 +1,7 @@
 # Level 1 continuous punch detection — implementation plan
 
+**Current continuous dataset (2026-10-28):** [Continuous dataset v1](CONTINUOUS_DATASET_V1.md) contains the 12 accepted backgrounds and the **three** currently saved completed V4 event reviews (11 punches). The requested fourth completion is not persisted; intervals 4 and 5 remain excluded. Binary loader/smoke engineering is feasible, while six-class and continuous development/evaluation readiness remain blocked.
+
 **Current dataset status (2026-10-28):** [Verified background v1](VERIFIED_BACKGROUND_V1.md) supplies 12 manually verified intervals (48.006 s). For this pilot, training is V4/V6 only, V5 is development-only, and V7/V8/V10 are evaluation-only; this supersedes broader training-source proposals below. Exhaustive event/evaluation labeling remains outstanding.
 
 2026-10-26. Planning only; no detector, new labels or training implemented.
