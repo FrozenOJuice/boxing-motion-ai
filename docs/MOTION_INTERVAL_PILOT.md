@@ -1,5 +1,7 @@
 # Motion-guided interval review — pilot 2
 
+**Review outcome (2026-10-28):** All 12 latest human decisions are validated and frozen as 48.006 seconds of verified background. See [Verified background v1](VERIFIED_BACKGROUND_V1.md). Earlier empty-ledger statements below describe preparation-time status.
+
 **Current coverage behavior (2026-10-28):** See [the continuous-viewing correction](CONTINUOUS_VIEWING_FIX.md). Complete visible playback plus explicit confirmation can now establish interval viewing; individual-frame inspection remains separate. Historical all-frame/callback-gate descriptions below are superseded.
 
 Prepared 2026-10-27. There are **12 unverified proposals**, six each from V4 and V6, totaling **48.006 seconds** inside the review bounds. Each has approximately one second of playback context on each side. All are unknown; no punch-absence label or human review was created. This is a second candidate-discovery pilot, not a detector or a negative dataset release.
