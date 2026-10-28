@@ -14,7 +14,7 @@ npm --prefix web run build
 Open the existing local dashboard at **http://127.0.0.1:8000**, then **Review → Video intervals**. The original **Punches** tab is unchanged. Development remains available with `npm --prefix web run dev` on port 5174. No browser is opened automatically.
 
 1. Select an interval. Its queue entry states Training candidate, Development only or Evaluation only.
-2. Play or step through the footage. The highlighted timeline range is the interval being reviewed; surrounding frames are context only. Click the start marker to replay it. Skeletons remain optional. Playback waits for each exact decoded frame and can run slower than real time.
+2. Play or step through the footage. The highlighted timeline range is the interval being reviewed; surrounding frames are context only. Click the start marker to replay it. Skeletons remain optional. Play now uses a cached MP4 at source speed; paused stepping inspects exact original frames. See the [buffered playback update](BUFFERED_REVIEW_PLAYBACK.md) for coverage rules and measured performance.
 3. Choose **No punches**, **Punch present** or **Not sure**.
 4. **Save & Next** saves first, then advances. **Save** stays on the current interval. The final item reports End of queue. Save failures retain edits; duplicate submissions are blocked.
 

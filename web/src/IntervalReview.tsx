@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { type Result, type Source, useRequest, title } from "./api";
-import Viewer, { Notice } from "./Viewer";
+import { Notice } from "./Viewer";
+import BufferedIntervalViewer from "./BufferedIntervalViewer";
 
 type Entry = {
   id: string;
@@ -279,7 +280,13 @@ function IntervalForm({
   }
   return (
     <>
-      <Viewer
+      <BufferedIntervalViewer
+        intervalId={e.id}
+        seenFrames={seen}
+        onPresented={(index) => {
+          if (index >= e.start && index < e.stop)
+            setSeen((old) => (old.has(index) ? old : new Set([...old, index])));
+        }}
         recording={e.recording}
         interval={{
           start: e.start,

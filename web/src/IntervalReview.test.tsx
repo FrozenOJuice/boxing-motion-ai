@@ -3,10 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import IntervalReview from "./IntervalReview";
 
 // Viewer decoding, stale image handling and exact stepping have separate real-viewer tests.
-vi.mock("./Viewer", () => ({
-  Notice: ({ children }: { children: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
+vi.mock("./BufferedIntervalViewer", () => ({
   default: ({
     onVisible,
   }: {

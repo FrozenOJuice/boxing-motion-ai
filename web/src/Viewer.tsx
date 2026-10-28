@@ -52,30 +52,32 @@ export function Skeleton({ frame }: { frame: Frame }) {
     </svg>
   );
 }
-function ExactFrame({
+export function ExactFrame({
   recording,
   index,
   overlay,
   onVisible,
   onFailure,
+  retryToken = 0,
 }: {
   recording: string;
   index: number;
   overlay: boolean;
   onVisible: (frame: Frame) => void;
   onFailure: () => void;
+  retryToken?: number;
 }) {
   const [retry, setRetry] = useState(0);
   const result = useRequest<Result<Frame>>(
     `/api/recordings/${recording}/frames/${index}`,
-    retry,
+    retry + retryToken,
   );
   const [displayed, setDisplayed] = useState<Frame | null>(null);
   const [failure, setFailure] = useState<{
     key: string;
     message: string;
   } | null>(null);
-  const key = `${recording}:${index}:${retry}`;
+  const key = `${recording}:${index}:${retry}:${retryToken}`;
   const latest = useRef({ key, generation: 0 });
   if (latest.current.key !== key)
     latest.current = { key, generation: latest.current.generation + 1 };

@@ -14,6 +14,7 @@ from boxing_motion_ai.services.contracts import QueryResult
 from boxing_motion_ai.services.interval_review import IntervalDecision, IntervalWorkspace
 from boxing_motion_ai.services.review_workspace import Decision, ReviewWorkspace
 
+from .clips import ClipService
 from .media import FrameService
 
 STATUS = {"available": 200, "incomplete": 200, "missing": 404, "invalid": 422, "stale": 409}
@@ -28,6 +29,7 @@ def create_app(root: Path):
     frames = FrameService(service)
     workspace = ReviewWorkspace(service)
     intervals = IntervalWorkspace(service, frames)
+    clips = ClipService(intervals, frames)
     app = FastAPI(
         title="Boxing Motion AI — local review", version="0.2.0", docs_url=None, redoc_url=None
     )
@@ -109,6 +111,19 @@ def create_app(root: Path):
     @app.get("/api/intervals")
     def interval_queue():
         return interval_reply(intervals.snapshot)
+
+    @app.get("/api/intervals/{key}/playback")
+    def interval_playback(key: str):
+        return interval_reply(lambda: clips.prepare(key))
+
+    @app.get("/api/intervals/{key}/clip")
+    def interval_clip(key: str, request: Request):
+        try:
+            return clips.response(key, request.headers.get("range"))
+        except ServiceError:
+            raise
+        except (ValueError, KeyError, TypeError, OSError, IndexError) as exc:
+            raise ServiceError("invalid", "preview_unavailable_or_invalid_source") from exc
 
     @app.get("/api/intervals/{key}")
     def interval_detail(key: str):
