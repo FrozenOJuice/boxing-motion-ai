@@ -1,5 +1,7 @@
 # Continuous interval review pilot
 
+**Current coverage behavior (2026-10-28):** See [the continuous-viewing correction](CONTINUOUS_VIEWING_FIX.md). Complete visible playback plus explicit confirmation can now establish interval viewing; individual-frame inspection remains separate. Historical all-frame/callback-gate descriptions below are superseded.
+
 Implemented 2026-10-26 from [the approved plan](CONTINUOUS_DETECTION_PLAN.md). This is review preparation, not a detection dataset release or a trained detector. All 36 prepared intervals initially remain **unknown**, with zero new human decisions. MediaPipe, original annotations, the 1,123-example curated pool, prior reviews/results and the RTMPose comparison remain unchanged. V9 is inaccessible.
 
 ## How to review

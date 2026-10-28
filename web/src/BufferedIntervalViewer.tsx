@@ -8,9 +8,11 @@ import {
 } from "./intervalAnnotations";
 import {
   type Playback,
-  type Presented,
   frameAt,
-  creditPresentation,
+  ContinuousViewing,
+  viewingProgress,
+  type ViewingSpan,
+  type ViewingUpdate,
 } from "./playback";
 
 type Interval = {
@@ -27,7 +29,7 @@ export default function BufferedIntervalViewer({
   interval,
   recording,
   onVisible,
-  onPresented,
+  onViewing,
   seenFrames,
   annotations = [],
 }: {
@@ -36,11 +38,13 @@ export default function BufferedIntervalViewer({
   interval: Interval;
   recording: string;
   onVisible: (frame: Frame) => void;
-  onPresented: (index: number) => void;
+  onViewing: (view: ViewingUpdate) => void;
   seenFrames: Set<number>;
   annotations?: IntervalAnnotation[];
 }) {
   const [frameRetry, setFrameRetry] = useState(0);
+  const [mediaReady, setMediaReady] = useState(false);
+  const lastToggle = useRef(-Infinity);
   const result = useRequest<Result<Playback>>(
     `/api/intervals/${intervalId}/playback${pilot === "original" ? "" : "?pilot=motion-v2"}`,
   );
@@ -57,22 +61,24 @@ export default function BufferedIntervalViewer({
     [error, setError] = useState("");
   const [hasPlayed, setHasPlayed] = useState(false);
   const lastExact = useRef<Frame | null>(null);
+  const resumeAt = useRef<number | null>(null);
   const [buffering, setBuffering] = useState(false),
     [supported, setSupported] = useState(true);
   const visible = useRef(false),
-    active = useRef(false),
-    previous = useRef<Presented | null>(null);
+    active = useRef(false);
+  const viewing = useRef(new ContinuousViewing());
+  const [viewedSpans, setViewedSpans] = useState<ViewingSpan[]>([]);
   const shown = useRef<number | null>(null),
     target = useRef(index),
     exactMode = useRef(exact);
   target.current = index;
   exactMode.current = exact;
-  const callbacks = useRef({ onVisible, onPresented });
-  callbacks.current = { onVisible, onPresented };
+  const callbacks = useRef({ onVisible, onViewing });
+  callbacks.current = { onVisible, onViewing };
   const minimum = clip?.frames[0] ?? interval.contextStart;
   const maximum = clip?.frames.at(-1) ?? interval.contextEnd;
   const invalidate = () => {
-    previous.current = null;
+    viewing.current.break();
     active.current = false;
   };
   useEffect(() => {
@@ -81,8 +87,10 @@ export default function BufferedIntervalViewer({
       typeof IntersectionObserver !== "undefined"
         ? new IntersectionObserver(
             (entries) => {
-              visible.current = entries[0].intersectionRatio >= 0.95;
-              if (!visible.current) {
+              visible.current =
+                entries[entries.length - 1].intersectionRatio >= 0.95;
+              if (!visible.current && !canSee()) {
+                closeVisibleEpoch();
                 invalidate();
                 video.current?.pause();
               }
@@ -93,14 +101,22 @@ export default function BufferedIntervalViewer({
     if (element && observer) observer.observe(element);
     const hide = () => {
       if (document.visibilityState !== "visible") {
+        closeVisibleEpoch();
         invalidate();
         video.current?.pause();
       }
     };
+    const blur = () => {
+      closeVisibleEpoch();
+      invalidate();
+      video.current?.pause();
+    };
     document.addEventListener("visibilitychange", hide);
+    window.addEventListener("blur", blur);
     return () => {
       observer?.disconnect();
       document.removeEventListener("visibilitychange", hide);
+      window.removeEventListener("blur", blur);
     };
   }, []);
   useEffect(() => {
@@ -112,42 +128,116 @@ export default function BufferedIntervalViewer({
     }
     let cancelled = false,
       handle = 0;
-    const tick = (now: number, metadata: VideoFrameCallbackMetadata) => {
+    const tick = (_now: number, metadata: VideoFrameCallbackMetadata) => {
       if (cancelled) return;
       const slot = frameAt(clip, metadata.mediaTime, true);
       if (slot !== null) {
-        const current = {
-          index: clip.frames[slot],
-          mediaTime: metadata.mediaTime,
-          frames: metadata.presentedFrames,
-          now,
-        };
-        shown.current = current.index;
+        shown.current = clip.frames[slot];
         if (!v.paused && !v.seeking) {
-          setPosition(current.index);
+          setPosition(clip.frames[slot]);
           setExact(false);
           setExactReady(false);
         }
-        const eligible =
-          active.current &&
-          !v.paused &&
-          !v.seeking &&
-          v.readyState >= 3 &&
-          visible.current &&
-          document.visibilityState === "visible";
-        if (creditPresentation(previous.current, current, eligible))
-          callbacks.current.onPresented(current.index);
-        previous.current = eligible ? current : null;
-      } else previous.current = null;
+      }
       handle = v.requestVideoFrameCallback(tick);
     };
     handle = v.requestVideoFrameCallback(tick);
     return () => {
       cancelled = true;
       v.cancelVideoFrameCallback(handle);
-      previous.current = null;
+      viewing.current.break();
     };
   }, [clip]);
+  function canSee() {
+    const rect = stage.current?.getBoundingClientRect();
+    return (
+      document.visibilityState === "visible" &&
+      !!rect &&
+      rect.width > 0 &&
+      rect.height > 0 &&
+      Math.max(0, Math.min(rect.bottom, innerHeight) - Math.max(rect.top, 0)) *
+        Math.max(
+          0,
+          Math.min(rect.right, innerWidth) - Math.max(rect.left, 0),
+        ) >=
+        rect.width * rect.height * 0.95
+    );
+  }
+  function closeVisibleEpoch() {
+    const v = video.current;
+    if (!v || !active.current || v.seeking) return;
+    // End the previously visible epoch at the visibility transition, before
+    // invalidating it. No subsequent hidden/offscreen clock time is credited.
+    if (
+      viewing.current.sample({
+        media: v.currentTime,
+        wall: performance.now() / 1000,
+        rate: v.playbackRate as 1 | 0.5 | 0.25,
+        eligible: [1, 0.5, 0.25].includes(v.playbackRate),
+      })
+    )
+      setViewedSpans(viewing.current.snapshot());
+  }
+  function sampleViewing() {
+    const v = video.current;
+    if (!v) return;
+    const rate = v.playbackRate;
+    const eligible =
+      active.current && canSee() && !v.seeking && [1, 0.5, 0.25].includes(rate);
+    if (
+      viewing.current.sample({
+        media: v.currentTime,
+        wall: performance.now() / 1000,
+        rate: rate as 1 | 0.5 | 0.25,
+        eligible,
+      })
+    )
+      setViewedSpans(viewing.current.snapshot());
+    if (v.paused || v.ended || v.readyState < 3) {
+      viewing.current.break();
+      active.current = false;
+    }
+    if (active.current && !canSee()) {
+      invalidate();
+      v.pause();
+      setError("Playback paused. Keep the video visible to record viewing.");
+    }
+  }
+  const sampleRef = useRef(sampleViewing);
+  sampleRef.current = sampleViewing;
+  useEffect(() => {
+    const timer = window.setInterval(() => sampleRef.current(), 100);
+    return () => window.clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    if (!clip) return;
+    const progress = viewingProgress(
+      clip,
+      interval.start,
+      interval.end + 1,
+      viewedSpans,
+      seenFrames,
+    );
+    callbacks.current.onViewing({
+      ...progress,
+      evidence: {
+        schema_version: "continuous-viewing-1.0",
+        policy: "visible-realtime-1.0",
+        cache_key: clip.cache_key,
+        interval_id: intervalId,
+        segments: viewedSpans,
+      },
+    });
+  }, [clip, interval.start, interval.end, intervalId, viewedSpans, seenFrames]);
+  const viewProgress = clip
+    ? viewingProgress(
+        clip,
+        interval.start,
+        interval.end + 1,
+        viewedSpans,
+        seenFrames,
+      )
+    : { complete: false, playbackComplete: false, percent: 0 };
   function seek(n: number) {
     if (!Number.isInteger(n) || n < minimum || n > maximum) return;
     if (
@@ -155,11 +245,11 @@ export default function BufferedIntervalViewer({
       exactReady &&
       n === target.current &&
       lastExact.current?.frame_index === n &&
-      visible.current &&
-      document.visibilityState === "visible"
+      canSee()
     ) {
       callbacks.current.onVisible(lastExact.current);
     }
+    resumeAt.current = null;
     const wasExact = exactMode.current;
     invalidate();
     exactMode.current = true;
@@ -172,20 +262,43 @@ export default function BufferedIntervalViewer({
   }
   function playPause() {
     const v = video.current;
-    if (!v || !clip) return;
-    if (!v.paused) {
+    if (!v || !clip || !mediaReady) return;
+    const now = performance.now();
+    if (now - lastToggle.current < 200) return;
+    lastToggle.current = now;
+    if (playing || !v.paused) {
       v.pause();
+      setPlaying(false);
       return;
     }
     const n = exact ? index : (shown.current ?? interval.start);
-    const slot = clip.frames.indexOf(n);
+    const replay =
+      v.ended || n >= maximum || (!hasPlayed && n === interval.start);
+    const slot = replay ? 0 : clip.frames.indexOf(n);
     if (slot < 0) return;
     invalidate();
     setError("");
     setOverlay(false);
-    if (exact || v.ended) v.currentTime = clip.media_times[slot];
+    stage.current?.scrollIntoView({ block: "start", behavior: "instant" });
+    if (replay) {
+      resumeAt.current = null;
+      v.currentTime = clip.media_times[0];
+    } else if (resumeAt.current !== null) {
+      if (Math.abs(v.currentTime - resumeAt.current) > 0.0001)
+        v.currentTime = resumeAt.current;
+    } else if (exact) v.currentTime = clip.media_times[slot];
     v.playbackRate = speed;
+    // Anchor before play() advances the clock; the asynchronous playing event
+    // may arrive after the first displayed fraction of a second.
+    active.current = true;
+    viewing.current.sample({
+      media: v.currentTime,
+      wall: performance.now() / 1000,
+      rate: speed as 1 | 0.5 | 0.25,
+      eligible: canSee() && !v.seeking,
+    });
     void v.play().catch(() => {
+      invalidate();
       setError(
         "Playback could not start. Retry Play or inspect individual frames.",
       );
@@ -249,7 +362,14 @@ export default function BufferedIntervalViewer({
   const percent = (n: number) =>
     `${(100 * (n - minimum)) / Math.max(1, maximum - minimum)}%`;
   return (
-    <section className="viewer panel" aria-label="Interval viewer">
+    <section
+      className="viewer panel"
+      aria-label="Interval viewer"
+      data-viewing-evidence={JSON.stringify({
+        progress: viewProgress,
+        segments: viewedSpans,
+      })}
+    >
       <div className="image-stage buffered-stage" ref={stage}>
         {clip && (
           <video
@@ -259,8 +379,10 @@ export default function BufferedIntervalViewer({
             playsInline
             muted
             aria-label="Buffered interval video"
+            onLoadStart={() => setMediaReady(false)}
+            onLoadedData={() => setMediaReady(true)}
             onLoadedMetadata={() => {
-              if (video.current)
+              if (video.current && !active.current && !hasPlayed)
                 video.current.currentTime =
                   clip.media_times[clip.frames.indexOf(interval.start)];
             }}
@@ -270,26 +392,31 @@ export default function BufferedIntervalViewer({
               setBuffering(false);
             }}
             onPlaying={() => {
-              previous.current = null;
+              if (!active.current) viewing.current.break();
               active.current = true;
+              sampleViewing();
               setBuffering(false);
             }}
             onSeeking={() => {
               invalidate();
             }}
             onSeeked={() => {
-              previous.current = null;
+              viewing.current.break();
               active.current = !!video.current && !video.current.paused;
+              sampleViewing();
             }}
             onWaiting={() => {
+              sampleViewing();
               invalidate();
               setBuffering(true);
             }}
             onStalled={() => {
+              sampleViewing();
               invalidate();
               setBuffering(true);
             }}
             onTimeUpdate={() => {
+              sampleViewing();
               const v = video.current;
               if (v && !v.requestVideoFrameCallback && !v.paused) {
                 const i = frameAt(clip, v.currentTime);
@@ -301,6 +428,8 @@ export default function BufferedIntervalViewer({
               }
             }}
             onPause={() => {
+              resumeAt.current = video.current?.currentTime ?? null;
+              sampleViewing();
               invalidate();
               setPlaying(false);
               setBuffering(false);
@@ -311,6 +440,7 @@ export default function BufferedIntervalViewer({
               }
             }}
             onEnded={() => {
+              sampleViewing();
               invalidate();
               setPlaying(false);
             }}
@@ -349,8 +479,7 @@ export default function BufferedIntervalViewer({
                   if (
                     exactMode.current &&
                     f.frame_index === target.current &&
-                    visible.current &&
-                    document.visibilityState === "visible"
+                    canSee()
                   )
                     callbacks.current.onVisible(f);
                 });
@@ -400,10 +529,18 @@ export default function BufferedIntervalViewer({
             ‹
           </button>
           <button
+            key={playing ? "pause" : "play"}
             aria-label={playing ? "Pause" : "Play"}
             className="play-button"
-            disabled={!clip || !!result.error}
-            onClick={playPause}
+            disabled={!clip || !mediaReady || !!result.error}
+            onClick={
+              playing
+                ? () => {
+                    video.current?.pause();
+                    setPlaying(false);
+                  }
+                : playPause
+            }
           >
             {playing ? "Ⅱ" : "▶"}
           </button>
@@ -436,9 +573,11 @@ export default function BufferedIntervalViewer({
               value={speed}
               onChange={(e) => {
                 const rate = Number(e.target.value);
+                sampleViewing();
+                viewing.current.break();
                 setSpeed(rate);
-                previous.current = null;
                 if (video.current) video.current.playbackRate = rate;
+                sampleViewing();
               }}
             >
               {[1, 0.5, 0.25].map((r) => (
@@ -586,14 +725,16 @@ export default function BufferedIntervalViewer({
           </p>
         </details>
       )}
-      {hasPlayed && !playing && remaining.length > 0 && (
+      {hasPlayed && !playing && !viewProgress.complete && (
         <div className="coverage-gap">
-          <small>
-            {remaining.length}{" "}
-            {remaining.length === 1 ? "frame still needs" : "frames still need"}{" "}
-            inspection.
-          </small>
-          <button onClick={() => seek(remaining[0])}>Inspect next</button>
+          <small>Some of this interval still needs viewing.</small>
+          <button
+            onClick={() => {
+              seek(minimum);
+            }}
+          >
+            Replay interval
+          </button>
         </div>
       )}
       <details className="viewer-options">
@@ -607,8 +748,8 @@ export default function BufferedIntervalViewer({
         </p>
         {!supported && (
           <p>
-            This browser cannot report individual presented frames. Use
-            exact-frame inspection to complete review coverage.
+            Playback frame positions are approximate in this browser. Pause for
+            exact-frame inspection; continuous viewing is recorded separately.
           </p>
         )}
         <label>
@@ -622,13 +763,13 @@ export default function BufferedIntervalViewer({
           />
         </label>
         <button disabled={!remaining.length} onClick={() => seek(remaining[0])}>
-          Inspect next unreviewed frame
+          Next frame not individually inspected
           {remaining.length ? ` (${remaining.length})` : ""}
         </button>
         <p>
-          Only individually observed frames count. Hidden playback, buffering
-          and skipped frames never fill review coverage; confirmation still
-          requires your explicit attestation.
+          Viewing credit follows visible, real-time playback. Seeking, hidden
+          video and buffering do not fill gaps. Exact-frame inspection is
+          tracked separately; explicit confirmation is always required.
         </p>
       </details>
     </section>

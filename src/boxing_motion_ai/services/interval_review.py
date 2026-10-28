@@ -8,13 +8,14 @@ from fractions import Fraction
 from typing import Literal
 
 import numpy as np
-from pydantic import Field, StrictBool, StrictInt, model_validator
+from pydantic import Field, StrictBool, StrictInt, model_serializer, model_validator
 
 from ..data.annotation_review import RECORDINGS, StrictModel
 from .artifacts import strict_json
 from .contracts import Artifact
 from .dashboard import require
 from .review_workspace import ReviewWorkspace, encode, sha
+from .viewing_coverage import PlaybackCoverage, validate_viewing
 
 DIRECTORY = "reports/boxingvi/interval-reviews-v1"
 CONFIG = "configs/interval_review_pilot_v1.json"
@@ -32,6 +33,7 @@ class IntervalDecision(StrictModel):
     request_id: str = Field(pattern=r"^[0-9a-f]{8}-[0-9a-f-]{27}$")
     expected_head: str = Field(pattern=r"^[0-9a-f]{64}$")
     decision: Literal["no_punch", "punch_present", "not_sure"]
+    playback_coverage: PlaybackCoverage | None = None
     watched_entire: StrictBool = False
     visible_continuous: StrictBool = False
     notes: str = Field(default="", max_length=2000)
@@ -41,6 +43,13 @@ class IntervalDecision(StrictModel):
     # Native decoded frames actually displayed, not a synthetic playback-complete flag.
     inspected_frames: list[StrictInt] = Field(default_factory=list, max_length=2000)
     unannotated_punches: Literal["yes", "no", "unknown"] = "unknown"
+
+    @model_serializer(mode="wrap")
+    def legacy_payload(self, handler):
+        data = handler(self)
+        if self.playback_coverage is None:
+            data.pop("playback_coverage", None)
+        return data
 
     @model_validator(mode="after")
     def absence(self):
@@ -203,12 +212,21 @@ class IntervalWorkspace:
             )
             require(
                 record["status"] == expected
-                and bool(decision.inspected_frames)
+                and (bool(decision.inspected_frames) or decision.playback_coverage is not None)
                 and all(entry["start"] <= i < entry["stop"] for i in decision.inspected_frames),
                 "invalid_history_decision",
                 "stale",
             )
-            if decision.decision == "no_punch":
+            if decision.playback_coverage is not None:
+                validation = self._viewing(entry, decision)
+                require(
+                    record.get("viewing_validation") == validation and validation["has_content"],
+                    "invalid_history_viewing",
+                    "stale",
+                )
+                if decision.decision == "no_punch":
+                    require(validation["complete"], "incomplete_history_viewing", "stale")
+            elif decision.decision == "no_punch":
                 require(
                     set(decision.inspected_frames) == set(range(entry["start"], entry["stop"])),
                     "incomplete_history_inspection",
@@ -258,6 +276,14 @@ class IntervalWorkspace:
             status=history[-1]["status"] if history else "unknown",
         )
 
+    def _viewing(self, entry, decision):
+        from ..api.clips import ClipService
+
+        descriptor = ClipService(self, self.frames).describe(entry)
+        return validate_viewing(
+            entry, descriptor, decision.playback_coverage, decision.inspected_frames
+        )
+
     def save(self, key, decision):
         detail = self.detail(key)  # Source hashes, full interval timing and known cuts.
         e = detail["entry"]
@@ -265,16 +291,23 @@ class IntervalWorkspace:
             all(e["start"] <= f < e["stop"] for f in decision.inspected_frames),
             "inspection_outside_interval",
         )
+        viewing = self._viewing(e, decision) if decision.playback_coverage is not None else None
         if decision.decision == "no_punch":
             require(
-                set(decision.inspected_frames) == set(range(e["start"], e["stop"])),
+                viewing["complete"]
+                if viewing
+                else set(decision.inspected_frames) == set(range(e["start"], e["stop"])),
                 "watch_entire_interval_before_certifying",
             )
             # Existing positive source intervals are conflicting evidence, not silently relabeled.
             require(not detail["annotations"], "source_punch_conflict_needs_review")
-        require(bool(decision.inspected_frames), "inspect_interval_before_saving")
+        require(
+            bool(decision.inspected_frames) or (viewing and viewing["has_content"]),
+            "inspect_interval_before_saving",
+        )
         # Verify source video and actual boundary frames through the established exact decoder.
-        for index in sorted({min(decision.inspected_frames), max(decision.inspected_frames)}):
+        verified = decision.inspected_frames or [e["start"], e["stop"] - 1]
+        for index in sorted({min(verified), max(verified)}):
             self.frames.frame(e["recording"], index)
         manifest, digest = self.manifest()
         payload = decision.model_dump(mode="json")
@@ -310,6 +343,8 @@ class IntervalWorkspace:
                 exhaustive_event_reference=False,
                 training_enabled=False,
             )
+            if viewing is not None:
+                record["viewing_validation"] = viewing
             raw = encode(record)
             temporary = "pending-" + uuid.uuid4().hex
             os.mkdir(temporary, 0o700, dir_fd=fd)

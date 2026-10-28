@@ -1,5 +1,7 @@
 # Buffered interval review playback
 
+**Current coverage behavior (2026-10-28):** See [the continuous-viewing correction](CONTINUOUS_VIEWING_FIX.md). Complete visible playback plus explicit confirmation can now establish interval viewing; individual-frame inspection remains separate. Historical all-frame/callback-gate descriptions below are superseded.
+
 2026-10-27. Video Intervals now use locally cached H.264 MP4 playback at source speed, with 1×, 0.5× and 0.25× controls. Exact inspection remains tied to original decoded frames. The dashboard is running at http://127.0.0.1:8000; refresh the page to load the update. Existing review decisions and history remain unchanged.
 
 ## What changed

@@ -11,12 +11,6 @@ export type Playback = {
   width: number;
   height: number;
 };
-export type Presented = {
-  index: number;
-  mediaTime: number;
-  frames: number;
-  now: number;
-};
 export function frameAt(
   clip: Playback,
   time: number,
@@ -35,19 +29,130 @@ export function frameAt(
     return null;
   return slot;
 }
-export function creditPresentation(
-  previous: Presented | null,
-  current: Presented,
-  eligible: boolean,
-): boolean {
-  // Consecutive callbacks AND native frame IDs; a timeupdate range or seek never fills a gap.
-  return (
-    eligible &&
-    previous !== null &&
-    current.frames === previous.frames + 1 &&
-    current.index === previous.index + 1 &&
-    current.mediaTime > previous.mediaTime &&
-    current.now > previous.now &&
-    current.now - previous.now <= 1000
-  );
+
+export type ViewingSpan = {
+  start: number;
+  end: number;
+  rate: 1 | 0.5 | 0.25;
+  wall_seconds: number;
+  samples: number;
+};
+export type PlaybackCoverage = {
+  schema_version: "continuous-viewing-1.0";
+  policy: "visible-realtime-1.0";
+  cache_key: string;
+  interval_id: string;
+  segments: ViewingSpan[];
+};
+type Sample = {
+  media: number;
+  wall: number;
+  rate: 1 | 0.5 | 0.25;
+  eligible: boolean;
+};
+export class ContinuousViewing {
+  private last: Sample | null = null;
+  private join = false;
+  private spans: ViewingSpan[] = [];
+  break() {
+    this.last = null;
+    this.join = false;
+  }
+  sample(point: Sample): boolean {
+    if (!point.eligible) {
+      this.break();
+      return false;
+    }
+    const previous = this.last;
+    this.last = point;
+    if (!previous) {
+      this.join = false;
+      return false;
+    }
+    const media = point.media - previous.media,
+      wall = point.wall - previous.wall;
+    if (
+      point.rate !== previous.rate ||
+      wall <= 0 ||
+      wall > 1 ||
+      media < 0 ||
+      media > wall * point.rate + 0.015
+    ) {
+      this.join = false;
+      return false;
+    }
+    if (media === 0) {
+      this.last = previous;
+      return false;
+    }
+    const tail = this.spans.at(-1);
+    if (
+      this.join &&
+      tail &&
+      tail.rate === point.rate &&
+      Math.abs(tail.end - previous.media) < 0.0001
+    ) {
+      tail.end = point.media;
+      tail.wall_seconds += wall;
+      tail.samples++;
+    } else {
+      this.spans.push({
+        start: previous.media,
+        end: point.media,
+        rate: point.rate,
+        wall_seconds: wall,
+        samples: 2,
+      });
+    }
+    this.join = true;
+    return true;
+  }
+  snapshot() {
+    return this.spans.map((s) => ({ ...s }));
+  }
 }
+export function viewingProgress(
+  clip: Playback,
+  startFrame: number,
+  stopFrame: number,
+  spans: ViewingSpan[],
+  inspected: Set<number>,
+) {
+  const first = clip.frames.indexOf(startFrame),
+    stopIndex = stopFrame - clip.frames[0];
+  const start = clip.media_times[first],
+    stop = clip.media_times[stopIndex] ?? clip.duration;
+  const exact = [...inspected]
+    .filter((n) => n >= startFrame && n < stopFrame)
+    .map((n) => {
+      const i = clip.frames.indexOf(n);
+      return [
+        clip.media_times[i],
+        clip.media_times[i + 1] ?? clip.duration,
+      ] as [number, number];
+    });
+  const ranges: [number, number][] = spans.map((s) => [s.start, s.end]);
+  function duration(input: [number, number][]) {
+    let end = start,
+      total = 0;
+    for (const [a, b] of [...input].sort((x, y) => x[0] - y[0])) {
+      const left = Math.max(start, a, end),
+        right = Math.min(stop, b);
+      if (right > left) {
+        total += right - left;
+        end = right;
+      }
+    }
+    return total;
+  }
+  const viewed = duration(ranges.concat(exact)),
+    required = stop - start;
+  return {
+    complete: required > 0 && viewed >= required - 0.0001,
+    playbackComplete: duration(ranges) >= required - 0.0001,
+    percent: Math.min(100, Math.floor((100 * viewed) / required)),
+  };
+}
+export type ViewingUpdate = ReturnType<typeof viewingProgress> & {
+  evidence: PlaybackCoverage;
+};

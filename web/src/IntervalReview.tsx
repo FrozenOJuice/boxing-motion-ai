@@ -3,6 +3,7 @@ import { type Result, useRequest } from "./api";
 import { Notice } from "./Viewer";
 import BufferedIntervalViewer from "./BufferedIntervalViewer";
 import { type IntervalAnnotation } from "./intervalAnnotations";
+import { type ViewingUpdate } from "./playback";
 
 type Entry = {
   id: string;
@@ -249,9 +250,10 @@ function IntervalForm({
   const [seen, setSeen] = useState<Set<number>>(new Set()),
     [saving, setSaving] = useState(false),
     [error, setError] = useState("");
+  const [viewing, setViewing] = useState<ViewingUpdate | null>(null);
   const inFlight = useRef(false);
   const request = useRef<{ body: string; id: string } | null>(null);
-  const full = seen.size === e.stop - e.start;
+  const full = !!viewing?.complete || seen.size === e.stop - e.start;
   const conflict = data.annotations.length > 0;
   const change = () => {
     onDirty(true);
@@ -259,7 +261,7 @@ function IntervalForm({
   };
   async function save(next: boolean) {
     if (inFlight.current) return;
-    if (!decision || !seen.size) {
+    if (!decision || (!seen.size && !viewing?.evidence.segments.length)) {
       setError("Watch the interval and choose a decision.");
       return;
     }
@@ -270,7 +272,7 @@ function IntervalForm({
       setError(
         conflict
           ? "A source punch overlaps this interval. Keep it unresolved for conflict review."
-          : "Watch every interval frame, then confirm the whole interval and visibility.",
+          : "Watch the whole interval, then explicitly confirm viewing and visibility.",
       );
       return;
     }
@@ -282,6 +284,9 @@ function IntervalForm({
       watched_entire: watched,
       visible_continuous: visible,
       inspected_frames: [...seen].sort((a, b) => a - b),
+      ...(viewing?.evidence.segments.length
+        ? { playback_coverage: viewing.evidence }
+        : {}),
       unannotated_punches: decision === "no_punch" ? "no" : unannotated,
     };
     const body = JSON.stringify(payload);
@@ -311,7 +316,7 @@ function IntervalForm({
           source_punch_conflict_needs_review:
             "A source punch overlaps this interval and needs conflict review",
           watch_entire_interval_before_certifying:
-            "Watch every interval frame before confirming no punches",
+            "Watch the complete interval before confirming no punches",
           interval_source_changed:
             "The source data changed. This interval needs revalidation",
         };
@@ -339,10 +344,7 @@ function IntervalForm({
         pilot={pilot}
         annotations={data.annotations}
         seenFrames={seen}
-        onPresented={(index) => {
-          if (index >= e.start && index < e.stop)
-            setSeen((old) => (old.has(index) ? old : new Set([...old, index])));
-        }}
+        onViewing={setViewing}
         recording={e.recording}
         interval={{
           start: e.start,
@@ -370,8 +372,10 @@ function IntervalForm({
             : e.role === "development"
               ? "Development only. "
               : "Training candidate. "}
-          {statusName(data.status)} · {seen.size}/{e.stop - e.start} interval
-          frames viewed
+          {statusName(data.status)} ·{" "}
+          {full ? "Interval viewed" : `Viewing ${viewing?.percent ?? 0}%`} ·{" "}
+          {seen.size} {seen.size === 1 ? "frame" : "frames"} inspected
+          individually
         </p>
         <div className="decision-options">
           {decisions.map(([value, label]) => (

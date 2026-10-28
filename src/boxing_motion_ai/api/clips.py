@@ -116,9 +116,8 @@ class ClipService:
         self.lock = threading.Lock()
         self.verified = {}
 
-    def prepare(self, key):
-        detail = self.intervals.detail(key)
-        e = detail["entry"]
+    def describe(self, e):
+        """Source-bound timeline descriptor; no encoding, review snapshots or ledger locks."""
         source = self.frames.service._recording(e["recording"])
         prep = self.frames.service._preparation(e["recording"], source)
         with self.frames.lock:
@@ -144,7 +143,7 @@ class ClipService:
         )
         binding = dict(
             version=VERSION,
-            interval_id=key,
+            interval_id=e["id"],
             video=e["video_sha256"],
             poses=source.inputs["poses.npz"],
             bounds=[lo, stop],
@@ -152,6 +151,20 @@ class ClipService:
             encoder="libx264-crf20-720p-bf0-vfr",
         )
         cache_key = digest(binding)
+        return dict(
+            source=source,
+            prep=prep,
+            indices=indices,
+            times=times,
+            binding=binding,
+            cache_key=cache_key,
+        )
+
+    def prepare(self, key):
+        e = self.intervals.detail(key)["entry"]
+        d = self.describe(e)
+        indices, times = d["indices"], d["times"]
+        binding, cache_key = d["binding"], d["cache_key"]
         with self.lock:
             with self.store.open_regular(
                 f"data/raw/boxingvi/RGB_videos/{e['recording']}.mkv"

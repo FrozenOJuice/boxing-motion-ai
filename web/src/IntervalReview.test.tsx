@@ -12,10 +12,38 @@ import IntervalReview from "./IntervalReview";
 vi.mock("./BufferedIntervalViewer", () => ({
   default: ({
     onVisible,
+    onViewing,
   }: {
     onVisible: (f: { frame_index: number }) => void;
+    onViewing: (v: unknown) => void;
   }) => (
     <div>
+      <button
+        onClick={() =>
+          onViewing({
+            complete: true,
+            playbackComplete: true,
+            percent: 100,
+            evidence: {
+              schema_version: "continuous-viewing-1.0",
+              policy: "visible-realtime-1.0",
+              cache_key: "a".repeat(64),
+              interval_id: "V4-bg-1",
+              segments: [
+                {
+                  start: 0,
+                  end: 0.12,
+                  rate: 1,
+                  wall_seconds: 0.12,
+                  samples: 3,
+                },
+              ],
+            },
+          })
+        }
+      >
+        Watch complete interval
+      </button>
       {[10, 11, 12].map((n) => (
         <button key={n} onClick={() => onVisible({ frame_index: n })}>
           Show frame {n}
@@ -260,4 +288,35 @@ it("keeps the motion pilot separate and saves to its own endpoint/head", async (
   expect(
     screen.queryByText("Less overall movement · Unverified"),
   ).not.toBeInTheDocument();
+});
+
+it("enables explicit no-punch confirmation after complete playback without inventing exact inspection", async () => {
+  const mock = api();
+  await screen.findByText("Watch complete interval");
+  fireEvent.click(screen.getByRole("button", { name: "No punches" }));
+  expect(
+    screen.getByLabelText(
+      "I watched the entire interval and observed no punches.",
+    ),
+  ).toBeDisabled();
+  fireEvent.click(screen.getByText("Watch complete interval"));
+  expect(
+    screen.getByText(/Interval viewed · 0 frames inspected individually/),
+  ).toBeInTheDocument();
+  const attest = screen.getByLabelText(
+    "I watched the entire interval and observed no punches.",
+  );
+  expect(attest).toBeEnabled();
+  expect(attest).not.toBeChecked();
+  fireEvent.click(attest);
+  fireEvent.click(
+    screen.getByLabelText(
+      "The boxer is visible throughout, with no scene changes.",
+    ),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await screen.findByText("Review saved.");
+  const body = JSON.parse(String(posts(mock)[0][1]?.body));
+  expect(body.inspected_frames).toEqual([]);
+  expect(body.playback_coverage.schema_version).toBe("continuous-viewing-1.0");
 });

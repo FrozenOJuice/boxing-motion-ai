@@ -15,11 +15,24 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   callback = null;
+  vi.useRealTimers();
 });
 function mount(
   annotations: IntervalAnnotation[] = [],
   pilot: "original" | "motion-v2" = "original",
 ) {
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
+    x: 0,
+    y: 0,
+    top: 0,
+    left: 0,
+    width: 640,
+    height: 360,
+    right: 640,
+    bottom: 360,
+    toJSON: () => ({}),
+  });
+  HTMLElement.prototype.scrollIntoView = vi.fn();
   vi.stubGlobal(
     "IntersectionObserver",
     class {
@@ -65,6 +78,7 @@ function mount(
         json: async () => ({
           data: {
             interval_id: "V4-bg-1",
+            cache_key: "a".repeat(64),
             video_url: "/clip.mp4",
             frames: [10, 11, 12, 13],
             media_times: [0, 0.04, 0.08, 0.12],
@@ -92,7 +106,7 @@ function mount(
     };
   });
   vi.stubGlobal("fetch", fetchMock);
-  const presented = vi.fn(),
+  const viewing = vi.fn(),
     visible = vi.fn();
   render(
     <BufferedIntervalViewer
@@ -110,10 +124,16 @@ function mount(
       }}
       seenFrames={new Set()}
       onVisible={visible}
-      onPresented={presented}
+      onViewing={viewing}
     />,
   );
-  return { presented, visible, fetchMock };
+  return { viewing, visible, fetchMock };
+}
+async function readyPlayer() {
+  const v = await screen.findByLabelText("Buffered interval video");
+  Object.defineProperty(v, "readyState", { configurable: true, value: 4 });
+  fireEvent.loadedData(v);
+  return v;
 }
 function tick(frame: number, count: number) {
   act(() =>
@@ -124,52 +144,60 @@ function tick(frame: number, count: number) {
   );
 }
 
-it("plays buffered video without per-frame HTTP requests; skips never fill coverage", async () => {
-  const { presented, fetchMock } = mount();
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Play" })).not.toBeDisabled(),
-  );
+it("records real-time visible playback independently of frame callbacks and HTTP inspection", async () => {
+  const { viewing, visible, fetchMock } = mount();
+  await readyPlayer();
   const v = screen.getByLabelText(
     "Buffered interval video",
   ) as HTMLVideoElement;
   Object.defineProperty(v, "readyState", { configurable: true, value: 4 });
+  let now = 1000;
+  vi.spyOn(performance, "now").mockImplementation(() => now);
   fireEvent.click(screen.getByRole("button", { name: "Play" }));
   const before = fetchMock.mock.calls.length;
-  tick(10, 1);
-  tick(11, 2);
-  tick(13, 4);
-  expect(presented.mock.calls.map(([n]) => n)).toEqual([11]);
+  v.currentTime = 0.1;
+  now = 1100;
+  fireEvent.timeUpdate(v);
+  v.currentTime = 0.16;
+  now = 1200;
+  fireEvent.timeUpdate(v);
+  expect(viewing.mock.lastCall?.[0]).toMatchObject({
+    complete: true,
+    playbackComplete: true,
+  });
+  expect(viewing.mock.lastCall?.[0].playbackComplete).toBe(true);
+  expect(visible).not.toHaveBeenCalled();
   expect(fetchMock.mock.calls.length).toBe(before);
-  fireEvent.seeking(v);
-  tick(12, 5);
-  fireEvent.seeked(v);
-  tick(12, 6);
-  expect(presented.mock.calls.map(([n]) => n)).toEqual([11]);
-  fireEvent.waiting(v);
-  tick(13, 7);
-  expect(presented.mock.calls.map(([n]) => n)).toEqual([11]);
+  expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled();
 });
 
-it("pauses outside the viewport and accepts neither hidden nor paused playback as review evidence", async () => {
-  const { presented } = mount();
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Play" })).not.toBeDisabled(),
-  );
+it("pauses and stops viewing credit outside the viewport", async () => {
+  const { viewing } = mount();
+  await readyPlayer();
   const v = screen.getByLabelText(
     "Buffered interval video",
   ) as HTMLVideoElement;
   Object.defineProperty(v, "readyState", { configurable: true, value: 4 });
   fireEvent.click(screen.getByRole("button", { name: "Play" }));
-  tick(10, 1);
+  vi.mocked(HTMLElement.prototype.getBoundingClientRect).mockReturnValue({
+    x: 0,
+    y: -200,
+    top: -200,
+    left: 0,
+    width: 640,
+    height: 360,
+    right: 640,
+    bottom: 160,
+    toJSON: () => ({}),
+  });
   act(() =>
     intersection(
       [{ intersectionRatio: 0 } as IntersectionObserverEntry],
       {} as IntersectionObserver,
     ),
   );
-  tick(11, 2);
-  expect(presented).not.toHaveBeenCalled();
   expect(v.paused).toBe(true);
+  expect(viewing.mock.lastCall?.[0].complete).toBe(false);
 });
 
 it("keeps exact frame stepping and skeletons separate from browser seeking", async () => {
@@ -199,30 +227,24 @@ it("keeps exact frame stepping and skeletons separate from browser seeking", asy
   expect(screen.getByText("Frame 11")).toBeInTheDocument();
 });
 
-it("does not count timeupdate ranges when the frame callback API is missing", async () => {
-  const { presented } = mount();
+it("does not pretend timeupdate events are individual-frame inspection when callbacks are missing", async () => {
+  const { viewing } = mount();
   HTMLVideoElement.prototype.requestVideoFrameCallback =
     undefined as unknown as typeof HTMLVideoElement.prototype.requestVideoFrameCallback;
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Play" })).not.toBeDisabled(),
-  );
-  await screen.findByText(
-    /This browser cannot report individual presented frames/,
-  );
+  await readyPlayer();
+  await screen.findByText(/Playback frame positions are approximate/);
   const v = screen.getByLabelText(
     "Buffered interval video",
   ) as HTMLVideoElement;
   fireEvent.click(screen.getByRole("button", { name: "Play" }));
   v.currentTime = 0.12;
   fireEvent.timeUpdate(v);
-  expect(presented).not.toHaveBeenCalled();
+  expect(viewing.mock.lastCall?.[0].complete).toBe(false);
 });
 
 it("keeps the review player height stable and frame inspection usable after a video error", async () => {
   mount();
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Play" })).not.toBeDisabled(),
-  );
+  await readyPlayer();
   fireEvent.error(screen.getByLabelText("Buffered interval video"));
   expect(screen.getByRole("alert")).toHaveTextContent(
     "Exact-frame inspection remains available",
@@ -251,7 +273,7 @@ it("shows source counts/types, partial markers and exact jumps without filling s
       source_interval_half_open: [12, 17],
     },
   ] as IntervalAnnotation[];
-  const { presented, visible } = mount(annotations);
+  const { viewing, visible } = mount(annotations);
   expect(
     screen.getByLabelText("Original annotation summary"),
   ).toHaveTextContent("2 annotated punches");
@@ -272,7 +294,7 @@ it("shows source counts/types, partial markers and exact jumps without filling s
   });
   fireEvent.click(marker);
   const target = await screen.findByAltText("V4, native frame 12");
-  expect(presented).not.toHaveBeenCalled();
+  expect(viewing.mock.lastCall?.[0].complete).toBe(false);
   fireEvent.load(target);
   await waitFor(() =>
     expect(visible).toHaveBeenLastCalledWith(
@@ -293,9 +315,7 @@ it("updates the current annotation from buffered presentation callbacks", async 
       source_interval_half_open: [11, 12],
     } as IntervalAnnotation,
   ]);
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Play" })).not.toBeDisabled(),
-  );
+  await readyPlayer();
   const v = screen.getByLabelText(
     "Buffered interval video",
   ) as HTMLVideoElement;
@@ -314,9 +334,7 @@ it("updates the current annotation from buffered presentation callbacks", async 
 
 it("requests playback metadata from the selected pilot", async () => {
   const { fetchMock } = mount([], "motion-v2");
-  await waitFor(() =>
-    expect(screen.getByRole("button", { name: "Play" })).not.toBeDisabled(),
-  );
+  await readyPlayer();
   expect(
     fetchMock.mock.calls.some(
       ([url]) =>
@@ -324,3 +342,52 @@ it("requests playback metadata from the selected pilot", async () => {
     ),
   ).toBe(true);
 });
+
+it("flushes native pause progress and resumes at the media clock, not a rounded frame index", async () => {
+  const { viewing } = mount();
+  await readyPlayer();
+  const v = screen.getByLabelText(
+    "Buffered interval video",
+  ) as HTMLVideoElement;
+  Object.defineProperty(v, "readyState", { configurable: true, value: 4 });
+  let now = 1000;
+  vi.spyOn(performance, "now").mockImplementation(() => now);
+  fireEvent.click(screen.getByRole("button", { name: "Play" }));
+  now = 1050;
+  v.currentTime = 0.05;
+  Object.defineProperty(v, "paused", { configurable: true, value: true });
+  fireEvent.timeUpdate(v);
+  fireEvent.pause(v);
+  expect(viewing.mock.lastCall?.[0].evidence.segments[0].end).toBe(0.05);
+  now = 2000;
+  fireEvent.click(screen.getByRole("button", { name: "Play" }));
+  expect(v.currentTime).toBe(0.05);
+  now = 2100;
+  v.currentTime = 0.15;
+  fireEvent.timeUpdate(v);
+  expect(viewing.mock.lastCall?.[0].complete).toBe(true);
+});
+
+for (const event of ["visibilitychange", "blur"] as const) {
+  it(`ends the visible epoch on ${event} and never credits hidden time`, async () => {
+    const { viewing } = mount();
+    const v = (await readyPlayer()) as HTMLVideoElement;
+    let now = 1000;
+    vi.spyOn(performance, "now").mockImplementation(() => now);
+    fireEvent.click(screen.getByRole("button", { name: "Play" }));
+    now = 1040;
+    v.currentTime = 0.04;
+    if (event === "visibilitychange") {
+      vi.spyOn(document, "visibilityState", "get").mockReturnValue("hidden");
+      fireEvent(document, new Event(event));
+    } else fireEvent(window, new Event(event));
+    expect(v.paused).toBe(true);
+    const before = viewing.mock.lastCall?.[0];
+    expect(before.evidence.segments[0].end).toBe(0.04);
+    now = 1200;
+    v.currentTime = 0.16;
+    fireEvent.timeUpdate(v);
+    expect(viewing.mock.lastCall?.[0]).toEqual(before);
+    expect(before.complete).toBe(false);
+  });
+}
