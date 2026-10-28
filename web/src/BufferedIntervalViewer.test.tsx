@@ -7,6 +7,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import BufferedIntervalViewer from "./BufferedIntervalViewer";
+import { type IntervalAnnotation } from "./intervalAnnotations";
 
 let callback: VideoFrameRequestCallback | null = null;
 let intersection: IntersectionObserverCallback;
@@ -15,7 +16,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
   callback = null;
 });
-function mount() {
+function mount(annotations: IntervalAnnotation[] = []) {
   vi.stubGlobal(
     "IntersectionObserver",
     class {
@@ -93,6 +94,7 @@ function mount() {
   render(
     <BufferedIntervalViewer
       intervalId="V4-bg-1"
+      annotations={annotations}
       recording="V4"
       interval={{
         start: 10,
@@ -224,4 +226,84 @@ it("keeps the review player height stable and frame inspection usable after a vi
   expect(document.querySelector(".buffered-stage")).toHaveClass("image-stage");
   fireEvent.click(screen.getByRole("button", { name: "Next frame" }));
   expect(await screen.findByAltText("V4, native frame 11")).toBeInTheDocument();
+});
+
+it("shows source counts/types, partial markers and exact jumps without filling skipped coverage", async () => {
+  const annotations = [
+    {
+      source_row: 2,
+      source_class: "Jab",
+      punch_type_provisional: "jab",
+      raw_start: 9,
+      raw_end: 10,
+      source_interval_half_open: [9, 11],
+    },
+    {
+      source_row: 3,
+      source_class: "Rear Hook",
+      punch_type_provisional: "rear_hook",
+      raw_start: 12,
+      raw_end: 16,
+      source_interval_half_open: [12, 17],
+    },
+  ] as IntervalAnnotation[];
+  const { presented, visible } = mount(annotations);
+  expect(
+    screen.getByLabelText("Original annotation summary"),
+  ).toHaveTextContent("2 annotated punches");
+  expect(
+    screen.getByLabelText("Original annotation summary"),
+  ).toHaveTextContent("Jab 1 · Rear Hook 1");
+  expect(
+    screen.getByText("Original dataset · Provisional"),
+  ).toBeInTheDocument();
+  const partial = screen.getByRole("button", {
+    name: "Jab · Row 2 · Frames 9–10 · Partial overlap",
+  });
+  expect(partial).toHaveClass("partial");
+  const first = await screen.findByAltText("V4, native frame 10");
+  fireEvent.load(first);
+  const marker = screen.getByRole("button", {
+    name: "Rear Hook · Row 3 · Frames 12–16 · Partial overlap",
+  });
+  fireEvent.click(marker);
+  const target = await screen.findByAltText("V4, native frame 12");
+  expect(presented).not.toHaveBeenCalled();
+  fireEvent.load(target);
+  await waitFor(() =>
+    expect(visible).toHaveBeenLastCalledWith(
+      expect.objectContaining({ frame_index: 12 }),
+    ),
+  );
+  expect(marker).toHaveAttribute("aria-current", "true");
+  expect(partial).not.toHaveAttribute("aria-current");
+  expect(visible.mock.calls.some(([f]) => f.frame_index === 11)).toBe(false);
+  expect(screen.getByText(/Ends after this interval/)).toBeInTheDocument();
+});
+
+it("updates the current annotation from buffered presentation callbacks", async () => {
+  mount([
+    {
+      source_row: 7,
+      source_class: "Cross",
+      source_interval_half_open: [11, 12],
+    } as IntervalAnnotation,
+  ]);
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Play" })).not.toBeDisabled(),
+  );
+  const v = screen.getByLabelText(
+    "Buffered interval video",
+  ) as HTMLVideoElement;
+  Object.defineProperty(v, "readyState", { configurable: true, value: 4 });
+  fireEvent.click(screen.getByRole("button", { name: "Play" }));
+  tick(10, 1);
+  tick(11, 2);
+  expect(
+    screen.getByRole("button", { name: "Cross · Row 7 · Frames 11–11" }),
+  ).toHaveAttribute("aria-current", "true");
+  tick(12, 3);
+  expect(
+    screen.getByRole("button", { name: "Cross · Row 7 · Frames 11–11" }),
+  ).not.toHaveAttribute("aria-current");
 });

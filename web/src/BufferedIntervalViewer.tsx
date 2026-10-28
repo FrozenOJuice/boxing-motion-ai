@@ -2,6 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { type Frame, type Result, useRequest } from "./api";
 import { ExactFrame } from "./Viewer";
 import {
+  type IntervalAnnotation,
+  annotationLabel,
+  annotationSegments,
+} from "./intervalAnnotations";
+import {
   type Playback,
   type Presented,
   frameAt,
@@ -23,6 +28,7 @@ export default function BufferedIntervalViewer({
   onVisible,
   onPresented,
   seenFrames,
+  annotations = [],
 }: {
   intervalId: string;
   interval: Interval;
@@ -30,6 +36,7 @@ export default function BufferedIntervalViewer({
   onVisible: (frame: Frame) => void;
   onPresented: (index: number) => void;
   seenFrames: Set<number>;
+  annotations?: IntervalAnnotation[];
 }) {
   const [frameRetry, setFrameRetry] = useState(0);
   const result = useRequest<Result<Playback>>(
@@ -224,6 +231,19 @@ export default function BufferedIntervalViewer({
     { length: interval.end - interval.start + 1 },
     (_, i) => interval.start + i,
   ).filter((n) => !seenFrames.has(n));
+  const segments = annotationSegments(
+    annotations,
+    interval.start,
+    interval.end + 1,
+  );
+  const lanes = Math.max(1, ...segments.map((s) => s.lane + 1));
+  const typeCounts = new Map<string, number>();
+  for (const a of annotations) {
+    const label = annotationLabel(a);
+    typeCounts.set(label, (typeCounts.get(label) ?? 0) + 1);
+  }
+  const segmentName = (s: (typeof segments)[number]) =>
+    `${s.label} · Row ${s.source.source_row} · Frames ${s.originalStart}–${s.originalStop - 1}${s.partial ? " · Partial overlap" : ""}`;
   const percent = (n: number) =>
     `${(100 * (n - minimum)) / Math.max(1, maximum - minimum)}%`;
   return (
@@ -428,6 +448,57 @@ export default function BufferedIntervalViewer({
           </label>
         </div>
       </div>
+      <div
+        className="annotation-summary"
+        aria-label="Original annotation summary"
+      >
+        <strong>
+          {annotations.length} annotated{" "}
+          {annotations.length === 1 ? "punch" : "punches"}
+        </strong>
+        <span>Original dataset · Provisional</span>
+        {annotations.length > 0 && (
+          <small>
+            {[...typeCounts]
+              .map(([label, count]) => `${label} ${count}`)
+              .join(" · ")}
+          </small>
+        )}
+      </div>
+      {segments.length > 0 && (
+        <div
+          className="source-annotation-track"
+          aria-label="Original punch annotation timeline"
+          style={{ height: `${lanes * 18 + 4}px` }}
+        >
+          {segments.map((s) => (
+            <button
+              key={s.source.source_row}
+              className={`source-annotation-segment${s.partial ? " partial" : ""}${displayed >= s.originalStart && displayed < s.originalStop ? " current" : ""}`}
+              style={{
+                left: percent(s.start),
+                width: `${(100 * (s.stop - 1 - s.start)) / Math.max(1, maximum - minimum)}%`,
+                top: `${s.lane * 18 + 2}px`,
+              }}
+              aria-label={segmentName(s)}
+              title={segmentName(s)}
+              aria-current={
+                displayed >= s.originalStart && displayed < s.originalStop
+                  ? "true"
+                  : undefined
+              }
+              onClick={() => seek(Math.max(minimum, s.originalStart))}
+            >
+              <span className="annotation-tooltip">{segmentName(s)}</span>
+            </button>
+          ))}
+          <span
+            className="annotation-playhead"
+            aria-hidden="true"
+            style={{ left: percent(displayed) }}
+          />
+        </div>
+      )}
       <div className="review-timeline">
         <div
           className="punch-range"
@@ -459,6 +530,60 @@ export default function BufferedIntervalViewer({
           onChange={(e) => seek(Number(e.target.value))}
         />
       </div>
+      {annotations.length > 0 && (
+        <details className="source-annotation-list">
+          <summary>Source annotations ({annotations.length})</summary>
+          <div>
+            {annotations.map((a) => {
+              const s = segments.find(
+                (segment) => segment.source.source_row === a.source_row,
+              );
+              const current =
+                !!s &&
+                displayed >= s.originalStart &&
+                displayed < s.originalStop;
+              return (
+                <button
+                  key={a.source_row}
+                  disabled={!s}
+                  aria-current={current ? "true" : undefined}
+                  className={current ? "current" : ""}
+                  onClick={() => s && seek(Math.max(minimum, s.originalStart))}
+                >
+                  <strong>{annotationLabel(a)}</strong>
+                  <span>
+                    Row {a.source_row} · Source frames {a.raw_start}–{a.raw_end}
+                  </span>
+                  {s?.partial && (
+                    <span className="partial-label">
+                      Partial overlap ·{" "}
+                      {s.originalStart < interval.start
+                        ? "Starts before this interval"
+                        : ""}
+                      {s.originalStart < interval.start &&
+                      s.originalStop > interval.end + 1
+                        ? "; "
+                        : ""}
+                      {s.originalStop > interval.end + 1
+                        ? "Ends after this interval"
+                        : ""}
+                    </span>
+                  )}
+                  {!s && <span>Frame mapping unavailable</span>}
+                  {!!a.exclusion_reasons?.length && (
+                    <span>Previously excluded</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+          <p>
+            Provisional references; boundaries use the existing dataset mapping.
+            Marks do not establish exhaustive coverage or verified labels.
+            Dashed segments overlap only part of the interval.
+          </p>
+        </details>
+      )}
       {hasPlayed && !playing && remaining.length > 0 && (
         <div className="coverage-gap">
           <small>

@@ -144,6 +144,14 @@ it("flags unannotated punches, advances only on successful save, and handles the
   const mock = api();
   await watchAll();
   fireEvent.click(screen.getByRole("button", { name: "Punch present" }));
+  expect(
+    screen.getByLabelText("Did you see any punches that weren't marked?"),
+  ).toBeInTheDocument();
+  expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
+    "Not sure",
+    "Yes",
+    "No",
+  ]);
   fireEvent.change(screen.getByRole("combobox"), { target: { value: "yes" } });
   fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
   await screen.findByText("Review saved · End of queue.");

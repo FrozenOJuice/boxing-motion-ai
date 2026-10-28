@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { type Result, type Source, useRequest, title } from "./api";
+import { type Result, useRequest } from "./api";
 import { Notice } from "./Viewer";
 import BufferedIntervalViewer from "./BufferedIntervalViewer";
+import { type IntervalAnnotation } from "./intervalAnnotations";
 
 type Entry = {
   id: string;
@@ -39,7 +40,7 @@ type Detail = {
   entry: Entry;
   head: string;
   history: Revision[];
-  annotations: Source[];
+  annotations: IntervalAnnotation[];
   status: string;
 };
 const decisions = [
@@ -282,6 +283,7 @@ function IntervalForm({
     <>
       <BufferedIntervalViewer
         intervalId={e.id}
+        annotations={data.annotations}
         seenFrames={seen}
         onPresented={(index) => {
           if (index >= e.start && index < e.stop)
@@ -401,7 +403,7 @@ function IntervalForm({
               become background.
             </p>
             <label>
-              Any punches missing from the source annotations?{" "}
+              Did you see any punches that weren't marked?{" "}
               <select
                 disabled={saving}
                 value={unannotated}
@@ -410,7 +412,7 @@ function IntervalForm({
                   change();
                 }}
               >
-                <option value="unknown">Not sure yet</option>
+                <option value="unknown">Not sure</option>
                 <option value="yes">Yes</option>
                 <option value="no">No</option>
               </select>
@@ -449,17 +451,6 @@ function IntervalForm({
           </button>
         </div>
       </section>
-      <details className="panel interval-references">
-        <summary>Source punch annotations ({data.annotations.length})</summary>
-        <p>Reference only; not exhaustive or automatically confirmed.</p>
-        {data.annotations.map((a) => (
-          <p key={a.source_row}>
-            Row {a.source_row} · {title(a.punch_type_provisional)} · frames{" "}
-            {a.raw_start}–{a.raw_end}
-            {a.exclusion_reasons?.length ? " · Previously excluded" : ""}
-          </p>
-        ))}
-      </details>
       <details className="panel interval-references">
         <summary>Review history & exact timing</summary>
         <p>
