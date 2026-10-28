@@ -69,3 +69,7 @@ Ready for human interval review; **not ready for detector training or complete e
 Verification includes synthetic all-three-path saves, persistence through a fresh app instance, immutable revision history, stale/idempotent requests, partial-view rejection, source conflict, unsafe storage, split restrictions, timing/cut/gap checks and frontend save/failure behavior. Read-only real-footage checks loaded all 36 interval details and verified 72 exact boundary images against native frame IDs and source PTS. No POST was sent to the real review workspace. Frontend interaction tests use synthetic fixtures; no browser-based human review is claimed.
 
 Checks: **457 Python tests passed**, **48 frontend tests passed**, Ruff passed, TypeScript passed, Python/frontend formatting passed, production frontend build passed, and `git diff --check` passed. Python reported one existing Starlette/httpx deprecation warning. All **4,647 protected hashes matched**, and the real interval ledger remained empty after verification.
+
+## First human-review findings
+
+The first five saved interval decisions are assessed in [First interval review findings](FIRST_INTERVAL_REVIEW_FINDINGS.md). All five V4 candidates contained human-reported unmarked punches and remain excluded from background. The original empty-ledger statements above describe initial pilot preparation, not the current review state. The findings recommend a bounded human-led selection pass before generating a revised candidate set.
