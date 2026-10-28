@@ -26,8 +26,11 @@ function mount(
     stop: number;
     punch_type: string;
     type_uncertain: boolean;
+    unverified?: boolean;
+    kind?: "activity" | "uncertain";
   }[] = [],
   showSourceAnnotations = true,
+  draftBounds?: { start: number | null; end: number | null },
 ) {
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
     x: 0,
@@ -124,6 +127,7 @@ function mount(
       annotations={annotations}
       showSourceAnnotations={showSourceAnnotations}
       humanEvents={humanEvents}
+      draftBounds={draftBounds}
       onHumanSelect={humanSelect}
       recording="V4"
       interval={{
@@ -461,4 +465,52 @@ it("hides original annotation UI for blind activity reference labeling", async (
   expect(
     screen.queryByLabelText("Original punch annotation timeline"),
   ).toBeNull();
+});
+
+it("keeps source suggestions unverified, shares a compact lane and exposes exact draft markers", async () => {
+  const { humanSelect, viewing } = mount(
+    [],
+    "original",
+    [
+      {
+        event_id: "source-a",
+        start: 10,
+        stop: 11,
+        punch_type: "",
+        type_uncertain: false,
+        kind: "activity",
+        unverified: true,
+      },
+      {
+        event_id: "source-b",
+        start: 12,
+        stop: 13,
+        punch_type: "",
+        type_uncertain: false,
+        kind: "activity",
+        unverified: true,
+      },
+    ],
+    false,
+    { start: 10, end: 11 },
+  );
+  await readyPlayer();
+  expect(screen.getByLabelText("Human annotation summary")).toHaveTextContent(
+    "0 sections you added",
+  );
+  expect(screen.getByLabelText("Human annotation summary")).toHaveTextContent(
+    "2 source suggestions (unverified)",
+  );
+  expect(screen.getByLabelText("Human activity timeline")).toHaveStyle({
+    height: "24px",
+  });
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Unverified suggestion section 1: Punching activity",
+    }),
+  );
+  expect(humanSelect).toHaveBeenCalledWith("source-a");
+  fireEvent.click(screen.getByRole("button", { name: "Proposed end · 11" }));
+  fireEvent.load(await screen.findByAltText("V4, native frame 11"));
+  expect(viewing.mock.lastCall?.[0]?.complete).not.toBe(true);
 });

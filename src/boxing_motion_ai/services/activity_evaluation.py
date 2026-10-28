@@ -9,6 +9,7 @@ from pydantic import Field, StrictBool, StrictInt, model_validator
 
 from ..data.annotation_review import StrictModel
 from ..data.interval_pilot import GROUPS
+from .activity_suggestions import VERSION, propose
 from .dashboard import require
 from .interval_events import IntervalEvents
 from .interval_review import IntervalDecision
@@ -36,9 +37,11 @@ class ActivityRegion(StrictModel):
 class ActivityDecision(StrictModel):
     request_id: Annotated[UUID, Field(strict=False)]
     expected_head: str = Field(pattern=r"^[0-9a-f]{64}$")
-    operation: Literal["upsert", "remove", "complete"]
+    operation: Literal["upsert", "remove", "dismiss", "complete"]
     event: ActivityRegion | None = None
     event_id: Annotated[UUID, Field(strict=False)] | None = None
+    suggestion_id: Annotated[UUID, Field(strict=False)] | None = None
+    suggestion_review_version: Literal["source-activity-suggestions-1.0"] | None = None
     inspected_frames: list[StrictInt] = Field(default_factory=list, max_length=2000)
     playback_coverage: PlaybackCoverage | None = None
     watched_entire: StrictBool = False
@@ -51,13 +54,24 @@ class ActivityDecision(StrictModel):
             self.operation == "remove"
         ) != (self.event_id is not None):
             raise ValueError("Operation requires exactly its matching event fields")
+        if self.operation == "dismiss" and self.suggestion_id is None:
+            raise ValueError("Dismiss requires a source suggestion")
+        if self.suggestion_id is not None and self.operation not in ("upsert", "dismiss"):
+            raise ValueError(
+                "Source suggestions apply only to explicit confirmation/change or dismissal"
+            )
+        if self.suggestion_review_version is not None and self.operation != "complete":
+            raise ValueError("Suggestion completion attestation requires complete")
         if len(set(self.inspected_frames)) != len(self.inspected_frames):
             raise ValueError("Duplicate inspected frame")
         if self.operation != "complete" and (
             self.watched_entire
             or self.all_activity_labeled
             or self.no_activity_observed
-            or self.playback_coverage is not None
+            or (
+                self.playback_coverage is not None
+                and not (self.operation == "upsert" and self.suggestion_id is not None)
+            )
         ):
             raise ValueError("Only explicit completion may attest coverage")
         return self
@@ -131,16 +145,90 @@ class ActivityEvaluation(IntervalEvents):
             right_censored=event.kind == "activity" and event.stop == entry["stop"],
         )
 
+    def suggestions(self, entry):
+        spec = self.base._recording(entry["recording"])
+        prep = self.base._preparation(entry["recording"], spec)
+        with self.frames.lock:
+            arrays = self.frames._load(entry["recording"], spec, prep)
+            return propose(entry, self.base._rows(entry["recording"], spec), arrays)
+
+    def extra_record(self, entry, decision):
+        return {"suggestion_snapshot": self.suggestions(entry)}
+
+    def history(self, fd, key, seed, head):
+        state = super().history(fd, key, seed, head)
+        snapshot = self.suggestions(seed["provenance"])
+        known = {s["event_id"] for s in snapshot["suggestions"]}
+        resolved = set()
+        for record in state["history"]:
+            if "suggestion_snapshot" in record:
+                require(
+                    encode(record["suggestion_snapshot"]) == encode(snapshot),
+                    "activity_suggestion_source_changed",
+                    "stale",
+                )
+            payload = record["payload"]
+            identifier = payload.get("suggestion_id") or payload.get("event_id")
+            if identifier in known:
+                resolved.add(identifier)
+            if payload.get("suggestion_review_version") == VERSION:
+                require(known <= resolved, "review_all_activity_suggestions")
+        return state
+
+    def save(self, key, decision):
+        if decision.operation == "complete":
+            state = self.detail(key)
+            require(
+                decision.suggestion_review_version == VERSION or not state["suggestions"],
+                "review_all_activity_suggestions",
+            )
+            require(
+                not any(s["status"] == "unreviewed" for s in state["suggestions"]),
+                "review_all_activity_suggestions",
+            )
+        return super().save(key, decision)
+
     def apply(self, entry, decision, events, complete):
+        if decision.suggestion_id is not None:
+            known = {s["event_id"] for s in self.suggestions(entry)["suggestions"]}
+            require(str(decision.suggestion_id) in known, "unknown_activity_suggestion")
+            if decision.event:
+                require(
+                    str(decision.event.event_id) == str(decision.suggestion_id),
+                    "activity_suggestion_identity_mismatch",
+                )
+        if decision.operation == "dismiss":
+            events.pop(str(decision.suggestion_id), None)
+            return False
         if decision.operation == "upsert":
             event = decision.event
+            known = {s["event_id"] for s in self.suggestions(entry)["suggestions"]}
+            require(
+                str(event.event_id) not in known or decision.suggestion_id is not None,
+                "activity_suggestion_identity_required",
+            )
             old = events.get(str(event.event_id))
             needed = set()
             if not old or event.start != old["start"]:
                 needed.add(event.start)
             if not old or event.stop != old["stop"]:
                 needed.add(event.stop - 1)
-            require(needed.issubset(decision.inspected_frames), "inspect_both_event_boundaries")
+            inspected = needed.issubset(decision.inspected_frames)
+            if not inspected and decision.suggestion_id and decision.playback_coverage:
+                suggestion = next(
+                    s
+                    for s in self.suggestions(entry)["suggestions"]
+                    if s["event_id"] == str(decision.suggestion_id)
+                )
+                if event.start == suggestion["start"] and event.stop == suggestion["stop"]:
+                    proof = IntervalDecision(
+                        request_id=str(decision.request_id),
+                        expected_head=decision.expected_head,
+                        decision="punch_present",
+                        playback_coverage=decision.playback_coverage,
+                    )
+                    inspected = self.intervals._viewing(entry, proof)["complete"]
+            require(inspected, "inspect_both_event_boundaries")
             require(
                 all(entry["start"] <= i < entry["stop"] for i in decision.inspected_frames),
                 "inspection_outside_interval",
@@ -196,6 +284,25 @@ class ActivityEvaluation(IntervalEvents):
 
         with ReviewWorkspace(self.base)._locked(f"{self.directory}/{key}") as fd:
             state = self.history(fd, key, seed, head)
+        snapshot = self.suggestions(entry["entry"])
+        suggestions = []
+        for suggestion in snapshot["suggestions"]:
+            identifier = suggestion["event_id"]
+            revisions = [
+                r
+                for r in state["history"]
+                if r["payload"].get("suggestion_id") == identifier
+                or r["payload"].get("event_id") == identifier
+            ]
+            current = next((e for e in state["events"] if e["event_id"] == identifier), None)
+            status = (
+                ("uncertain" if current["kind"] == "uncertain" else "confirmed")
+                if current is not None
+                else "removed"
+                if revisions
+                else "unreviewed"
+            )
+            suggestions.append(suggestion | {"status": status})
         uncertain = sum(e["kind"] == "uncertain" for e in state["events"])
         return state | dict(
             entry=entry["entry"],
@@ -204,6 +311,9 @@ class ActivityEvaluation(IntervalEvents):
             primary_eligible=state["complete"] and not uncertain,
             protocol_sha256=seed["protocol_sha256"],
             predictions_hidden=True,
+            suggestions=suggestions,
+            suggestion_issues=snapshot["issues"],
+            suggestion_version=VERSION,
         )
 
     def status(self):

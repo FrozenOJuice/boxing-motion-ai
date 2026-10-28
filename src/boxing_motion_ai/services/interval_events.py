@@ -216,6 +216,9 @@ class IntervalEvents:
             source_review_sha256=seed["source_review_sha256"],
         )
 
+    def extra_record(self, entry, decision):
+        return {}
+
     def save(self, key, decision):
         detail, seed, initial = self.context(key)
         entry = detail["entry"]
@@ -251,4 +254,5 @@ class IntervalEvents:
                 background_inferred=False,
                 training_enabled=False,
             )
+            record.update(self.extra_record(entry, decision))
             return append_review_bundle(fd, record["version"], record)

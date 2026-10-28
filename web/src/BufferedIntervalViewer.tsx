@@ -36,6 +36,7 @@ export default function BufferedIntervalViewer({
   humanEvents = [],
   onHumanSelect,
   inspectionControls,
+  draftBounds,
 }: {
   intervalId: string;
   pilot?: "original" | "motion-v2";
@@ -46,6 +47,7 @@ export default function BufferedIntervalViewer({
   seenFrames: Set<number>;
   annotations?: IntervalAnnotation[];
   showSourceAnnotations?: boolean;
+  draftBounds?: { start: number | null; end: number | null };
   humanEvents?: {
     event_id: string;
     start: number;
@@ -53,6 +55,7 @@ export default function BufferedIntervalViewer({
     punch_type?: string;
     type_uncertain?: boolean;
     kind?: "activity" | "uncertain";
+    unverified?: boolean;
   }[];
   onHumanSelect?: (id: string) => void;
   inspectionControls?: (
@@ -628,12 +631,17 @@ export default function BufferedIntervalViewer({
           aria-label="Human annotation summary"
         >
           <strong>
-            {humanEvents.length}{" "}
+            {humanEvents.filter((e) => !e.unverified).length}{" "}
             {humanEvents.some((e) => e.kind)
               ? "sections you added"
               : "punches you added"}
           </strong>
-          <span>Human labels</span>
+          <span>
+            Human labels
+            {humanEvents.some((e) => e.unverified)
+              ? ` · ${humanEvents.filter((e) => e.unverified).length} source suggestions (unverified)`
+              : ""}
+          </span>
         </div>
       )}
       {humanEvents.length > 0 && (
@@ -644,19 +652,21 @@ export default function BufferedIntervalViewer({
               ? "Human activity timeline"
               : "Human punch timeline"
           }
-          style={{ height: `${humanEvents.length * 20 + 4}px` }}
+          style={{
+            height: `${(humanEvents.filter((e) => !e.unverified).length + Number(humanEvents.some((e) => e.unverified))) * 20 + 4}px`,
+          }}
         >
           {humanEvents.map((event, lane) => (
             <button
               key={event.event_id}
-              className={`source-annotation-segment human-event-segment${event.kind === "uncertain" || event.start < interval.start || event.stop > interval.end + 1 ? " partial" : ""}`}
+              className={`source-annotation-segment human-event-segment${event.unverified ? " activity-suggestion-segment" : ""}${event.kind === "uncertain" || event.start < interval.start || event.stop > interval.end + 1 ? " partial" : ""}`}
               style={{
                 left: percent(event.start),
                 width: `${(100 * (event.stop - event.start)) / Math.max(1, maximum - minimum + 1)}%`,
-                top: `${lane * 20 + 2}px`,
+                top: `${(event.unverified ? 0 : lane + Number(humanEvents.some((e) => e.unverified))) * 20 + 2}px`,
               }}
-              title={`Human · ${event.type_uncertain ? "Type uncertain" : event.kind ? (event.kind === "activity" ? "Punching activity" : "Uncertain section") : event.punch_type?.replaceAll("_", " ")} · ${event.start}–${event.stop - 1}${event.start < interval.start || event.stop > interval.end + 1 ? " · Partial overlap" : ""}`}
-              aria-label={`Human ${event.kind ? "section" : "punch"} ${lane + 1}: ${event.type_uncertain ? "Type uncertain" : event.kind ? (event.kind === "activity" ? "Punching activity" : "Uncertain section") : event.punch_type?.replaceAll("_", " ")}`}
+              title={`${event.unverified ? "Unverified source suggestion" : "Human"} · ${event.type_uncertain ? "Type uncertain" : event.kind ? (event.kind === "activity" ? "Punching activity" : "Uncertain section") : event.punch_type?.replaceAll("_", " ")} · ${event.start}–${event.stop - 1}${event.start < interval.start || event.stop > interval.end + 1 ? " · Partial overlap" : ""}`}
+              aria-label={`${event.unverified ? "Unverified suggestion" : "Human"} ${event.kind ? "section" : "punch"} ${lane + 1}: ${event.type_uncertain ? "Type uncertain" : event.kind ? (event.kind === "activity" ? "Punching activity" : "Uncertain section") : event.punch_type?.replaceAll("_", " ")}`}
               onClick={() => {
                 seek(event.start);
                 onHumanSelect?.(event.event_id);
@@ -724,6 +734,23 @@ export default function BufferedIntervalViewer({
         </div>
       )}
       <div className="review-timeline">
+        {draftBounds &&
+          ([draftBounds.start, draftBounds.end] as const).map(
+            (n, i) =>
+              n !== null && (
+                <button
+                  key={`draft-${i}`}
+                  className={`boundary-marker boundary-${i ? "end" : "start"}`}
+                  style={{ left: percent(n) }}
+                  aria-label={`Proposed ${i ? "end" : "start"} · ${n}`}
+                  onClick={() => seek(n)}
+                >
+                  <span className="boundary-tooltip">
+                    Proposed {i ? "end" : "start"} · {n}
+                  </span>
+                </button>
+              ),
+          )}
         <div
           className="punch-range"
           style={{

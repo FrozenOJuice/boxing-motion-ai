@@ -213,3 +213,99 @@ def test_playback_completion_reuses_visible_coverage_contract(activity):
     assert r.status_code == 200, r.text
     evidence["cache_key"] = "0" * 64
     assert change(client, "complete", playback_coverage=evidence, **flags)[0].status_code == 409
+
+
+@pytest.fixture
+def suggested(activity, workspace):
+    root, _ = activity
+    spec = workspace[1]["sources"]["V7"]
+    path = root / spec["dataset"] / "candidates.jsonl"
+    row = json.loads(path.read_text().splitlines()[0])
+    row.update(source_interval_half_open=[1, 3], raw_start=1, raw_end=2)
+    path.write_text(json.dumps(row) + "\n")
+    spec["inputs"]["candidates.jsonl"] = pin(root, str(path.relative_to(root)))["sha256"]
+    publish(workspace)
+    manifest_path = root / "reports/boxingvi/interval-review-pilot-v1/manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["entries"][0]["source_inputs"] = spec["inputs"]
+    manifest_path.write_bytes(encode(manifest))
+    ref = pin(root, str(manifest_path.relative_to(root)))
+    (root / "configs/interval_review_pilot_v1.json").write_bytes(encode(ref))
+    protocol = json.loads((root / module.PROTOCOL).read_text())
+    protocol["interval_manifest"] = ref
+    (root / module.PROTOCOL).write_bytes(encode(protocol))
+    return root, TestClient(create_app(root), base_url="http://127.0.0.1:8000")
+
+
+def test_suggestions_never_auto_confirm_dismiss_and_revise_are_auditable(suggested):
+    root, client = suggested
+    state = client.get(URL).json()["data"]
+    suggestion = state["suggestions"][0]
+    assert suggestion["status"] == "unreviewed" and state["events"] == []
+    assert finish(client, no_activity_observed=True).status_code == 422
+    r, body = change(client, "dismiss", suggestion_id=suggestion["event_id"])
+    assert r.status_code == 200, r.text
+    assert client.post(URL, json=body, headers=HEADERS).status_code == 200
+    assert r.json()["data"]["suggestion_snapshot"]["suggestions"][0]["verified"] is False
+    assert (
+        finish(
+            client,
+            no_activity_observed=True,
+            suggestion_review_version="source-activity-suggestions-1.0",
+        ).status_code
+        == 200
+    )
+    p = region(start=1, stop=4) | {"event_id": suggestion["event_id"]}
+    assert change(client, event=p, suggestion_id=p["event_id"])[0].status_code == 422
+    r, _ = change(client, event=p, suggestion_id=p["event_id"], inspected_frames=[1, 3])
+    assert r.status_code == 200, r.text
+    restarted = TestClient(create_app(root), base_url="http://127.0.0.1:8000")
+    state = restarted.get(URL).json()["data"]
+    assert not state["complete"] and state["events"][0]["stop"] == 4
+    assert state["suggestions"][0]["stop"] == 3  # Original suggestion never rewritten.
+    assert len(state["history"]) == 3
+    assert change(client, "remove", event_id=p["event_id"])[0].status_code == 200
+    assert client.get(URL).json()["data"]["suggestions"][0]["status"] == "removed"
+
+
+def test_unchanged_suggestion_can_be_confirmed_after_real_viewing_not_fake_inspection(suggested):
+    _, client = suggested
+    s = client.get(URL).json()["data"]["suggestions"][0]
+    p = {k: s[k] for k in ("event_id", "kind", "start", "stop")}
+    assert change(client, event=p, suggestion_id=s["event_id"])[0].status_code == 422
+    clip = client.get("/api/intervals/V7-eval-1/playback").json()["data"]
+    evidence = dict(
+        schema_version="continuous-viewing-1.0",
+        policy="visible-realtime-1.0",
+        cache_key=clip["cache_key"],
+        interval_id="V7-eval-1",
+        segments=[dict(start=0, end=0.2, rate=1, wall_seconds=0.2, samples=4)],
+    )
+    r, _ = change(client, event=p, suggestion_id=s["event_id"], playback_coverage=evidence)
+    assert r.status_code == 200, r.text
+    payload = r.json()["data"]["payload"]
+    assert payload["inspected_frames"] == [] and payload["playback_coverage"]
+    # Watching alone does not confirm changed timing; exact changed endpoints remain required.
+    assert (
+        change(
+            client, event=p | {"stop": 4}, suggestion_id=s["event_id"], playback_coverage=evidence
+        )[0].status_code
+        == 422
+    )
+
+
+def test_uncertain_suggestion_is_not_confirmed_and_dismissal_removes_prior_reference(suggested):
+    _, client = suggested
+    s = client.get(URL).json()["data"]["suggestions"][0]
+    p = {k: s[k] for k in ("event_id", "start", "stop")} | {"kind": "uncertain"}
+    assert change(client, event=p, inspected_frames=[1, 2])[0].status_code == 422
+    assert (
+        change(client, event=p, suggestion_id=s["event_id"], inspected_frames=[1, 2])[0].status_code
+        == 200
+    )
+    state = client.get(URL).json()["data"]
+    assert state["suggestions"][0]["status"] == "uncertain" and not state["primary_eligible"]
+    assert change(client, "dismiss", suggestion_id=s["event_id"])[0].status_code == 200
+    state = client.get(URL).json()["data"]
+    assert state["events"] == [] and state["suggestions"][0]["status"] == "removed"
+    assert state["history"][0]["events"][0]["kind"] == "uncertain"

@@ -1,8 +1,8 @@
 # Continuous punching-activity evaluation v1
 
 Status: protocol frozen before held-out binary predictions; dashboard ready for six human
-reference reviews. No detector training, held-out inference, threshold selection or final
-scoring was performed for this milestone. All six references are currently incomplete.
+reference reviews with unverified source-annotation suggestions. No detector training, held-out
+inference, threshold selection or final scoring was performed for this milestone. All six references are currently incomplete.
 
 ## What is being detected
 
@@ -67,17 +67,25 @@ V1/V6 grouping restrictions remain, and V9 stays inaccessible and untouched.
 Launch the dashboard as described in [DASHBOARD_V01.md](DASHBOARD_V01.md). Open **Review →
 Video intervals → Review pilot → Activity evaluation · V7/V8/V10**.
 
-1. Watch the block with buffered playback. Pause and use exact-frame stepping when needed.
-2. Choose **Add activity**, mark its start and last included frame, then **Save section**.
-   Repeat for further bouts. No punch-type identification is required.
-3. Use **Mark uncertain section** for anything unclear. Saved regions are clickable timeline
+1. Watch the block with buffered playback. Dashed timeline periods are unverified source
+   suggestions. Click one (or **Review period**) to open its proposed boundaries.
+2. Use **Confirm period** if correct. After full visible block playback an unchanged suggestion
+   can be confirmed without individually inspecting every frame. Alternatively, inspect its
+   start/end using the clickable **Proposed start/end** markers. Adjust timing with exact-frame
+   controls and **Set start/end here**; changed boundaries require exact-frame inspection.
+   **Remove suggestion** records a rejection without changing the source annotation.
+3. Use **Add activity** to label source omissions, mark its start and last included frame, then
+   **Save section**. No punch-type identification is required.
+4. Use **Mark uncertain section** for anything unclear. Saved regions are clickable timeline
    segments; Edit and Remove append revisions and invalidate any previous completion.
-4. After watching the entire block, explicitly confirm all activity and uncertainty has been
+5. After watching the entire block, explicitly confirm all activity and uncertainty has been
    marked, then **Save complete & Next**. For an empty block the confirmation instead explicitly
    states no punching activity was observed. Nothing is automatically certified.
 
-Initial labeling hides both model predictions and provisional source punch marks to reduce
-anchoring bias. There is no held-out prediction endpoint in this workflow. Existing playback
+Model predictions remain hidden. At the user's request, source-annotation activity suggestions
+are now visible; this replaces the initial source-blind presentation, not the frozen matching
+protocol. Source-assisted review can introduce anchoring bias, so review unmarked footage too.
+There is no held-out prediction endpoint in this workflow. Existing playback
 coverage, foreground/visible-player checks and exact inspection evidence are reused: watching
 normally is distinct from inspecting every frame. A saved completion requires complete viewing
 coverage and explicit manual attestation. It cannot prove attention; the human attestation is
@@ -116,7 +124,7 @@ to reviewed V4/V6 material. A later, separately approved evaluation runner must 
 scoring-ready frozen reference and implement the activity grouping/latency rules above before
 opening held-out predictions. No final performance claims are ready yet.
 
-## Milestone verification
+## Initial milestone verification (before source suggestions)
 
 567 Python tests and 80 frontend tests passed. Ruff, changed-Python formatting checks,
 TypeScript, Prettier and production build passed. Chrome verification used actual V7 (~29.97 FPS)
@@ -132,3 +140,55 @@ Private validation receipts and the browser screenshot are under ignored
 `reports/boxingvi/activity-evaluation-validation-v1/`. There are zero completed reference blocks
 and no frozen activity reference yet. The next step is the six human block reviews, followed by
 an explicit reference freeze; performance evaluation remains deferred.
+
+
+## Source-assisted review v1
+
+Suggestions use only the existing BoxingVI source rows and their **provisional** mapped half-open
+frame intervals, including the adapter's unverified inclusive-end convention. They do not
+establish new offsets, class mappings, timing corrections, or punch validity. Source bounds,
+labels, flags, member rows, mapping assumptions and input hashes are retained in every saved
+suggestion snapshot. Timing uses exact extracted source PTS. Overlaps and gaps strictly shorter
+than 1/4 second merge; exactly 1/4 second remains separate. Periods are clipped to the reviewed
+block. Unmappable source rows are flagged, never repaired. Exclusions in training datasets are
+unchanged; a source suggestion is not a restored training example.
+
+| Block | Suggested activity periods |
+| --- | ---: |
+| V7-eval-1 | 8 |
+| V7-eval-2 | 0 |
+| V8-eval-1 | 15 |
+| V8-eval-2 | 0 |
+| V10-eval-1 | 20 |
+| V10-eval-2 | 0 |
+
+There are 43 suggestions in total. V10's reversed source row 123 remains unmapped and is listed
+as a recording-level issue, not silently shifted into a block. Zero suggestions means no
+source marks overlap that block; it does **not** mean no punches occur.
+
+Suggestions have stable source-derived IDs and `source=automated`, `verified=false`. They are
+never placed into reference `events` automatically. Confirmation, correction, dismissal and
+subsequent removal are explicit manual ledger revisions with the original suggestion snapshot.
+A dismissed or corrected suggestion can be revisited under **Labeling history & details →
+Original source suggestions**. Confirmed/added human regions and dashed unverified source
+regions stay distinct on the shared timeline. Source suggestions share one compact lane.
+
+Every suggestion must be resolved before a new exhaustive completion can be saved. Full viewing
+coverage and explicit completion confirmation remain necessary, including blocks with zero
+suggestions. Removed proposals do not certify their surrounding footage as background. Prior
+human ledger revisions remain replayable; no old decision is rewritten or auto-certified.
+Completion and reference freeze still follow the unchanged evaluation protocol. No detector
+predictions, threshold selection, training or scoring are used in this workflow.
+
+The versioned proposal generator is `services/activity_suggestions.py`. New review revisions
+persist the complete original suggestion set and issues, bound to source-input hashes and the
+unchanged protocol hash. An additional ignored pre-review snapshot is preserved at
+`reports/boxingvi/activity-suggestions-validation-v1/source-suggestions.json`.
+
+
+Source-assisted verification: 575 Python tests and 83 frontend tests passed, alongside Ruff,
+changed-Python formatting, TypeScript, Prettier and production build. Real Chrome checks used
+V7 exact source/proposed boundary navigation and V10 buffered playback. A full V10 replay reached
+Interval viewed while all 20 source suggestions remained unverified and the human-label count
+remained zero. Drafts were canceled; automated testing saved no human confirmations. The frozen
+protocol, previous reviews, source files and results remain unchanged.

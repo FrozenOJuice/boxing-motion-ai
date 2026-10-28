@@ -79,6 +79,7 @@ function setup(
     failComplete?: boolean;
     pending?: Promise<void>;
     activity?: boolean;
+    suggestions?: boolean;
   } = {},
 ) {
   let state: any = {
@@ -86,6 +87,21 @@ function setup(
     events: [],
     history: [],
     complete: false,
+    ...(options.suggestions
+      ? {
+          suggestion_version: "source-activity-suggestions-1.0",
+          suggestions: [
+            {
+              event_id: "source-1",
+              start: 10,
+              stop: 12,
+              kind: "activity",
+              verified: false,
+              source: "automated",
+            },
+          ],
+        }
+      : {}),
   };
   let fail = options.fail;
   const bodies: any[] = [];
@@ -117,6 +133,7 @@ function setup(
       payload: p,
     };
     state = {
+      ...state,
       head: record.sha256,
       events,
       complete: record.complete,
@@ -320,4 +337,60 @@ it("allows an explicitly reviewed empty activity block without inventing activit
     operation: "complete",
     no_activity_observed: true,
   });
+});
+
+it("requires explicit suggestion confirmation, preserves source bounds and gates completion", async () => {
+  const { bodies, next } = setup({ activity: true, suggestions: true });
+  await screen.findByRole("button", { name: "Review period 1" });
+  expect(
+    screen.getByLabelText("Unverified source suggestions"),
+  ).toHaveTextContent("Unverified");
+  fireEvent.click(screen.getByRole("button", { name: "Watch interval" }));
+  expect(
+    screen.getByRole("checkbox", { name: /I watched the entire block/ }),
+  ).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Review period 1" }));
+  expect(screen.getByText("Start 10")).toBeVisible();
+  expect(screen.getByText("Last included frame 11")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Confirm period" }));
+  await screen.findByText("Section saved. Continue reviewing the block.");
+  expect(bodies[0]).toMatchObject({
+    suggestion_id: "source-1",
+    event: { start: 10, stop: 12 },
+    inspected_frames: [],
+  });
+  expect(bodies[0].playback_coverage).toBeDefined();
+  expect(screen.queryByRole("button", { name: "Review period 1" })).toBeNull();
+  fireEvent.click(
+    screen.getByRole("checkbox", {
+      name: /I watched the entire block and marked/,
+    }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Save complete & Next" }));
+  await waitFor(() => expect(next).toHaveBeenCalledOnce());
+  expect(bodies[1].suggestion_review_version).toBe(
+    "source-activity-suggestions-1.0",
+  );
+});
+it("dismisses a source suggestion without creating a human event and can revisit it", async () => {
+  const { bodies, result, mount } = setup({
+    activity: true,
+    suggestions: true,
+  });
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Remove suggestion 1" }),
+  );
+  await screen.findByText("Suggestion removed. The original is preserved.");
+  expect(bodies[0]).toMatchObject({
+    operation: "dismiss",
+    suggestion_id: "source-1",
+  });
+  expect(bodies[0]).not.toHaveProperty("event");
+  result.unmount();
+  mount();
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Review source period 1 again" }),
+  );
+  expect(screen.getByText("Start 10")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Confirm period" })).toBeVisible();
 });

@@ -2157,3 +2157,10 @@ footer span {
   flex: 1;
   min-width: 12rem;
 }
+
+/* Provisional source periods remain visually distinct from saved human regions. */
+.activity-suggestion-segment {
+  border: 1px dashed #d8b26b;
+  background: #75603b;
+  opacity: 0.8;
+}
