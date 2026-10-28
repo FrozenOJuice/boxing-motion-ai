@@ -18,6 +18,14 @@ from .review_workspace import ReviewWorkspace, encode, sha
 
 DIRECTORY = "reports/boxingvi/interval-reviews-v1"
 CONFIG = "configs/interval_review_pilot_v1.json"
+Pilot = Literal["original", "motion-v2"]
+PILOTS = {
+    "original": (CONFIG, DIRECTORY),
+    "motion-v2": (
+        "configs/interval_review_motion_v2.json",
+        "reports/boxingvi/interval-reviews-motion-v2",
+    ),
+}
 
 
 class IntervalDecision(StrictModel):
@@ -81,11 +89,13 @@ def interval_timing(arrays, start, stop, cuts=()):
 
 
 class IntervalWorkspace:
-    def __init__(self, base, frames):
-        self.base, self.frames = base, frames
+    def __init__(self, base, frames, pilot: Pilot = "original"):
+        require(pilot in PILOTS, "unknown_interval_pilot")
+        self.base, self.frames, self.pilot = base, frames, pilot
+        self.config_path, self.directory = PILOTS[pilot]
 
     def manifest(self):
-        ref, _ = self.base.store.json(CONFIG)
+        ref, _ = self.base.store.json(self.config_path)
         ref = Artifact.model_validate(ref)
         manifest, digest = self.base.store.json(ref.path, ref.sha256)
         require(manifest["schema_version"] == "interval-pilot-1.0", "invalid_interval_manifest")
@@ -100,7 +110,7 @@ class IntervalWorkspace:
             require(
                 e["recording"] in RECORDINGS
                 and e["id"].startswith(e["recording"] + "-")
-                and re.fullmatch(r"V(?:4|5|6|7|8|10)-(?:bg|eval)-[0-9]+", e["id"]),
+                and re.fullmatch(r"V(?:4|5|6|7|8|10)-(?:bg|eval|motion)-[0-9]+", e["id"]),
                 "reserved_or_invalid_interval",
             )
             role = manifest["roles"][e["recording"]]
@@ -134,6 +144,20 @@ class IntervalWorkspace:
             if e["purpose"] == "evaluation_block"
         )
         require(0 <= duration <= 360, "evaluation_budget_exceeded")
+        if self.pilot == "motion-v2":
+            require(
+                len(entries) <= 12
+                and all(
+                    e["recording"] in ("V4", "V6")
+                    and e["role"] == "train_candidate"
+                    and e["purpose"] == "background_candidate"
+                    and e["id"].startswith(e["recording"] + "-motion-")
+                    for e in entries
+                ),
+                "invalid_motion_pilot_scope",
+            )
+        else:
+            require(all("-motion-" not in e["id"] for e in entries), "wrong_interval_pilot")
         for i, a in enumerate(entries):
             for b in entries[i + 1 :]:
                 if a["recording"] == b["recording"]:
@@ -148,7 +172,7 @@ class IntervalWorkspace:
         names = sorted(n for n in os.listdir(fd) if n.startswith("v"))
         for number, name in enumerate(names, 1):
             require(name == f"v{number:08d}", "interval_history_gap", "stale")
-            raw, digest = self.base.store.read(f"{DIRECTORY}/{name}/review.json")
+            raw, digest = self.base.store.read(f"{self.directory}/{name}/review.json")
             record = strict_json(raw)
             require(
                 record["parent"] == head
@@ -196,7 +220,7 @@ class IntervalWorkspace:
 
     def snapshot(self):
         manifest, digest = self.manifest()
-        with ReviewWorkspace(self.base)._locked(DIRECTORY) as fd:
+        with ReviewWorkspace(self.base)._locked(self.directory) as fd:
             head, history = self._history(fd, digest, manifest)
         return dict(manifest=manifest, head=head, history=history)
 
@@ -254,7 +278,7 @@ class IntervalWorkspace:
             self.frames.frame(e["recording"], index)
         manifest, digest = self.manifest()
         payload = decision.model_dump(mode="json")
-        with ReviewWorkspace(self.base)._locked(DIRECTORY) as fd:
+        with ReviewWorkspace(self.base)._locked(self.directory) as fd:
             head, records = self._history(fd, digest, manifest)
             for prior in records:
                 if prior["payload"]["request_id"] == decision.request_id:

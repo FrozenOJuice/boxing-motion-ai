@@ -11,7 +11,7 @@ from boxing_motion_ai.data.annotation_review import LABELS, RECORDINGS
 from boxing_motion_ai.services import DashboardService
 from boxing_motion_ai.services.artifacts import ServiceError
 from boxing_motion_ai.services.contracts import QueryResult
-from boxing_motion_ai.services.interval_review import IntervalDecision, IntervalWorkspace
+from boxing_motion_ai.services.interval_review import IntervalDecision, IntervalWorkspace, Pilot
 from boxing_motion_ai.services.review_workspace import Decision, ReviewWorkspace
 
 from .clips import ClipService
@@ -28,8 +28,8 @@ def create_app(root: Path):
     service = DashboardService(root)
     frames = FrameService(service)
     workspace = ReviewWorkspace(service)
-    intervals = IntervalWorkspace(service, frames)
-    clips = ClipService(intervals, frames)
+    intervals = {p: IntervalWorkspace(service, frames, p) for p in ("original", "motion-v2")}
+    clips = {p: ClipService(w, frames) for p, w in intervals.items()}
     app = FastAPI(
         title="Boxing Motion AI — local review", version="0.2.0", docs_url=None, redoc_url=None
     )
@@ -109,29 +109,29 @@ def create_app(root: Path):
             raise ServiceError("invalid", "interval_validation_or_storage_failed") from exc
 
     @app.get("/api/intervals")
-    def interval_queue():
-        return interval_reply(intervals.snapshot)
+    def interval_queue(pilot: Pilot = "original"):
+        return interval_reply(intervals[pilot].snapshot)
 
     @app.get("/api/intervals/{key}/playback")
-    def interval_playback(key: str):
-        return interval_reply(lambda: clips.prepare(key))
+    def interval_playback(key: str, pilot: Pilot = "original"):
+        return interval_reply(lambda: clips[pilot].prepare(key))
 
     @app.get("/api/intervals/{key}/clip")
-    def interval_clip(key: str, request: Request):
+    def interval_clip(key: str, request: Request, pilot: Pilot = "original"):
         try:
-            return clips.response(key, request.headers.get("range"))
+            return clips[pilot].response(key, request.headers.get("range"))
         except ServiceError:
             raise
         except (ValueError, KeyError, TypeError, OSError, IndexError) as exc:
             raise ServiceError("invalid", "preview_unavailable_or_invalid_source") from exc
 
     @app.get("/api/intervals/{key}")
-    def interval_detail(key: str):
-        return interval_reply(lambda: intervals.detail(key))
+    def interval_detail(key: str, pilot: Pilot = "original"):
+        return interval_reply(lambda: intervals[pilot].detail(key))
 
     @app.post("/api/intervals/{key}")
-    def interval_save(key: str, decision: IntervalDecision):
-        return interval_reply(lambda: intervals.save(key, decision))
+    def interval_save(key: str, decision: IntervalDecision, pilot: Pilot = "original"):
+        return interval_reply(lambda: intervals[pilot].save(key, decision))
 
     @app.get("/api/curation")
     def curation():

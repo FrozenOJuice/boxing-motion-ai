@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import IntervalReview from "./IntervalReview";
 
@@ -42,8 +48,20 @@ function api(
   const entries = options.second
     ? [entry, { ...entry, id: "V4-bg-2" }]
     : [entry];
-  const history: unknown[] = [];
+  const histories: Record<string, unknown[]> = { original: [], motion: [] };
   const mock = vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
+    const motion = String(url).includes("pilot=motion-v2");
+    const activeEntries = motion
+      ? [
+          {
+            ...entry,
+            id: "V6-motion-1",
+            recording: "V6",
+            discovery_hint: "Less overall movement",
+          },
+        ]
+      : entries;
+    const history = histories[motion ? "motion" : "original"];
     if (init?.method === "POST") {
       if (options.pending) return options.pending;
       if (options.fail)
@@ -53,7 +71,7 @@ function api(
         };
       const payload = JSON.parse(String(init.body));
       history.push({
-        interval_id: String(url).split("/").at(-1),
+        interval_id: String(url).split("?")[0].split("/").at(-1),
         payload,
         source: "manual",
         reviewed_at: "2026-10-26",
@@ -67,11 +85,17 @@ function api(
       return { ok: true, json: async () => ({ data: {} }) };
     }
     const data =
-      String(url) === "/api/intervals"
-        ? { manifest: { entries }, head: "a".repeat(64), history }
+      String(url).split("?")[0] === "/api/intervals"
+        ? {
+            manifest: { entries: activeEntries },
+            head: (motion ? "b" : "a").repeat(64),
+            history,
+          }
         : {
-            entry: entries.find((e) => String(url).endsWith(e.id)),
-            head: "a".repeat(64),
+            entry: activeEntries.find((e) =>
+              String(url).split("?")[0].endsWith(e.id),
+            ),
+            head: (motion ? "b" : "a").repeat(64),
             history,
             annotations: options.conflict
               ? [
@@ -147,12 +171,17 @@ it("flags unannotated punches, advances only on successful save, and handles the
   expect(
     screen.getByLabelText("Did you see any punches that weren't marked?"),
   ).toBeInTheDocument();
-  expect(screen.getAllByRole("option").map((o) => o.textContent)).toEqual([
-    "Not sure",
-    "Yes",
-    "No",
-  ]);
-  fireEvent.change(screen.getByRole("combobox"), { target: { value: "yes" } });
+  expect(
+    within(
+      screen.getByLabelText("Did you see any punches that weren't marked?"),
+    )
+      .getAllByRole("option")
+      .map((o) => o.textContent),
+  ).toEqual(["Not sure", "Yes", "No"]);
+  fireEvent.change(
+    screen.getByLabelText("Did you see any punches that weren't marked?"),
+    { target: { value: "yes" } },
+  );
   fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
   await screen.findByText("Review saved · End of queue.");
   expect(JSON.parse(String(posts(mock)[0][1]?.body))).toMatchObject({
@@ -201,4 +230,34 @@ it("prevents duplicate submissions while a save is pending", async () => {
   );
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   expect(posts(mock)).toHaveLength(1);
+});
+
+it("keeps the motion pilot separate and saves to its own endpoint/head", async () => {
+  const mock = api();
+  await screen.findByText("Show frame 10");
+  fireEvent.change(screen.getByRole("combobox", { name: "Review pilot" }), {
+    target: { value: "motion-v2" },
+  });
+  await screen.findByRole("button", { name: /V6 · Background candidate 1/ });
+  expect(
+    screen.queryByRole("button", { name: /V4 · Background candidate/ }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByText("Less overall movement · Unverified"),
+  ).toBeInTheDocument();
+  fireEvent.click(await screen.findByText("Show frame 10"));
+  fireEvent.click(screen.getByRole("button", { name: "Not sure" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save" }));
+  await screen.findByText("Review saved.");
+  expect(posts(mock)[0][0]).toBe("/api/intervals/V6-motion-1?pilot=motion-v2");
+  expect(JSON.parse(String(posts(mock)[0][1]?.body)).expected_head).toBe(
+    "b".repeat(64),
+  );
+  fireEvent.change(screen.getByRole("combobox", { name: "Review pilot" }), {
+    target: { value: "original" },
+  });
+  await screen.findByRole("button", { name: /V4 · Background candidate 1/ });
+  expect(
+    screen.queryByText("Less overall movement · Unverified"),
+  ).not.toBeInTheDocument();
 });

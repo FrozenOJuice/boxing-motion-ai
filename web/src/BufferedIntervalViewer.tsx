@@ -23,6 +23,7 @@ type Interval = {
 };
 export default function BufferedIntervalViewer({
   intervalId,
+  pilot = "original",
   interval,
   recording,
   onVisible,
@@ -31,6 +32,7 @@ export default function BufferedIntervalViewer({
   annotations = [],
 }: {
   intervalId: string;
+  pilot?: "original" | "motion-v2";
   interval: Interval;
   recording: string;
   onVisible: (frame: Frame) => void;
@@ -40,7 +42,7 @@ export default function BufferedIntervalViewer({
 }) {
   const [frameRetry, setFrameRetry] = useState(0);
   const result = useRequest<Result<Playback>>(
-    `/api/intervals/${intervalId}/playback`,
+    `/api/intervals/${intervalId}/playback${pilot === "original" ? "" : "?pilot=motion-v2"}`,
   );
   const clip = result.data?.data;
   const video = useRef<HTMLVideoElement>(null),

@@ -15,6 +15,7 @@ type Entry = {
   context_end: number;
   frame_count: number;
   timing: { start: string; stop_exclusive: string };
+  discovery_hint?: string;
 };
 type Payload = {
   decision: string;
@@ -68,18 +69,42 @@ export default function IntervalReview({
   onDirty: (value: boolean) => void;
   onSaving: (value: boolean) => void;
 }) {
+  const [pilot, setPilot] = useState<"original" | "motion-v2">("original");
+  return (
+    <IntervalQueue
+      key={pilot}
+      pilot={pilot}
+      onPilot={setPilot}
+      onDirty={onDirty}
+      onSaving={onSaving}
+    />
+  );
+}
+
+function IntervalQueue({
+  onDirty,
+  onSaving,
+  pilot,
+  onPilot,
+}: {
+  onDirty: (value: boolean) => void;
+  onSaving: (value: boolean) => void;
+  pilot: "original" | "motion-v2";
+  onPilot: (pilot: "original" | "motion-v2") => void;
+}) {
+  const query = pilot === "original" ? "" : "?pilot=motion-v2";
   const [refresh, setRefresh] = useState(0),
     [selected, setSelected] = useState("");
   const [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
     [feedback, setFeedback] = useState("");
-  const queue = useRequest<Result<Queue>>("/api/intervals", refresh);
+  const queue = useRequest<Result<Queue>>(`/api/intervals${query}`, refresh);
   const entries = queue.data?.data?.manifest.entries ?? [];
   useEffect(() => {
     if (!selected && entries.length) setSelected(entries[0].id);
   }, [selected, entries]);
   const current = useRequest<Result<Detail>>(
-    selected ? `/api/intervals/${selected}` : null,
+    selected ? `/api/intervals/${selected}${query}` : null,
     refresh,
   );
   const data = current.data?.data;
@@ -95,6 +120,23 @@ export default function IntervalReview({
             Intervals <span className="count">{entries.length}</span>
           </h2>
         </div>
+        <label className="queue-pilot-selector">
+          Review pilot
+          <select
+            aria-label="Review pilot"
+            value={pilot}
+            disabled={busy}
+            onChange={(event) => {
+              if (!dirty || window.confirm("Discard unsaved review changes?")) {
+                change(false);
+                onPilot(event.target.value as "original" | "motion-v2");
+              }
+            }}
+          >
+            <option value="original">Original pilot</option>
+            <option value="motion-v2">Motion pilot 2 · V4/V6</option>
+          </select>
+        </label>
         <div className="case-list">
           {entries.map((e, i) => {
             const history =
@@ -124,6 +166,11 @@ export default function IntervalReview({
                     : "Background candidate"}{" "}
                   {i + 1}
                 </strong>
+                {e.discovery_hint && (
+                  <span className="queue-discovery-hint">
+                    {e.discovery_hint} · Unverified
+                  </span>
+                )}
                 <span className="queue-meta">
                   <span>
                     {e.role === "evaluation_reserved"
@@ -148,6 +195,7 @@ export default function IntervalReview({
           <IntervalForm
             key={`${selected}:${refresh}`}
             data={data}
+            pilot={pilot}
             feedback={feedback}
             onDirty={change}
             onSaving={(v) => {
@@ -179,8 +227,10 @@ function IntervalForm({
   onDirty,
   onSaving,
   onSaved,
+  pilot,
 }: {
   data: Detail;
+  pilot: "original" | "motion-v2";
   feedback: string;
   onDirty: (v: boolean) => void;
   onSaving: (v: boolean) => void;
@@ -242,14 +292,17 @@ function IntervalForm({
     onSaving(true);
     setError("");
     try {
-      const r = await fetch(`/api/intervals/${e.id}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Review-Client": "dashboard-v0.2",
+      const r = await fetch(
+        `/api/intervals/${e.id}${pilot === "original" ? "" : "?pilot=motion-v2"}`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Review-Client": "dashboard-v0.2",
+          },
+          body: JSON.stringify({ ...payload, request_id: request.current.id }),
         },
-        body: JSON.stringify({ ...payload, request_id: request.current.id }),
-      });
+      );
       const result = await r.json();
       if (!r.ok) {
         const messages: Record<string, string> = {
@@ -283,6 +336,7 @@ function IntervalForm({
     <>
       <BufferedIntervalViewer
         intervalId={e.id}
+        pilot={pilot}
         annotations={data.annotations}
         seenFrames={seen}
         onPresented={(index) => {

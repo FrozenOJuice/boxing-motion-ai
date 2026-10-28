@@ -16,7 +16,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
   callback = null;
 });
-function mount(annotations: IntervalAnnotation[] = []) {
+function mount(
+  annotations: IntervalAnnotation[] = [],
+  pilot: "original" | "motion-v2" = "original",
+) {
   vi.stubGlobal(
     "IntersectionObserver",
     class {
@@ -56,7 +59,7 @@ function mount(annotations: IntervalAnnotation[] = []) {
   });
   HTMLVideoElement.prototype.cancelVideoFrameCallback = vi.fn();
   const fetchMock = vi.fn(async (url: RequestInfo | URL) => {
-    if (String(url).endsWith("/playback"))
+    if (String(url).includes("/playback"))
       return {
         ok: true,
         json: async () => ({
@@ -93,7 +96,8 @@ function mount(annotations: IntervalAnnotation[] = []) {
     visible = vi.fn();
   render(
     <BufferedIntervalViewer
-      intervalId="V4-bg-1"
+      intervalId={pilot === "original" ? "V4-bg-1" : "V4-motion-1"}
+      pilot={pilot}
       annotations={annotations}
       recording="V4"
       interval={{
@@ -306,4 +310,17 @@ it("updates the current annotation from buffered presentation callbacks", async 
   expect(
     screen.getByRole("button", { name: "Cross · Row 7 · Frames 11–11" }),
   ).not.toHaveAttribute("aria-current");
+});
+
+it("requests playback metadata from the selected pilot", async () => {
+  const { fetchMock } = mount([], "motion-v2");
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Play" })).not.toBeDisabled(),
+  );
+  expect(
+    fetchMock.mock.calls.some(
+      ([url]) =>
+        String(url) === "/api/intervals/V4-motion-1/playback?pilot=motion-v2",
+    ),
+  ).toBe(true);
 });

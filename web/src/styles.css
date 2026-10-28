@@ -2097,3 +2097,20 @@ footer span {
   font-size: 11px;
   margin-block: 7px 2px;
 }
+.queue-pilot-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 0 14px 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.queue-pilot-selector select {
+  width: 100%;
+  padding: 7px 6px;
+}
+.queue-discovery-hint {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}

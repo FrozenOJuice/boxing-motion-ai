@@ -202,7 +202,10 @@ class ClipService:
                         recording=e["recording"],
                         interval_id=key,
                         cache_key=cache_key,
-                        video_url=f"/api/intervals/{key}/clip",
+                        video_url=(
+                            f"/api/intervals/{key}/clip"
+                            + ("?pilot=motion-v2" if self.intervals.pilot == "motion-v2" else "")
+                        ),
                         width=width,
                         height=height,
                         frames=indices,

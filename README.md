@@ -43,7 +43,7 @@ confirmations](docs/INDEPENDENT_ANNOTATION_VERIFICATION.md). Partial reviews can
 manual, separately from automated observations. Technical information stays under Advanced details. Proposed corrections and revision history remain separate from originals. V9 remains inaccessible.
 Back up `reports/boxingvi/dashboard-reviews-v1/`: it contains durable human decisions, not disposable previews.
 
-The [continuous interval review pilot](docs/INTERVAL_REVIEW_PILOT.md) adds **Review → Video intervals**: 30 unverified background candidates and six evaluation blocks. Its decisions live separately in `reports/boxingvi/interval-reviews-v1/`; back up this directory and the pinned `interval-review-pilot-v1/manifest.json` too. No detector training is enabled.
+The [continuous interval review pilot](docs/INTERVAL_REVIEW_PILOT.md) adds **Review → Video intervals**: 30 unverified background candidates and six evaluation blocks. Its decisions live separately in `reports/boxingvi/interval-reviews-v1/`; back up this directory and the pinned `interval-review-pilot-v1/manifest.json` too. No detector training is enabled. The [motion-guided second pilot](docs/MOTION_INTERVAL_PILOT.md) adds 12 unverified V4/V6 proposals under the Review pilot selector; back up its `interval-review-motion-v2/` manifest and `interval-reviews-motion-v2/` decisions as well.
 
 ```sh
 uv sync --locked --extra dashboard
