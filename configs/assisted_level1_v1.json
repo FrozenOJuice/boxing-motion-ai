@@ -1,0 +1,43 @@
+{
+  "schema_version": "assisted-level1-pin-1.0",
+  "checkpoint": {
+    "path": "reports/boxingvi/level1-velocity-v1/seed-20261021/xy_velocity/tcn/best.pt",
+    "sha256": "bd314c2f608a0f73b5b13bca912510a513e7491c6062a8c73446404f146bdbfa"
+  },
+  "provenance": {
+    "path": "reports/boxingvi/level1-velocity-v1/seed-20261021/xy_velocity/provenance.json",
+    "sha256": "a35fbfa648b40cbe12a84fe5c1abe814d9669d340c2fa74fcf84ff06d5527618"
+  },
+  "pose_model": {
+    "path": "weights/pose_landmarker_full.task",
+    "sha256": "5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1"
+  },
+  "source_sha256": {
+    "src/boxing_motion_ai/training/data.py": "8a996f4c375533745fbea82018efdd306238e3b1e72117e44bff92efabf78aac",
+    "src/boxing_motion_ai/training/velocity.py": "d4137dd5609bf2ef29e2d126e401c0263dc9f10b12ff2a58ed4ea1fdbe57de28",
+    "src/boxing_motion_ai/training/models.py": "ea7a54c067e137cbd0a726e6abfb3723413e03b9cc7a334e2fcf200faca33e79",
+    "src/boxing_motion_ai/data/pose_quality.py": "ab3ff98c223f8a2c80311772ac6bbad02336d995207dfbd1ac35c3fe27de461b",
+    "src/boxing_motion_ai/vision/contracts.py": "14da7d4fc646c6b2b84e1bb51d8b7e98070b2f6e00839eb5691917ebbc588ca1",
+    "src/boxing_motion_ai/vision/mediapipe_pose.py": "f0e1336550ae865ab44fc0a2182d27da8aa049864ef1604c70b5f05953876df4"
+  },
+  "feature_version": "torso-core-2d-velocity-1.0",
+  "channels": 65,
+  "seed": 20261021,
+  "epoch": 32,
+  "classes": [
+    "jab",
+    "cross",
+    "lead_hook",
+    "rear_hook",
+    "lead_uppercut",
+    "rear_uppercut"
+  ],
+  "quality_policy": "mask_aware70",
+  "training_recordings": [
+    "V4"
+  ],
+  "development_recordings": [
+    "V5"
+  ],
+  "selection": "Original V5-selected checkpoint, seed 20261021; no new model selection or ensemble"
+}

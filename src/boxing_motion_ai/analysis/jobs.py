@@ -1,0 +1,236 @@
+"""Bounded local jobs and scoped cleanup, isolated from research data and ledgers."""
+
+import json
+import re
+import shutil
+import subprocess
+import sys
+import threading
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from time import perf_counter
+
+from .common import EXTENSIONS, MAX_BYTES, pin, regular, sha, write_json
+
+
+class AnalysisError(ValueError):
+    def __init__(self, message, status=422):
+        super().__init__(message)
+        self.status = status
+
+
+class AnalysisJobs:
+    def __init__(self, root):
+        self.root = Path(root).resolve()
+        self.storage = self.root / ".analysis-local"
+        self.lock = threading.RLock()
+        self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="assisted-analysis")
+        self.active = set()
+        self.classifying = set()
+
+    def directory(self, key):
+        if not re.fullmatch(r"[0-9a-f]{32}", key):
+            raise AnalysisError("Unknown local video.", 404)
+        directory = self.storage / key
+        if any(p.is_symlink() for p in (directory, *directory.parents)):
+            raise AnalysisError("Unsafe local analysis storage.")
+        return directory
+
+    def read(self, key, filename):
+        try:
+            return json.loads(regular(self.directory(key) / filename).read_text())
+        except (OSError, ValueError) as exc:
+            raise AnalysisError(
+                "Local analysis files are unavailable. Remove the video and upload again.", 404
+            ) from exc
+
+    def listing(self):
+        if not self.storage.exists():
+            return []
+        if self.storage.is_symlink():
+            raise AnalysisError("Unsafe local analysis storage.")
+        return [
+            self.status(p.name)
+            for p in sorted(self.storage.iterdir())
+            if re.fullmatch(r"[0-9a-f]{32}", p.name)
+        ]
+
+    def reserve(self, filename):
+        with self.lock:
+            if len(self.active) >= 2:
+                raise AnalysisError(
+                    "Two videos are already processing. Wait for one to finish.", 429
+                )
+            if Path(filename).suffix.lower() not in EXTENSIONS:
+                raise AnalysisError("Choose an MP4, MOV, MKV, WebM or M4V video.")
+            if len(self.listing()) >= 4:
+                raise AnalysisError(
+                    "Four local videos are saved. Remove one before uploading another.", 409
+                )
+            key = uuid.uuid4().hex
+            directory = self.directory(key)
+            directory.mkdir(parents=True, mode=0o700)
+            self.active.add(key)
+            write_json(
+                directory / "job.json",
+                dict(
+                    id=key,
+                    filename=Path(filename).name[:160],
+                    status="uploading",
+                    message="Receiving local video",
+                    uploaded_bytes=0,
+                ),
+            )
+            return key, directory
+
+    def abandon(self, key):
+        with self.lock:
+            self.active.discard(key)
+            self.remove(key)
+
+    def submit(self, key, size):
+        if not 0 < size <= MAX_BYTES:
+            raise AnalysisError("Use a nonempty video of at most 150 MiB.")
+        with self.lock:
+            job = self.read(key, "job.json")
+            job.update(status="queued", message="Waiting to process", uploaded_bytes=size)
+            write_json(self.directory(key) / "job.json", job)
+            self.executor.submit(self.process, key)
+
+    def run(self, key, module, *args, timeout=300):
+        directory = self.directory(key)
+        with (directory / "worker.log").open("ab") as log:
+            try:
+                result = subprocess.run(
+                    [sys.executable, "-m", module, *map(str, args)],
+                    cwd=self.root,
+                    stdout=log,
+                    stderr=log,
+                    timeout=timeout,
+                )
+            except subprocess.TimeoutExpired as exc:
+                raise AnalysisError(
+                    "Processing took too long. Try a shorter, lower-resolution video."
+                ) from exc
+        if result.returncode:
+            tail = (directory / "worker.log").read_text(errors="replace")[-6000:]
+            errors = [
+                line.split("ValueError: ", 1)[1]
+                for line in tail.splitlines()
+                if "ValueError: " in line
+            ]
+            if errors:
+                raise AnalysisError(errors[-1])
+            raise AnalysisError(
+                "Video processing failed. Use a standard MP4/MOV export and check that "
+                "pose/train dependencies and FFmpeg are installed."
+            )
+
+    def process(self, key):
+        began = perf_counter()
+        directory = self.directory(key)
+        job = self.read(key, "job.json")
+        try:
+            job.update(status="processing", message="Preparing video and extracting poses")
+            write_json(directory / "job.json", job)
+            self.run(key, "boxing_motion_ai.analysis.media", directory, timeout=120)
+            self.run(key, "boxing_motion_ai.analysis.worker", "pose", self.root, directory)
+            job.update(status="ready", message="Ready to select a punch")
+        except Exception as exc:
+            job.update(
+                status="failed",
+                message=str(exc)
+                if isinstance(exc, AnalysisError)
+                else "Processing failed. Remove this video and try again.",
+            )
+        finally:
+            job["processing_wall_seconds"] = perf_counter() - began
+            write_json(directory / "job.json", job)
+            with self.lock:
+                self.active.discard(key)
+
+    def status(self, key):
+        with self.lock:
+            job = self.read(key, "job.json")
+            if job["status"] in ("uploading", "queued", "processing") and key not in self.active:
+                job.update(
+                    status="failed",
+                    message="Processing was interrupted by a server restart. "
+                    "Remove this video and upload again.",
+                )
+            if job["status"] == "processing" and (self.directory(key) / "progress.json").is_file():
+                job["progress"] = self.read(key, "progress.json")
+            if job["status"] == "ready":
+                video = self.read(key, "video.json")
+                poses = self.read(key, "pose.json")
+                job["video"] = video
+                job["poses"] = poses
+                job["preview_url"] = f"/api/analyze/videos/{key}/preview"
+                job["predictions"] = [
+                    self.read(key, p.name)
+                    for p in sorted(self.directory(key).glob("prediction-*.json"))
+                ]
+            return job
+
+    def classify(self, key, start, stop):
+        with self.lock:
+            job = self.status(key)
+            if job["status"] != "ready":
+                raise AnalysisError("Wait for video processing to finish.", 409)
+            count = job["video"]["frame_count"]
+            if not (0 <= start < stop <= count):
+                raise AnalysisError("Choose a start frame before the end frame, within the video.")
+            if key in self.classifying or self.classifying or self.active:
+                raise AnalysisError(
+                    "Analysis is busy. Wait for processing to finish and try again.", 409
+                )
+            self.classifying.add(key)
+        try:
+            name = f"prediction-{start}-{stop}.json"
+            try:
+                pin(self.root)
+                poses = self.read(key, "pose.json")
+                if sha(regular(self.directory(key) / "poses.npz")) != poses["poses_sha256"]:
+                    raise AnalysisError(
+                        "Cached poses have changed. Remove the video and upload again."
+                    )
+            except (OSError, ValueError) as exc:
+                raise AnalysisError(str(exc)) from exc
+            if not (self.directory(key) / name).exists():
+                self.run(
+                    key,
+                    "boxing_motion_ai.analysis.worker",
+                    "classify",
+                    self.root,
+                    self.directory(key),
+                    start,
+                    stop,
+                    timeout=45,
+                )
+            return self.read(key, name)
+        finally:
+            with self.lock:
+                self.classifying.discard(key)
+
+    def remove(self, key):
+        with self.lock:
+            if key in self.active or key in self.classifying:
+                raise AnalysisError(
+                    "Wait for processing to finish before removing this video.", 409
+                )
+            directory = self.directory(key)
+            if directory.is_dir():
+                shutil.rmtree(directory)
+
+    def asset(self, key, frame=None):
+        job = self.status(key)
+        if job["status"] != "ready":
+            raise AnalysisError("The video is not ready for playback.", 409)
+        if frame is not None and not 0 <= frame < job["video"]["frame_count"]:
+            raise AnalysisError("That frame is outside the video.")
+        path = self.directory(key) / ("preview.mp4" if frame is None else f"frames/{frame:04d}.png")
+        try:
+            return regular(path)
+        except ValueError as exc:
+            raise AnalysisError(str(exc), 404) from exc

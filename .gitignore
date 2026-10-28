@@ -261,3 +261,4 @@ __marimo__/
 /web/dist/
 /web/coverage/
 /.dashboard-cache/
+/.analysis-local/

@@ -16,6 +16,7 @@ from boxing_motion_ai.services.interval_events import SCOPE, EventDecision, Inte
 from boxing_motion_ai.services.interval_review import IntervalDecision, IntervalWorkspace, Pilot
 from boxing_motion_ai.services.review_workspace import Decision, ReviewWorkspace
 
+from .analyze import register as register_analysis
 from .clips import ClipService
 from .media import FrameService
 
@@ -45,16 +46,18 @@ def create_app(root: Path):
         allowed = {
             f"http://{host}:{port}"
             for host in ("localhost", "127.0.0.1")
-            for port in (5174, 8000, 4174)
+            for port in (5174, 8000, 8001, 4174)
         }
         if (origin and origin not in allowed) or request.headers.get(
             "sec-fetch-site"
         ) == "cross-site":
             return JSONResponse({"detail": "Only local dashboard requests are allowed"}, 403)
+        upload = request.url.path == "/api/analyze/uploads" and request.method == "POST"
         if request.method not in ("GET", "HEAD", "OPTIONS") and (
             origin not in allowed
             or request.headers.get("x-review-client") != "dashboard-v0.2"
-            or request.headers.get("content-type", "").split(";")[0] != "application/json"
+            or request.headers.get("content-type", "").split(";")[0]
+            != ("application/octet-stream" if upload else "application/json")
         ):
             return JSONResponse({"detail": "Local JSON review request required"}, 403)
         response = await call_next(request)
@@ -247,6 +250,8 @@ def create_app(root: Path):
                 "X-Exact-Timestamp": metadata["exact_timestamp"],
             },
         )
+
+    register_analysis(app, root)
 
     # Only the built application, never the repository, datasets or reports.
     dist = Path(root) / "web" / "dist"
