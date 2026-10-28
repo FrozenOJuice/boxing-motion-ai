@@ -13,8 +13,9 @@ import { Notice } from "./Viewer";
 import ReviewWorkbench from "./ReviewWorkbench";
 import IntervalReview from "./IntervalReview";
 import { Dataset, ExperimentsView, Models } from "./Overview";
+import Analyze from "./Analyze";
 const sections = ["Review Queue", "Dataset", "Experiments", "Models"] as const;
-type Section = (typeof sections)[number];
+type Section = (typeof sections)[number] | "Analyze";
 function NavIcon({ index }: { index: number }) {
   return (
     <svg
@@ -51,7 +52,7 @@ function NavIcon({ index }: { index: number }) {
 }
 export default function App() {
   const [reviewMode, setReviewMode] = useState("punches");
-  const [section, setSection] = useState<Section>("Review Queue");
+  const [section, setSection] = useState<Section>("Analyze");
   const [refresh, setRefresh] = useState(0);
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState("");
@@ -64,9 +65,17 @@ export default function App() {
     setDirty(value);
     if (value) setSaved("");
   }, []);
-  const queue = useRequest<Result<Reviews>>("/api/reviews", refresh);
-  const inventory = useRequest<Result<Inventory>>("/api/inventory");
-  const experiments = useRequest<Result<Experiments>>("/api/experiments");
+  const development = section !== "Analyze";
+  const queue = useRequest<Result<Reviews>>(
+    development ? "/api/reviews" : null,
+    refresh,
+  );
+  const inventory = useRequest<Result<Inventory>>(
+    development ? "/api/inventory" : null,
+  );
+  const experiments = useRequest<Result<Experiments>>(
+    development ? "/api/experiments" : null,
+  );
   const [selected, setSelected] = useState("");
   const [recording, setRecording] = useState("all");
   const [status, setStatus] = useState("all");
@@ -97,7 +106,7 @@ export default function App() {
     if (queue.data && !filtered.length) setSelected("");
   }, [filtered, selected, retained, queue.data]);
   const current = useRequest<Result<Case>>(
-    selected ? `/api/cases/${selected.replace(":", "/")}` : null,
+    selected && development ? `/api/cases/${selected.replace(":", "/")}` : null,
     refresh,
   );
   const navigate = (id: string) => {
@@ -124,6 +133,33 @@ export default function App() {
         </div>
 
         <nav aria-label="Main navigation">
+          <button
+            className={section === "Analyze" ? "active" : ""}
+            aria-current={section === "Analyze" ? "page" : undefined}
+            disabled={saving}
+            onClick={() => {
+              if (!dirty || window.confirm("Discard unsaved review changes?")) {
+                setDirty(false);
+                setSaved("");
+                setSection("Analyze");
+              }
+            }}
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.6"
+              aria-hidden="true"
+            >
+              <rect x="3" y="4" width="18" height="16" rx="3" />
+              <path d="m10 8 6 4-6 4z" />
+            </svg>
+            Analyze
+          </button>
+          <div className="development-label">Development</div>
           {sections.map((s, i) => (
             <button
               key={s === "Review Queue" ? "Review" : s}
@@ -155,7 +191,7 @@ export default function App() {
       </aside>
       <div className="main-shell">
         <main>
-          {(queue.error || inventory.error) && (
+          {development && (queue.error || inventory.error) && (
             <Notice>
               Could not load project metadata: {queue.error || inventory.error}.
               Start the local backend and check registered artifacts.
@@ -183,7 +219,9 @@ export default function App() {
               ))}
             </div>
           )}
-          {section === "Review Queue" && reviewMode === "intervals" ? (
+          {section === "Analyze" ? (
+            <Analyze />
+          ) : section === "Review Queue" && reviewMode === "intervals" ? (
             <IntervalReview onDirty={handleDirty} onSaving={setSaving} />
           ) : section === "Review Queue" ? (
             <>

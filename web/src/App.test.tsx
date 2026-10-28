@@ -10,6 +10,12 @@ import App from "./App";
 import { frameBounds, reviewCategory, reviewSource, type Source } from "./api";
 import { Skeleton } from "./Viewer";
 
+function renderDevelopment() {
+  const result = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Review" }));
+  return result;
+}
+
 const source: Source = {
   source_row: 1,
   video_id: "V4",
@@ -167,7 +173,7 @@ afterEach(() => {
 describe("interactive dashboard", () => {
   it("shows real response labels, uncertainty and model confidence with explicit human review controls", async () => {
     mockApi();
-    render(<App />);
+    renderDevelopment();
     await screen.findByRole("button", { name: "Yes" });
     expect(
       screen.queryByLabelText("Correct punch label"),
@@ -186,7 +192,7 @@ describe("interactive dashboard", () => {
   });
   it("steps integer frames and filters to V5 without touching V9", async () => {
     const fetchMock = mockApi();
-    render(<App />);
+    renderDevelopment();
     await screen.findByAltText("V4, native frame 2");
     fireEvent.click(screen.getByRole("button", { name: "Next frame" }));
     await screen.findByAltText("V4, native frame 3");
@@ -214,7 +220,7 @@ describe("interactive dashboard", () => {
           } as Response)
         : original(url, ...args),
     );
-    render(<App />);
+    renderDevelopment();
     const old = await screen.findByAltText("V4, native frame 2");
     fireEvent.load(old);
     const stage = old.closest(".image-stage");
@@ -233,7 +239,7 @@ describe("interactive dashboard", () => {
       "fetch",
       vi.fn().mockRejectedValue(new Error("Backend unavailable")),
     );
-    render(<App />);
+    renderDevelopment();
     expect(
       await screen.findByText(/Start the local backend/),
     ).toBeInTheDocument();
@@ -283,7 +289,7 @@ it("recognizes documented end conventions and rejects an unspecified convention"
 
 it("clears the viewer when no annotation matches the filters", async () => {
   mockApi();
-  render(<App />);
+  renderDevelopment();
   await screen.findByAltText("V4, native frame 2");
   fireEvent.change(screen.getByLabelText("Search cases"), {
     target: { value: "no matching case" },
@@ -296,7 +302,7 @@ it("clears the viewer when no annotation matches the filters", async () => {
 
 it("saves an explicitly attested hold and refreshes review history", async () => {
   const fetchMock = mockApi();
-  render(<App />);
+  renderDevelopment();
   await screen.findByRole("button", { name: "Not sure" });
   fireEvent.click(screen.getByRole("button", { name: "Not sure" }));
   fireEvent.change(screen.getByLabelText("Why are you not sure?"), {
@@ -334,7 +340,7 @@ it("saves an explicitly attested hold and refreshes review history", async () =>
 
 it("requires displayed boundary frames and stance evidence for confirmation", async () => {
   mockApi();
-  render(<App />);
+  renderDevelopment();
   fireEvent.load(await screen.findByAltText("V4, native frame 2"));
   fireEvent.click(screen.getByRole("button", { name: "Yes" }));
   fireEvent.click(screen.getByText("Add a note (optional)"));
@@ -369,7 +375,7 @@ it("preserves a draft on conflict and guards navigation", async () => {
       : original(url, init),
   );
   vi.spyOn(window, "confirm").mockReturnValue(false);
-  render(<App />);
+  renderDevelopment();
   await screen.findByRole("button", { name: "Not sure" });
   fireEvent.click(screen.getByRole("button", { name: "Not sure" }));
   fireEvent.change(screen.getByLabelText("Why are you not sure?"), {
@@ -397,7 +403,7 @@ it.each(["ambiguous", "hold", "exclude"])(
   "preserves the %s backend decision under Not sure",
   async (action) => {
     const fetchMock = mockApi();
-    render(<App />);
+    renderDevelopment();
     fireEvent.click(await screen.findByRole("button", { name: "Not sure" }));
     fireEvent.change(screen.getByLabelText("Why are you not sure?"), {
       target: {
@@ -440,7 +446,7 @@ it.each(["ambiguous", "hold", "exclude"])(
 
 it("Yes resets a proposed correction and preserves the original label and bounds", async () => {
   const mock = mockApi();
-  render(<App />);
+  renderDevelopment();
   fireEvent.load(await screen.findByAltText("V4, native frame 2"));
   fireEvent.click(screen.getByRole("button", { name: "Change it" }));
   fireEvent.change(screen.getByLabelText("Correct punch label"), {
@@ -506,7 +512,7 @@ it("groups for display without certifying automated observations", () => {
 
 it("waits for displayed frames, pauses on stepping, and stops at the window end", async () => {
   mockApi();
-  render(<App />);
+  renderDevelopment();
   const first = await screen.findByAltText("V4, native frame 2");
   fireEvent.click(screen.getByRole("button", { name: "Play" }));
   await new Promise((resolve) => setTimeout(resolve, 160));
@@ -548,7 +554,7 @@ it("atomically swaps decoded pixels, frame label, timestamp and overlay; late de
         }),
     } as Response;
   });
-  const { container } = render(<App />);
+  const { container } = renderDevelopment();
   fireEvent.load(await screen.findByAltText("V4, native frame 2"));
   fireEvent.click(screen.getByLabelText("Skeleton"));
   fireEvent.click(screen.getByRole("button", { name: "Next frame" }));
@@ -599,7 +605,7 @@ it.each(["load", "decode"])(
   "keeps the stage and old image after a %s failure, then retries",
   async (kind) => {
     mockApi();
-    render(<App />);
+    renderDevelopment();
     const old = await screen.findByAltText("V4, native frame 2");
     fireEvent.load(old);
     const stage = old.closest(".image-stage");
@@ -638,7 +644,7 @@ it("ignores late metadata during rapid stepping and retains pixels across viewpo
         })
       : original(url, init),
   );
-  render(<App />);
+  renderDevelopment();
   const old = await screen.findByAltText("V4, native frame 2");
   fireEvent.load(old);
   const stage = old.closest(".image-stage");
@@ -672,7 +678,7 @@ it("ignores late metadata during rapid stepping and retains pixels across viewpo
 
 it("keeps the initial empty stage stable on failure and removes redundant page titles", async () => {
   mockApi();
-  render(<App />);
+  renderDevelopment();
   const image = await screen.findByAltText("V4, native frame 2");
   const stage = image.closest(".image-stage");
   fireEvent.error(image);
@@ -689,7 +695,7 @@ it("keeps the initial empty stage stable on failure and removes redundant page t
 
 it("confirms anonymously without written notes across next and remount", async () => {
   const mock = mockApi();
-  const first = render(<App />);
+  const first = renderDevelopment();
   fireEvent.click(await screen.findByRole("button", { name: "Yes" }));
   expect(screen.queryByLabelText("Your name")).not.toBeInTheDocument();
   expect(
@@ -729,7 +735,7 @@ it("confirms anonymously without written notes across next and remount", async (
   expect(screen.getByLabelText(/I personally reviewed/)).not.toBeChecked();
   first.unmount();
   // A new application instance still requires no identity and restores no draft decisions.
-  render(<App />);
+  renderDevelopment();
   fireEvent.click(await screen.findByRole("button", { name: "Yes" }));
   expect(screen.queryByLabelText("Your name")).not.toBeInTheDocument();
   expect(
@@ -740,7 +746,7 @@ it("confirms anonymously without written notes across next and remount", async (
 
 it("requires an explanation for corrections and sends the corrected interval with original source bindings", async () => {
   const mock = mockApi();
-  render(<App />);
+  renderDevelopment();
   fireEvent.click(await screen.findByRole("button", { name: "Change it" }));
   fireEvent.change(screen.getByLabelText("Correct punch label"), {
     target: { value: "cross" },
@@ -784,7 +790,7 @@ it("requires an explanation for corrections and sends the corrected interval wit
 
 it("flags uncertainty using only a selected reason, without certifying label, stance or boundaries", async () => {
   const mock = mockApi();
-  render(<App />);
+  renderDevelopment();
   fireEvent.click(await screen.findByRole("button", { name: "Not sure" }));
   expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
   fireEvent.change(screen.getByLabelText("Why are you not sure?"), {
@@ -806,7 +812,7 @@ it("flags uncertainty using only a selected reason, without certifying label, st
 
 it("validates Other reason without a reviewer profile", async () => {
   const mock = mockApi();
-  render(<App />);
+  renderDevelopment();
   fireEvent.click(await screen.findByRole("button", { name: "Not sure" }));
   fireEvent.change(screen.getByLabelText("Why are you not sure?"), {
     target: { value: "other" },
@@ -832,7 +838,7 @@ it("ignores old stored names and needs no browser profile or storage access", as
   const read = vi.spyOn(window.localStorage, "getItem");
   const write = vi.spyOn(window.localStorage, "setItem");
   mockApi();
-  render(<App />);
+  renderDevelopment();
   fireEvent.click(await screen.findByRole("button", { name: "Yes" }));
   expect(screen.queryByLabelText("Your name")).not.toBeInTheDocument();
   expect(screen.queryByText("Alice")).not.toBeInTheDocument();
@@ -852,7 +858,7 @@ it("explains server boundary validation without losing the review draft", async 
         } as Response)
       : original(url, init),
   );
-  render(<App />);
+  renderDevelopment();
   fireEvent.load(await screen.findByAltText("V4, native frame 2"));
   fireEvent.click(screen.getByRole("button", { name: "Yes" }));
   fireEvent.click(
@@ -872,7 +878,7 @@ it("explains server boundary validation without losing the review draft", async 
 
 it("blocks invalid correction intervals with a clear message", async () => {
   mockApi();
-  render(<App />);
+  renderDevelopment();
   fireEvent.click(await screen.findByRole("button", { name: "Change it" }));
   fireEvent.change(screen.getByLabelText("Start frame"), {
     target: { value: "9" },
@@ -907,7 +913,7 @@ it.each([
   "saves %s independently without additional explanations",
   async (label, axis) => {
     const mock = mockApi();
-    render(<App />);
+    renderDevelopment();
     fireEvent.load(await screen.findByAltText("V4, native frame 2"));
     fireEvent.click(screen.getByRole("button", { name: "Yes" }));
     for (const text of [
@@ -989,7 +995,7 @@ function mockPriorVerification(
 
 it("restores only real human checks and allows withdrawing a prior check", async () => {
   const mock = mockPriorVerification();
-  render(<App />);
+  renderDevelopment();
   fireEvent.click(await screen.findByRole("button", { name: "Yes" }));
   expect(screen.getByLabelText("Punch type is correct.")).toBeChecked();
   expect(screen.getByLabelText("Lead/rear hand is correct.")).not.toBeChecked();
@@ -1012,7 +1018,7 @@ it("restores only real human checks and allows withdrawing a prior check", async
 
 it("never restores assistant checks and clears checks after a target edit", async () => {
   mockPriorVerification("assistant");
-  render(<App />);
+  renderDevelopment();
   fireEvent.click(await screen.findByRole("button", { name: "Change it" }));
   expect(screen.getByLabelText("Punch type is correct.")).not.toBeChecked();
   fireEvent.click(screen.getByLabelText("Punch type is correct."));
@@ -1027,7 +1033,7 @@ it("never restores assistant checks and clears checks after a target edit", asyn
 
 it("reads legacy human verification as three separate prior checks", async () => {
   mockPriorVerification("human", true);
-  render(<App />);
+  renderDevelopment();
   fireEvent.click(await screen.findByRole("button", { name: "Yes" }));
   for (const text of [
     "Punch type is correct.",
@@ -1058,7 +1064,7 @@ it("labels manual and automated origins while retaining legacy names in history"
     reviewSource({ ...revision, actor_type: "human", reviewer: "Alice" }),
   ).toBe("manual");
   mockPriorVerification();
-  render(<App />);
+  renderDevelopment();
   await screen.findByRole("button", { name: "Yes" });
   fireEvent.click(screen.getByText("Advanced details"));
   fireEvent.click(screen.getByText(/Review history \(/));
@@ -1084,7 +1090,7 @@ it("submits only once and advances only after Save & Next succeeds", async () =>
         })
       : original(url, init),
   );
-  render(<App />);
+  renderDevelopment();
   await selectPartialReview();
   const next = screen.getByRole("button", { name: "Save & Next" });
   const stay = screen.getByRole("button", { name: "Save" });
@@ -1148,7 +1154,7 @@ function mockCategoryChangeAfterSave() {
 
 it("Save stays on the current punch even when its updated status leaves the filter", async () => {
   const mock = mockCategoryChangeAfterSave();
-  render(<App />);
+  renderDevelopment();
   await screen.findByRole("button", { name: "Yes" });
   fireEvent.change(
     screen.getByRole("combobox", { name: "Filter review state" }),
@@ -1181,7 +1187,7 @@ it("keeps a failed Save & Next on the current punch and allows a single retry", 
       ? ({ ok: false, status: 500, json: async () => ({}) } as Response)
       : ({ ok: true, json: async () => ok({ source: "manual" }) } as Response);
   });
-  render(<App />);
+  renderDevelopment();
   await selectPartialReview();
   fireEvent.click(screen.getByRole("button", { name: "Save & Next" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(
@@ -1199,7 +1205,7 @@ it("keeps a failed Save & Next on the current punch and allows a single retry", 
 
 it("finishes on the final punch without wrapping when the filter changes after saving", async () => {
   const mock = mockCategoryChangeAfterSave();
-  render(<App />);
+  renderDevelopment();
   await screen.findByRole("button", { name: "Yes" });
   fireEvent.change(
     screen.getByRole("combobox", { name: "Filter review state" }),
@@ -1225,7 +1231,7 @@ it("finishes on the final punch without wrapping when the filter changes after s
 
 it("uses accessible proposed timeline markers for boundary verification without extra buttons", async () => {
   mockApi();
-  render(<App />);
+  renderDevelopment();
   fireEvent.load(await screen.findByAltText("V4, native frame 2"));
   fireEvent.click(screen.getByRole("button", { name: "Change it" }));
   expect(

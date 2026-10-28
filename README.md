@@ -6,7 +6,23 @@ audit reports. Phase 1 adds recording-aware pose extraction and provisional clip
 The first Level 1 experiment uses V4 for training and V5 for development validation. Level 2 is the core target; Level 2.5 analytics follows the core.
 See [the project specification](docs/PROJECT_SPEC.md).
 
-**Current workflow:** [versioned annotation curation](docs/ANNOTATION_CURATION.md).
+## Analyze: Assisted Punch Recognition
+
+**Analyze is now the default local experience.** Upload a continuous single-boxer
+shadowboxing video (up to 30 seconds), select one punch with exact-frame boundaries,
+and classify it with a pinned existing Level 1 checkpoint. Buffered playback, cached
+MediaPipe poses, six uncalibrated model scores and additional selections are working.
+This is experimental assisted recognition; it does not automatically find punches.
+
+See [setup, usage, limitations, cleanup and verification](docs/ASSISTED_PUNCH_RECOGNITION.md).
+Analyze requires the `dashboard`, `pose` and `train` extras plus the existing local
+pinned weights. Existing research notes above/below are historical; their datasets,
+reviews and experimental conclusions are preserved. Development groups the existing
+Review, Dataset, Experiments and Models tools without changing their workflows.
+
+## Research and development context
+
+**Historical development workflow:** [versioned annotation curation](docs/ANNOTATION_CURATION.md).
 The proposed selection retains 1,125 provisional training examples; the 18 targeted
 human reviews remain pending. Original annotations and the frozen V5 development
 benchmark are preserved. No curated training experiment has been run.
@@ -141,7 +157,8 @@ Phase 0 tool cannot certify licensing, footage continuity, identity independence
 alignment. `structural_checks_passed` describes only automated checks, and `phase_0_gate` stays
 `not_verified`. Review the [status note](docs/DATASET_AUDIT.md) before approving any modeling work.
 The audit itself never trains models. The opt-in Level 1 experiment is documented below;
-no inference server or round analytics are implemented.
+the historical audit workflow does not run inference or round analytics.
+The separate Analyze workflow now provides assisted upload classification.
 
 ## V5 pose-quality investigation
 
