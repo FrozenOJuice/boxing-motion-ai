@@ -1,0 +1,62 @@
+{
+  "schema_version": "activity-evaluation-protocol-1.0",
+  "interval_ids": [
+    "V7-eval-1",
+    "V7-eval-2",
+    "V8-eval-1",
+    "V8-eval-2",
+    "V10-eval-1",
+    "V10-eval-2"
+  ],
+  "interval_manifest": {
+    "path": "reports/boxingvi/interval-review-pilot-v1/manifest.json",
+    "sha256": "0a3d424bfaccc67c157bf4d42abfdd7bfba283cea6b0a54ca222dce628b3ff8d"
+  },
+  "reference": {
+    "unit": "visible punching-activity bout, not individual punch",
+    "short_pause_seconds": "1/4",
+    "onset": "first visible committed punching action; preparatory guard/defense/footwork excluded",
+    "end": "first excluded frame after final punch excursion/return; pauses <1/4 second remain in the bout",
+    "edge_rule": "clip visible support at block boundaries and mark censored; do not invent physical onset/end",
+    "uncertainty": "separate unknown sections; completion may retain uncertainty"
+  },
+  "primary": {
+    "unit": "window-visible activity events",
+    "iou_threshold": "1/2",
+    "matching": "maximum cardinality, then maximum total IoU, stable deterministic ties",
+    "uncertain_block_policy": "exclude_whole_block",
+    "censored_policy": "include visible support; never drop predicted censored alarms",
+    "false_positive_denominator": "full duration of completed clean scored blocks, including pose-abstention time",
+    "latency": "first source-time emission minus reference onset; only matched references with uncensored starts",
+    "negative_latency": "report as early alarm, not anticipation",
+    "undefined_metrics": "null; never perfect scores",
+    "all_six_complete_before_freeze": true,
+    "per_group": [
+      "V7_V8",
+      "V10"
+    ],
+    "boxer_independent": false,
+    "pristine_independent_test": false,
+    "prediction_bouts": "Causally group decoder events separated by <1/4 second within the same contiguous block/segment; never bridge unknown, missing/unreliable observations, cuts or resets. Keep first event onset and first emission, last event end. Finalize after the quarter-second silence or censor at boundary. No probability or threshold tuning."
+  },
+  "matching_code": {
+    "path": "src/boxing_motion_ai/detection/metrics.py",
+    "sha256": "6ee3f802b1a3a6ff6071c959236b82e7cb49d34cff8da5b1551230d3747d3bf3"
+  },
+  "decoder_config": {
+    "path": "configs/decoder_v1.json",
+    "sha256": "e485fd922144311c73b034a2353e927eb2ee4aa62d09b6df220940b9b41db28f"
+  },
+  "checkpoint": {
+    "path": "reports/boxingvi/detector-smoke-v1-verified/checkpoint.pt",
+    "sha256": "b24f527e6f50a883a1c2bd6ae8c054f029aefba07ce2f23ee8d2acbe1655fd63"
+  },
+  "policy": "no held-out prediction access, threshold selection, scoring or training before complete frozen references",
+  "roles": {
+    "V5": "development_only",
+    "V7": "evaluation_only",
+    "V8": "evaluation_only",
+    "V10": "evaluation_only",
+    "V9": "reserved_inaccessible"
+  }
+}

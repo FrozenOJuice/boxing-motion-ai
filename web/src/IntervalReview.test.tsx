@@ -320,3 +320,74 @@ it("enables explicit no-punch confirmation after complete playback without inven
   expect(body.inspected_frames).toEqual([]);
   expect(body.playback_coverage.schema_version).toBe("continuous-viewing-1.0");
 });
+
+it("offers only the six reserved blocks in activity mode and requests no predictions", async () => {
+  const blocks = ["V7", "V8", "V10"].flatMap((recording) =>
+    [1, 2].map((n) => ({
+      ...entry,
+      id: `${recording}-eval-${n}`,
+      recording,
+      role: "evaluation_reserved",
+      purpose: "evaluation_block",
+    })),
+  );
+  const mock = vi.fn(async (url: RequestInfo | URL) => {
+    const path = String(url);
+    if (path === "/api/intervals")
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            manifest: { entries: [entry, ...blocks] },
+            history: [],
+            head: "a".repeat(64),
+          },
+        }),
+      };
+    if (path === "/api/activity-evaluation/status")
+      return { ok: true, json: async () => ({ data: {} }) };
+    if (path.startsWith("/api/activity-evaluation/"))
+      return {
+        ok: true,
+        json: async () => ({
+          data: {
+            head: "a".repeat(64),
+            events: [],
+            complete: false,
+            history: [],
+          },
+        }),
+      };
+    const selected =
+      [entry, ...blocks].find((e) => path.includes(e.id)) ?? entry;
+    return {
+      ok: true,
+      json: async () => ({
+        data: {
+          entry: selected,
+          annotations: [],
+          history: [],
+          head: "a".repeat(64),
+          status: "unknown",
+        },
+      }),
+    };
+  });
+  vi.stubGlobal("fetch", mock);
+  render(<IntervalReview onDirty={vi.fn()} onSaving={vi.fn()} />);
+  fireEvent.change(
+    await screen.findByRole("combobox", { name: "Review pilot" }),
+    { target: { value: "activity" } },
+  );
+  await screen.findByRole("button", { name: "Add activity" });
+  expect(
+    screen.getAllByRole("button", { name: /Activity block/ }),
+  ).toHaveLength(6);
+  expect(
+    screen.queryByRole("button", { name: /Background candidate/ }),
+  ).toBeNull();
+  expect(screen.queryByRole("combobox", { name: "Punch type" })).toBeNull();
+  expect(
+    mock.mock.calls.some(([url]) => String(url).includes("prediction")),
+  ).toBe(false);
+});

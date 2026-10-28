@@ -71,9 +71,9 @@ export default function IntervalReview({
   onDirty: (value: boolean) => void;
   onSaving: (value: boolean) => void;
 }) {
-  const [pilot, setPilot] = useState<"original" | "motion-v2" | "events">(
-    "original",
-  );
+  const [pilot, setPilot] = useState<
+    "original" | "motion-v2" | "events" | "activity"
+  >("original");
   return (
     <IntervalQueue
       key={pilot}
@@ -93,14 +93,21 @@ function IntervalQueue({
 }: {
   onDirty: (value: boolean) => void;
   onSaving: (value: boolean) => void;
-  pilot: "original" | "motion-v2" | "events";
-  onPilot: (pilot: "original" | "motion-v2" | "events") => void;
+  pilot: "original" | "motion-v2" | "events" | "activity";
+  onPilot: (pilot: "original" | "motion-v2" | "events" | "activity") => void;
 }) {
   const query = pilot === "motion-v2" ? "?pilot=motion-v2" : "";
-  const labeling = pilot === "events";
+  const activity = pilot === "activity";
+  const labeling = pilot === "events" || activity;
   const statuses = useRequest<
     Result<Record<string, { complete: boolean; events: HumanPunch[] }>>
-  >(labeling ? "/api/interval-event-status" : null);
+  >(
+    activity
+      ? "/api/activity-evaluation/status"
+      : labeling
+        ? "/api/interval-event-status"
+        : null,
+  );
   const [progress, setProgress] = useState<
     Record<string, { complete: boolean; events: HumanPunch[] }>
   >({});
@@ -110,8 +117,10 @@ function IntervalQueue({
     [busy, setBusy] = useState(false),
     [feedback, setFeedback] = useState("");
   const queue = useRequest<Result<Queue>>(`/api/intervals${query}`, refresh);
-  const entries = (queue.data?.data?.manifest.entries ?? []).filter(
-    (e) => !labeling || /^V4-bg-[1-5]$/.test(e.id),
+  const entries = (queue.data?.data?.manifest.entries ?? []).filter((e) =>
+    activity
+      ? /^(V7|V8|V10)-eval-[12]$/.test(e.id)
+      : !labeling || /^V4-bg-[1-5]$/.test(e.id),
   );
   useEffect(() => {
     if (!selected && entries.length) setSelected(entries[0].id);
@@ -143,11 +152,13 @@ function IntervalQueue({
               if (!dirty || window.confirm("Discard unsaved review changes?")) {
                 change(false);
                 onPilot(
-                  event.target.value as "original" | "motion-v2" | "events",
+                  event.target.value as
+                    "original" | "motion-v2" | "events" | "activity",
                 );
               }
             }}
           >
+            <option value="activity">Activity evaluation · V7/V8/V10</option>
             <option value="events">Label missing punches · V4</option>
             <option value="original">Original pilot</option>
             <option value="motion-v2">Motion pilot 2 · V4/V6</option>
@@ -178,7 +189,9 @@ function IntervalQueue({
                 <strong>
                   {e.recording} ·{" "}
                   {labeling
-                    ? "Punch interval"
+                    ? activity
+                      ? "Activity block"
+                      : "Punch interval"
                     : e.purpose === "evaluation_block"
                       ? "Continuous review"
                       : "Background candidate"}{" "}
@@ -201,8 +214,16 @@ function IntervalQueue({
                     {labeling
                       ? (progress[e.id] ?? statuses.data?.data?.[e.id])
                           ?.complete
-                        ? "Completely labeled"
-                        : "Punches to label"
+                        ? (
+                            progress[e.id] ?? statuses.data?.data?.[e.id]
+                          )?.events.some((e) => e.kind === "uncertain")
+                          ? "Reviewed · uncertainty"
+                          : activity
+                            ? "Reviewed"
+                            : "Completely labeled"
+                        : activity
+                          ? "To review"
+                          : "Punches to label"
                       : statusName(history.at(-1)?.status)}
                   </span>
                 </span>
@@ -219,6 +240,7 @@ function IntervalQueue({
         ) : labeling ? (
           <PunchLabeling
             key={selected}
+            mode={activity ? "activity" : "punch"}
             entry={data.entry}
             annotations={data.annotations}
             onDirty={change}

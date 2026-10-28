@@ -62,6 +62,10 @@ class EventDecision(StrictModel):
 
 
 class IntervalEvents:
+    directory = DIRECTORY
+    decision_type = EventDecision
+    review_schema = "human-interval-event-review-1.0"
+
     def __init__(self, intervals):
         self.intervals = intervals
         self.base, self.frames = intervals.base, intervals.frames
@@ -97,10 +101,10 @@ class IntervalEvents:
         require(
             event.start < entry["stop"] and event.stop > entry["start"], "event_outside_interval"
         )
-        spec = self.base._recording("V4")
-        prep = self.base._preparation("V4", spec)
+        spec = self.base._recording(entry["recording"])
+        prep = self.base._preparation(entry["recording"], spec)
         with self.frames.lock:
-            arrays = self.frames._load("V4", spec, prep)
+            arrays = self.frames._load(entry["recording"], spec, prep)
             timing = interval_timing(
                 arrays, event.start, event.stop, prep.get("confirmed_scene_cuts", [])
             )
@@ -177,20 +181,20 @@ class IntervalEvents:
         events, records, complete = {}, [], False
         for number, name in enumerate(sorted(n for n in os.listdir(fd) if n.startswith("v")), 1):
             require(name == f"v{number:08d}", "event_history_gap", "stale")
-            raw, digest = self.base.store.read(f"{DIRECTORY}/{key}/{name}/review.json")
+            raw, digest = self.base.store.read(f"{self.directory}/{key}/{name}/review.json")
             record = strict_json(raw)
             require(
                 record["parent"] == head
                 and record["binding"] == seed
                 and record["version"] == number
                 and record["source"] == "manual"
-                and record["schema_version"] == "human-interval-event-review-1.0"
+                and record["schema_version"] == self.review_schema
                 and record["background_inferred"] is False
                 and record["training_enabled"] is False,
                 "event_history_changed",
                 "stale",
             )
-            decision = EventDecision.model_validate(record["payload"])
+            decision = self.decision_type.model_validate(record["payload"])
             require(decision.expected_head == head, "event_history_changed", "stale")
             complete = self.apply(seed["provenance"], decision, events, complete)
             require(
@@ -204,7 +208,7 @@ class IntervalEvents:
 
     def detail(self, key):
         detail, seed, head = self.context(key)
-        with ReviewWorkspace(self.base)._locked(f"{DIRECTORY}/{key}") as fd:
+        with ReviewWorkspace(self.base)._locked(f"{self.directory}/{key}") as fd:
             state = self.history(fd, key, seed, head)
         return state | dict(
             interval_id=key,
@@ -218,11 +222,13 @@ class IntervalEvents:
         if decision.event:
             self.event_metadata(entry, decision.event)
             for index in {decision.event.start, decision.event.stop - 1}:
-                self.frames.frame("V4", index)  # Actual decoder validates original source hash/PTS.
+                self.frames.frame(
+                    entry["recording"], index
+                )  # Actual decoder validates original source hash/PTS.
         else:
             for index in (entry["start"], entry["stop"] - 1):
-                self.frames.frame("V4", index)
-        with ReviewWorkspace(self.base)._locked(f"{DIRECTORY}/{key}") as fd:
+                self.frames.frame(entry["recording"], index)
+        with ReviewWorkspace(self.base)._locked(f"{self.directory}/{key}") as fd:
             state = self.history(fd, key, seed, initial)
             payload = decision.model_dump(mode="json")
             for prior in state["history"]:
@@ -233,7 +239,7 @@ class IntervalEvents:
             events = {e["event_id"]: e for e in state["events"]}
             complete = self.apply(entry, decision, events, state["complete"])
             record = dict(
-                schema_version="human-interval-event-review-1.0",
+                schema_version=self.review_schema,
                 version=len(state["history"]) + 1,
                 parent=state["head"],
                 binding=seed,

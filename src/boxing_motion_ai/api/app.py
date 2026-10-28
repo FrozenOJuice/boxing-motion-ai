@@ -9,6 +9,7 @@ from starlette.staticfiles import StaticFiles
 
 from boxing_motion_ai.data.annotation_review import LABELS, RECORDINGS
 from boxing_motion_ai.services import DashboardService
+from boxing_motion_ai.services.activity_evaluation import ActivityDecision, ActivityEvaluation
 from boxing_motion_ai.services.artifacts import ServiceError
 from boxing_motion_ai.services.contracts import QueryResult
 from boxing_motion_ai.services.interval_events import SCOPE, EventDecision, IntervalEvents
@@ -112,6 +113,18 @@ def create_app(root: Path):
     @app.get("/api/intervals")
     def interval_queue(pilot: Pilot = "original"):
         return interval_reply(intervals[pilot].snapshot)
+
+    @app.get("/api/activity-evaluation/status")
+    def activity_status():
+        return interval_reply(lambda: ActivityEvaluation(intervals["original"]).status())
+
+    @app.get("/api/activity-evaluation/{key}")
+    def activity_detail(key: str):
+        return interval_reply(lambda: ActivityEvaluation(intervals["original"]).detail(key))
+
+    @app.post("/api/activity-evaluation/{key}")
+    def activity_save(key: str, decision: ActivityDecision):
+        return interval_reply(lambda: ActivityEvaluation(intervals["original"]).save(key, decision))
 
     @app.get("/api/interval-event-status")
     def interval_event_status():

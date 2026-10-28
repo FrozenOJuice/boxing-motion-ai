@@ -27,6 +27,7 @@ function mount(
     punch_type: string;
     type_uncertain: boolean;
   }[] = [],
+  showSourceAnnotations = true,
 ) {
   vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue({
     x: 0,
@@ -121,6 +122,7 @@ function mount(
       intervalId={pilot === "original" ? "V4-bg-1" : "V4-motion-1"}
       pilot={pilot}
       annotations={annotations}
+      showSourceAnnotations={showSourceAnnotations}
       humanEvents={humanEvents}
       onHumanSelect={humanSelect}
       recording="V4"
@@ -436,4 +438,27 @@ it("keeps overlapping human events clickable separately from original source mar
       expect.objectContaining({ frame_index: 11 }),
     ),
   );
+});
+
+it("hides original annotation UI for blind activity reference labeling", async () => {
+  mount(
+    [
+      {
+        source_row: 2,
+        source_class: "Jab",
+        punch_type_provisional: "jab",
+        raw_start: 10,
+        raw_end: 11,
+        source_interval_half_open: [10, 12],
+      } as IntervalAnnotation,
+    ],
+    "original",
+    [],
+    false,
+  );
+  await screen.findByRole("region", { name: "Interval viewer" });
+  expect(screen.queryByLabelText("Original annotation summary")).toBeNull();
+  expect(
+    screen.queryByLabelText("Original punch annotation timeline"),
+  ).toBeNull();
 });

@@ -78,6 +78,7 @@ function setup(
     fail?: boolean;
     failComplete?: boolean;
     pending?: Promise<void>;
+    activity?: boolean;
   } = {},
 ) {
   let state: any = {
@@ -129,7 +130,12 @@ function setup(
   const mount = () =>
     render(
       <PunchLabeling
-        entry={entry}
+        entry={
+          options.activity
+            ? { ...entry, id: "V7-eval-1", recording: "V7" }
+            : entry
+        }
+        mode={options.activity ? "activity" : "punch"}
         annotations={[]}
         onDirty={dirty}
         onSaving={vi.fn()}
@@ -256,4 +262,62 @@ it("never advances when completion persistence fails", async () => {
     }),
   ).toBeChecked();
   expect(screen.getByText(/In progress/)).toBeVisible();
+});
+
+it("labels activity and uncertainty without punch types, retains revisions and requires full viewing", async () => {
+  const { bodies, result, mount, next } = setup({ activity: true });
+  fireEvent.click(await screen.findByRole("button", { name: "Add activity" }));
+  expect(screen.queryByRole("combobox", { name: "Punch type" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Inspect 10" }));
+  fireEvent.click(screen.getByRole("button", { name: "Set start here" }));
+  fireEvent.click(screen.getByRole("button", { name: "Inspect 12" }));
+  fireEvent.click(screen.getByRole("button", { name: "Set end here" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save section" }));
+  await screen.findByText("Section saved. Continue reviewing the block.");
+  expect(bodies[0].event).toMatchObject({
+    kind: "activity",
+    start: 10,
+    stop: 13,
+  });
+  expect(bodies[0].event).not.toHaveProperty("punch_type");
+  fireEvent.click(screen.getByRole("button", { name: "Edit section 1" }));
+  fireEvent.change(screen.getByRole("combobox", { name: "Section kind" }), {
+    target: { value: "uncertain" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save section" }));
+  await waitFor(() => expect(bodies).toHaveLength(2));
+  result.unmount();
+  mount();
+  await screen.findByText(/1\. Uncertain section/);
+  const attest = screen.getByRole("checkbox", {
+    name: /I watched the entire block and marked/,
+  });
+  expect(attest).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Watch interval" }));
+  expect(attest).toBeEnabled();
+  expect(attest).not.toBeChecked();
+  fireEvent.click(attest);
+  fireEvent.click(screen.getByRole("button", { name: "Save complete & Next" }));
+  await waitFor(() => expect(next).toHaveBeenCalledOnce());
+  expect(bodies[2]).toMatchObject({
+    all_activity_labeled: true,
+    no_activity_observed: false,
+  });
+  expect(bodies[2]).not.toHaveProperty("all_punches_labeled");
+});
+it("allows an explicitly reviewed empty activity block without inventing activity", async () => {
+  const { bodies, next } = setup({ activity: true });
+  await screen.findByRole("button", { name: "Add activity" });
+  fireEvent.click(screen.getByRole("button", { name: "Watch interval" }));
+  fireEvent.click(
+    screen.getByRole("checkbox", {
+      name: "I watched the entire block and saw no punching activity.",
+    }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Save complete & Next" }));
+  await waitFor(() => expect(next).toHaveBeenCalledOnce());
+  expect(bodies[0]).toMatchObject({
+    operation: "complete",
+    no_activity_observed: true,
+  });
 });

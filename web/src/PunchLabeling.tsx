@@ -9,8 +9,9 @@ export type HumanPunch = {
   event_id: string;
   start: number;
   stop: number;
-  punch_type: string;
-  type_uncertain: boolean;
+  punch_type?: string;
+  type_uncertain?: boolean;
+  kind?: "activity" | "uncertain";
   partial_overlap?: boolean;
 };
 type Revision = {
@@ -45,11 +46,16 @@ const labels = [
   ["rear_uppercut", "Rear Uppercut"],
 ];
 const name = (p: HumanPunch) =>
-  p.type_uncertain
-    ? "Type uncertain"
-    : (labels.find(([v]) => v === p.punch_type)?.[1] ?? p.punch_type);
+  p.kind
+    ? p.kind === "activity"
+      ? "Punching activity"
+      : "Uncertain section"
+    : p.type_uncertain
+      ? "Type uncertain"
+      : (labels.find(([v]) => v === p.punch_type)?.[1] ?? p.punch_type);
 export default function PunchLabeling({
   entry: e,
+  mode = "punch",
   annotations,
   onDirty,
   onSaving,
@@ -57,13 +63,18 @@ export default function PunchLabeling({
   onProgress,
 }: {
   entry: Entry;
+  mode?: "punch" | "activity";
   annotations: IntervalAnnotation[];
   onDirty: (v: boolean) => void;
   onSaving: (v: boolean) => void;
   onNext: () => void;
   onProgress: (s: { complete: boolean; events: HumanPunch[] }) => void;
 }) {
-  const query = useRequest<Result<State>>(`/api/intervals/${e.id}/events`);
+  const activity = mode === "activity";
+  const endpoint = activity
+    ? `/api/activity-evaluation/${e.id}`
+    : `/api/intervals/${e.id}/events`;
+  const query = useRequest<Result<State>>(endpoint);
   const [state, setState] = useState<State | null>(null);
   const [draft, setDraft] = useState<{
     event_id: string;
@@ -71,6 +82,7 @@ export default function PunchLabeling({
     end: number | null;
     punch_type: string;
     type_uncertain: boolean;
+    kind: "activity" | "uncertain";
   } | null>(null);
   const [seen, setSeen] = useState<Set<number>>(new Set());
   const [viewing, setViewing] = useState<ViewingUpdate | null>(null);
@@ -92,13 +104,22 @@ export default function PunchLabeling({
     [...seen].filter((n) => n >= e.start && n < e.stop).length ===
       e.stop - e.start;
   function edit(p: HumanPunch) {
-    if (draft && !window.confirm("Discard unsaved punch changes?")) return;
+    if (
+      draft &&
+      !window.confirm(
+        activity
+          ? "Discard unsaved section changes?"
+          : "Discard unsaved punch changes?",
+      )
+    )
+      return;
     setDraft({
       event_id: p.event_id,
       start: p.start,
       end: p.stop - 1,
-      punch_type: p.punch_type,
-      type_uncertain: p.type_uncertain,
+      punch_type: p.punch_type ?? "",
+      type_uncertain: p.type_uncertain ?? false,
+      kind: p.kind ?? "activity",
     });
     setAttest(false);
     onDirty(true);
@@ -116,16 +137,20 @@ export default function PunchLabeling({
         draft.start === null ||
         draft.end === null ||
         draft.end < draft.start ||
-        !draft.punch_type)
+        (!activity && !draft.punch_type))
     ) {
       setError(
-        "Mark the first and last punch frames and choose a type, or select Type uncertain.",
+        activity
+          ? "Mark the first and last frames of the section."
+          : "Mark the first and last punch frames and choose a type, or select Type uncertain.",
       );
       return;
     }
     if (operation === "complete" && (!full || !attest || draft)) {
       setError(
-        "Watch the whole interval, save any punch changes, and confirm all punches are labeled.",
+        activity
+          ? "Watch the whole block, save any section changes, then confirm the review is complete."
+          : "Watch the whole interval, save any punch changes, and confirm all punches are labeled.",
       );
       return;
     }
@@ -135,8 +160,12 @@ export default function PunchLabeling({
             event_id: draft.event_id,
             start: draft.start,
             stop: draft.end! + 1,
-            punch_type: draft.punch_type,
-            type_uncertain: draft.type_uncertain,
+            ...(activity
+              ? { kind: draft.kind }
+              : {
+                  punch_type: draft.punch_type,
+                  type_uncertain: draft.type_uncertain,
+                }),
           }
         : undefined;
     const payload = {
@@ -150,7 +179,12 @@ export default function PunchLabeling({
       ...(operation === "complete"
         ? {
             watched_entire: true,
-            all_punches_labeled: true,
+            ...(activity
+              ? {
+                  all_activity_labeled: true,
+                  no_activity_observed: state.events.length === 0,
+                }
+              : { all_punches_labeled: true }),
             ...(viewing?.evidence.segments.length
               ? { playback_coverage: viewing.evidence }
               : {}),
@@ -166,7 +200,7 @@ export default function PunchLabeling({
     setError("");
     setFeedback("");
     try {
-      const response = await fetch(`/api/intervals/${e.id}/events`, {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -177,6 +211,10 @@ export default function PunchLabeling({
       const result = await response.json();
       if (!response.ok) {
         const messages: Record<string, string> = {
+          combine_activity_bouts_under_quarter_second:
+            "Combine consecutive punches separated by less than 0.25 seconds into one activity interval.",
+          activity_outside_reviewed_block:
+            "Keep activity and uncertain sections inside this review block.",
           event_review_changed_reload:
             "Another change was saved. Reload before saving again.",
           inspect_both_event_boundaries:
@@ -208,8 +246,12 @@ export default function PunchLabeling({
         operation === "complete"
           ? "Interval saved as completely labeled."
           : operation === "remove"
-            ? "Punch removed. Its history is preserved."
-            : "Punch saved. Continue looking for others.",
+            ? activity
+              ? "Section removed. Its history is preserved."
+              : "Punch removed. Its history is preserved."
+            : activity
+              ? "Section saved. Continue reviewing the block."
+              : "Punch saved. Continue looking for others.",
       );
       if (operation === "complete") onNext();
     } catch (err) {
@@ -223,7 +265,12 @@ export default function PunchLabeling({
     }
   }
   if (query.error) return <Notice>{query.error}</Notice>;
-  if (!state) return <Notice>Loading punch labels…</Notice>;
+  if (!state)
+    return (
+      <Notice>
+        {activity ? "Loading activity review…" : "Loading punch labels…"}
+      </Notice>
+    );
   const controls = (frame: number, ready: boolean, inspect?: () => void) =>
     draft && (
       <div className="event-boundaries">
@@ -248,7 +295,10 @@ export default function PunchLabeling({
         >
           Set end here
         </button>
-        <span>Last punch frame {draft.end ?? "—"}</span>
+        <span>
+          {activity ? "Last included frame" : "Last punch frame"}{" "}
+          {draft.end ?? "—"}
+        </span>
         {!ready && <small>Pause to inspect an exact frame.</small>}
       </div>
     );
@@ -257,7 +307,8 @@ export default function PunchLabeling({
       <BufferedIntervalViewer
         intervalId={e.id}
         recording={e.recording}
-        annotations={annotations}
+        annotations={activity ? [] : annotations}
+        showSourceAnnotations={!activity}
         seenFrames={reviewSeen}
         onViewing={setViewing}
         humanEvents={state.events}
@@ -282,75 +333,124 @@ export default function PunchLabeling({
       />
       <section className="panel interval-form">
         <div className="event-heading">
-          <h2>Punches you added</h2>
+          <h2>{activity ? "Punching activity" : "Punches you added"}</h2>
           <span className="muted">
-            {state.complete && !draft ? "Completely labeled" : "In progress"} ·{" "}
-            {state.events.length} punches
+            {state.complete && !draft
+              ? activity
+                ? state.events.some((e) => e.kind === "uncertain")
+                  ? "Reviewed · uncertainty"
+                  : "Reviewed"
+                : "Completely labeled"
+              : "In progress"}{" "}
+            · {state.events.length} {activity ? "sections" : "punches"}
           </span>
         </div>
-        <button
-          disabled={saving || !!draft}
-          onClick={() => {
-            setDraft({
-              event_id: crypto.randomUUID(),
-              start: null,
-              end: null,
-              punch_type: "",
-              type_uncertain: false,
-            });
-            onDirty(true);
-            setFeedback("");
-          }}
-        >
-          Add punch
-        </button>
+        {activity && (
+          <p className="muted">
+            One activity interval can contain several punches. Keep pauses under
+            0.25 seconds in the same interval. Mark anything unclear as
+            uncertain.
+          </p>
+        )}
+        {(activity
+          ? (["activity", "uncertain"] as const)
+          : (["activity"] as const)
+        ).map((kind) => (
+          <button
+            key={kind}
+            disabled={saving || !!draft}
+            onClick={() => {
+              setDraft({
+                event_id: crypto.randomUUID(),
+                start: null,
+                end: null,
+                punch_type: "",
+                type_uncertain: false,
+                kind,
+              });
+              onDirty(true);
+              setFeedback("");
+            }}
+          >
+            {activity
+              ? kind === "activity"
+                ? "Add activity"
+                : "Mark uncertain section"
+              : "Add punch"}
+          </button>
+        ))}
         {draft && (
           <div className="event-editor">
-            <label>
-              Punch type{" "}
-              <select
-                aria-label="Punch type"
-                disabled={saving || draft.type_uncertain}
-                value={draft.punch_type}
-                onChange={(ev) => {
-                  setDraft({ ...draft, punch_type: ev.target.value });
-                  onDirty(true);
-                }}
-              >
-                <option value="">Choose a punch</option>
-                {draft.type_uncertain && (
-                  <option value="unknown">Type uncertain</option>
-                )}
-                {labels.map(([v, t]) => (
-                  <option key={v} value={v}>
-                    {t}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={draft.type_uncertain}
-                disabled={saving}
-                onChange={(ev) => {
-                  setDraft({
-                    ...draft,
-                    type_uncertain: ev.target.checked,
-                    punch_type: ev.target.checked ? "unknown" : "",
-                  });
-                  onDirty(true);
-                }}
-              />{" "}
-              Type uncertain
-            </label>
+            {!activity && (
+              <>
+                {" "}
+                <label>
+                  Punch type{" "}
+                  <select
+                    aria-label="Punch type"
+                    disabled={saving || draft.type_uncertain}
+                    value={draft.punch_type}
+                    onChange={(ev) => {
+                      setDraft({ ...draft, punch_type: ev.target.value });
+                      onDirty(true);
+                    }}
+                  >
+                    <option value="">Choose a punch</option>
+                    {draft.type_uncertain && (
+                      <option value="unknown">Type uncertain</option>
+                    )}
+                    {labels.map(([v, t]) => (
+                      <option key={v} value={v}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={draft.type_uncertain}
+                    disabled={saving}
+                    onChange={(ev) => {
+                      setDraft({
+                        ...draft,
+                        type_uncertain: ev.target.checked,
+                        punch_type: ev.target.checked ? "unknown" : "",
+                      });
+                      onDirty(true);
+                    }}
+                  />{" "}
+                  Type uncertain
+                </label>
+              </>
+            )}
+            {activity && (
+              <label>
+                Section{" "}
+                <select
+                  aria-label="Section kind"
+                  value={draft.kind}
+                  disabled={saving}
+                  onChange={(ev) => {
+                    setDraft({
+                      ...draft,
+                      kind: ev.target.value as "activity" | "uncertain",
+                    });
+                    onDirty(true);
+                  }}
+                >
+                  <option value="activity">Punching activity</option>
+                  <option value="uncertain">Uncertain section</option>
+                </select>
+              </label>
+            )}
             <div className="interval-save">
               <button
                 className="primary"
                 disabled={saving}
                 onClick={() => void save("upsert")}
               >
-                Save punch
+                {activity ? "Save section" : "Save punch"}
               </button>
               <button
                 disabled={saving}
@@ -372,13 +472,13 @@ export default function PunchLabeling({
               {p.partial_overlap ? " · Partial overlap" : ""}
             </span>
             <button disabled={saving || !!draft} onClick={() => edit(p)}>
-              Edit punch {i + 1}
+              Edit {activity ? "section" : "punch"} {i + 1}
             </button>
             <button
               disabled={saving || !!draft}
               onClick={() => void save("remove", p.event_id)}
             >
-              Remove punch {i + 1}
+              Remove {activity ? "section" : "punch"} {i + 1}
             </button>
           </div>
         ))}
@@ -399,13 +499,22 @@ export default function PunchLabeling({
                 onDirty(ev.target.checked);
               }}
             />{" "}
-            I watched the entire interval and labeled every punch.
+            {activity
+              ? state.events.length
+                ? "I watched the entire block and marked all punching activity and uncertain sections."
+                : "I watched the entire block and saw no punching activity."
+              : "I watched the entire interval and labeled every punch."}
           </label>
         </div>
         <div className="interval-save">
           <button
             className="primary"
-            disabled={saving || !attest || !state.events.length || !!draft}
+            disabled={
+              saving ||
+              !attest ||
+              (!activity && !state.events.length) ||
+              !!draft
+            }
             onClick={() => void save("complete")}
           >
             {saving ? "Saving…" : "Save complete & Next"}
@@ -420,8 +529,10 @@ export default function PunchLabeling({
       <details className="panel interval-references">
         <summary>Labeling history & details</summary>
         <p>
-          Start = first punch frame. End = last included punch frame. Stored
-          intervals use an exclusive stop. Human labels are separate from
+          {activity
+            ? "Start = first activity or uncertain frame. End = last included frame. Source annotations and model predictions are hidden during labeling. "
+            : "Start = first punch frame. End = last included punch frame. "}{" "}
+          Stored intervals use an exclusive stop. Human labels are separate from
           original dataset marks. Unreviewed footage remains unknown.
         </p>
         {state.history.map((r, i) => (

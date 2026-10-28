@@ -32,6 +32,7 @@ export default function BufferedIntervalViewer({
   onViewing,
   seenFrames,
   annotations = [],
+  showSourceAnnotations = true,
   humanEvents = [],
   onHumanSelect,
   inspectionControls,
@@ -44,12 +45,14 @@ export default function BufferedIntervalViewer({
   onViewing: (view: ViewingUpdate) => void;
   seenFrames: Set<number>;
   annotations?: IntervalAnnotation[];
+  showSourceAnnotations?: boolean;
   humanEvents?: {
     event_id: string;
     start: number;
     stop: number;
-    punch_type: string;
-    type_uncertain: boolean;
+    punch_type?: string;
+    type_uncertain?: boolean;
+    kind?: "activity" | "uncertain";
   }[];
   onHumanSelect?: (id: string) => void;
   inspectionControls?: (
@@ -624,27 +627,36 @@ export default function BufferedIntervalViewer({
           className="annotation-summary"
           aria-label="Human annotation summary"
         >
-          <strong>{humanEvents.length} punches you added</strong>
+          <strong>
+            {humanEvents.length}{" "}
+            {humanEvents.some((e) => e.kind)
+              ? "sections you added"
+              : "punches you added"}
+          </strong>
           <span>Human labels</span>
         </div>
       )}
       {humanEvents.length > 0 && (
         <div
           className="human-event-track"
-          aria-label="Human punch timeline"
+          aria-label={
+            humanEvents.some((e) => e.kind)
+              ? "Human activity timeline"
+              : "Human punch timeline"
+          }
           style={{ height: `${humanEvents.length * 20 + 4}px` }}
         >
           {humanEvents.map((event, lane) => (
             <button
               key={event.event_id}
-              className={`source-annotation-segment human-event-segment${event.start < interval.start || event.stop > interval.end + 1 ? " partial" : ""}`}
+              className={`source-annotation-segment human-event-segment${event.kind === "uncertain" || event.start < interval.start || event.stop > interval.end + 1 ? " partial" : ""}`}
               style={{
                 left: percent(event.start),
                 width: `${(100 * (event.stop - event.start)) / Math.max(1, maximum - minimum + 1)}%`,
                 top: `${lane * 20 + 2}px`,
               }}
-              title={`Human · ${event.type_uncertain ? "Type uncertain" : event.punch_type.replaceAll("_", " ")} · ${event.start}–${event.stop - 1}${event.start < interval.start || event.stop > interval.end + 1 ? " · Partial overlap" : ""}`}
-              aria-label={`Human punch ${lane + 1}: ${event.type_uncertain ? "Type uncertain" : event.punch_type.replaceAll("_", " ")}`}
+              title={`Human · ${event.type_uncertain ? "Type uncertain" : event.kind ? (event.kind === "activity" ? "Punching activity" : "Uncertain section") : event.punch_type?.replaceAll("_", " ")} · ${event.start}–${event.stop - 1}${event.start < interval.start || event.stop > interval.end + 1 ? " · Partial overlap" : ""}`}
+              aria-label={`Human ${event.kind ? "section" : "punch"} ${lane + 1}: ${event.type_uncertain ? "Type uncertain" : event.kind ? (event.kind === "activity" ? "Punching activity" : "Uncertain section") : event.punch_type?.replaceAll("_", " ")}`}
               onClick={() => {
                 seek(event.start);
                 onHumanSelect?.(event.event_id);
@@ -658,24 +670,26 @@ export default function BufferedIntervalViewer({
           />
         </div>
       )}
-      <div
-        className="annotation-summary"
-        aria-label="Original annotation summary"
-      >
-        <strong>
-          {annotations.length} annotated{" "}
-          {annotations.length === 1 ? "punch" : "punches"}
-        </strong>
-        <span>Original dataset · Provisional</span>
-        {annotations.length > 0 && (
-          <small>
-            {[...typeCounts]
-              .map(([label, count]) => `${label} ${count}`)
-              .join(" · ")}
-          </small>
-        )}
-      </div>
-      {segments.length > 0 && (
+      {showSourceAnnotations && (
+        <div
+          className="annotation-summary"
+          aria-label="Original annotation summary"
+        >
+          <strong>
+            {annotations.length} annotated{" "}
+            {annotations.length === 1 ? "punch" : "punches"}
+          </strong>
+          <span>Original dataset · Provisional</span>
+          {annotations.length > 0 && (
+            <small>
+              {[...typeCounts]
+                .map(([label, count]) => `${label} ${count}`)
+                .join(" · ")}
+            </small>
+          )}
+        </div>
+      )}
+      {showSourceAnnotations && segments.length > 0 && (
         <div
           className="source-annotation-track"
           aria-label="Original punch annotation timeline"
@@ -740,7 +754,7 @@ export default function BufferedIntervalViewer({
           onChange={(e) => seek(Number(e.target.value))}
         />
       </div>
-      {annotations.length > 0 && (
+      {showSourceAnnotations && annotations.length > 0 && (
         <details className="source-annotation-list">
           <summary>Source annotations ({annotations.length})</summary>
           <div>

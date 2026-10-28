@@ -75,3 +75,7 @@ Checks: **457 Python tests passed**, **48 frontend tests passed**, Ruff passed, 
 ## First human-review findings
 
 The first five saved interval decisions are assessed in [First interval review findings](FIRST_INTERVAL_REVIEW_FINDINGS.md). All five V4 candidates contained human-reported unmarked punches and remain excluded from background. The original empty-ledger statements above describe initial pilot preparation, not the current review state. The findings recommend a bounded human-led selection pass before generating a revised candidate set.
+
+The six reserved V7/V8/V10 blocks have a separate **Activity evaluation** mode. It labels
+punching-activity bouts and uncertainty, without individual punch types or model predictions.
+Use [ACTIVITY_EVALUATION_V1.md](ACTIVITY_EVALUATION_V1.md) for the protocol and instructions.

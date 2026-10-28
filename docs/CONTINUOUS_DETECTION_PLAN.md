@@ -142,3 +142,8 @@ The first blocker is missing verified absence/continuous coverage, not estimator
 ## Verification of this planning milestone
 
 Only this document and ignored read-only inventory outputs were created. Verification: 442 Python tests passed (one existing Starlette/httpx deprecation warning), and Ruff passed; no frontend/backend behavior or contracts are changed. All 4,647 existing pose-audit protected hashes were rechecked and matched. The manual work above is proposed, not claimed complete.
+
+The six-block held-out activity labeling pilot is now implemented. See
+[ACTIVITY_EVALUATION_V1.md](ACTIVITY_EVALUATION_V1.md) for the frozen activity-bout protocol,
+blinded dashboard workflow, uncertainty/censoring rules and reference-freeze gate. This adds
+reference preparation only; it does not train or evaluate a detector.
