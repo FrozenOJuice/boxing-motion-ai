@@ -258,7 +258,9 @@ def test_checkpoint_inference_roundtrip_preserves_source_pts_and_reports_abstent
     x, observed, epoch, _ = encode_source(raw, 1.0)
     region = interval()
     windows, labels = make_windows(x, observed, epoch, region, 8)
-    ds = SimpleNamespace(raw=raw, windows=windows, intervals=[region], labels={"synthetic": labels})
+    ds = SimpleNamespace(
+        raw=raw, windows=windows, intervals=[region], labels={"synthetic": labels}, epoch=epoch
+    )
     monkeypatch.setattr(smoke, "ReviewedWindows", lambda *_: ds)
     config = json.loads((Path(__file__).parents[1] / "configs/detector_smoke_v1.json").read_text())
     manifest = tmp_path / "reports/synthetic/manifest.json"

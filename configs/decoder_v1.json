@@ -1,0 +1,8 @@
+{
+  "schema_version": "causal-binary-decoder-1.0",
+  "activation_threshold": 0.65,
+  "deactivation_threshold": 0.35,
+  "minimum_activation_seconds": "2/25",
+  "termination_seconds": "2/25",
+  "maximum_timestamp_gap_seconds": "1/10"
+}

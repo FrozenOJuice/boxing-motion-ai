@@ -21,6 +21,7 @@ from ..training.augmentation import mirror_features
 from ..vision.pipeline import code_provenance, sha256
 from .data import HELD, ReviewedWindows, collate
 from .data import VERSION as FEATURE_VERSION
+from .decoder import CausalEventDecoder, DecoderConfig, Observation, decode_batch
 from .model import VERSION, BinaryDetector
 
 
@@ -237,7 +238,7 @@ def run(root, config_path, output):
 
 
 @torch.no_grad()
-def predict(root, run_path, output, recording="V4"):
+def predict(root, run_path, output, recording="V4", decoder_config_path=None):
     safe_relative(run_path)
     if not run_path.startswith("reports/"):
         raise ValueError("Use a local smoke checkpoint under reports/")
@@ -258,6 +259,11 @@ def predict(root, run_path, output, recording="V4"):
     if config.training_recording != "V4" or set(config.held_intervals) != HELD:
         raise ValueError("Invalid checkpoint scope")
     verify_binding(root, config)
+    policy = (
+        DecoderConfig.model_validate(store.json(decoder_config_path)[0])
+        if decoder_config_path
+        else DecoderConfig()
+    )
     data = ReviewedWindows(root, recording, config.core_frames)
     torch.set_num_threads(config.threads)
     model = BinaryDetector()
@@ -297,8 +303,55 @@ def predict(root, run_path, output, recording="V4"):
                     if probability is None
                     else int(probability >= config.decision_threshold),
                     reviewed_target=int(data.labels[interval["id"]][n - p["start"]]),
+                    reviewed=True,
+                    scene_id=int(data.raw["scene_id"][n]),
+                    segment_id=int(data.raw["segment_id"][n]),
+                    discontinuity_before=bool(data.epoch[n] == n),
                 )
             )
+    boundaries = {}
+    for interval in data.intervals:
+        p = interval["provenance"]
+        n = p["stop"]
+        boundaries[(recording, interval["id"])] = (
+            n,
+            Fraction(
+                int(data.raw["pts"][n]) * int(data.raw["time_base_num"][n]),
+                int(data.raw["time_base_den"][n]),
+            ),
+        )
+    decoded = decode_batch(lines, boundaries, policy)
+    # Replay in arbitrary I/O chunks: never flush merely because a batch ends.
+    streaming = CausalEventDecoder(policy)
+    scope = None
+    for offset in range(0, len(lines), 13):
+        for row in lines[offset : offset + 13]:
+            observation = Observation.from_row(row)
+            if scope is not None and observation.scope != scope:
+                stop_frame, stop_time = boundaries[scope]
+                streaming.finish(stop_frame=stop_frame, stop_time=stop_time)
+            streaming.push(observation)
+            scope = observation.scope
+    if scope is not None:
+        stop_frame, stop_time = boundaries[scope]
+        streaming.finish(stop_frame=stop_frame, stop_time=stop_time)
+    if decoded != dict(
+        events=streaming.events,
+        updates=streaming.updates,
+        discarded_candidates=streaming.discarded_candidates,
+    ):
+        raise ValueError("Decoder streaming/batch disagreement")
+    event_output = dict(
+        schema_version="decoded-punch-predictions-1.0",
+        source="model_prediction",
+        decoder=policy.model_dump(mode="json"),
+        decoder_code_sha256=sha256(Path(__file__).parent / "decoder.py"),
+        checkpoint_sha256=expected,
+        dataset_sha256=config.dataset.sha256,
+        threshold_selection="fixed engineering defaults; not optimized or validated",
+        **decoded,
+    )
+    write(path / "events.json", event_output)
     (path / "frames.jsonl").write_text(
         "".join(json.dumps(r, allow_nan=False) + "\n" for r in lines)
     )
@@ -310,7 +363,18 @@ def predict(root, run_path, output, recording="V4"):
         dataset_sha256=config.dataset.sha256,
         streaming_window_max_error=stream_error,
         threshold=config.decision_threshold,
-        scope="reviewed footage only; training-fit outputs, not generalization evaluation",
+        decoder=policy.model_dump(mode="json"),
+        decoder_config_sha256=sha256(Path(root) / decoder_config_path)
+        if decoder_config_path
+        else None,
+        predicted_events=len(decoded["events"]),
+        decoder_streaming_batch_equal=True,
+        events_sha256=sha256(path / "events.json"),
+        scope=(
+            "reviewed V4 training-footage engineering demonstration; not evaluation"
+            if recording == "V4"
+            else "reviewed V6 negative-only engineering demonstration; not evaluation"
+        ),
     )
     write(path / "receipt.json", result)
     return result

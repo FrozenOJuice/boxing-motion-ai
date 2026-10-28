@@ -16,6 +16,11 @@ def main():
     inference.add_argument("--run", required=True, help="Smoke output directory under reports/")
     inference.add_argument("--output", required=True)
     inference.add_argument("--recording", choices=["V4", "V6"], default="V4")
+    inference.add_argument(
+        "--decoder-config",
+        default="configs/decoder_v1.json",
+        help="Fixed, untuned timestamp-based event policy JSON",
+    )
     args = parser.parse_args()
     from .smoke import predict, run
 
@@ -23,7 +28,7 @@ def main():
         result = (
             run(Path.cwd(), args.config, args.output)
             if args.command == "smoke"
-            else predict(Path.cwd(), args.run, args.output, args.recording)
+            else predict(Path.cwd(), args.run, args.output, args.recording, args.decoder_config)
         )
     except (ValueError, OSError, KeyError) as exc:
         parser.exit(2, f"Detector command failed: {exc}\n")

@@ -340,3 +340,9 @@ training fit is an engineering check, not generalization evidence:
 ```sh
 uv run python -m boxing_motion_ai.detection --help
 ```
+
+The frozen model also supports [causal event decoding](docs/CAUSAL_EVENT_DECODING.md)
+with timestamp-based hysteresis, explicit first-emission times and censored edges.
+`infer --decoder-config configs/decoder_v1.json` writes event predictions alongside
+frame probabilities; the fixed demonstration is an engineering check, not event
+recognition/generalization accuracy.
