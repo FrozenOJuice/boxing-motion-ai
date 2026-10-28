@@ -331,3 +331,12 @@ exploratory Level 1 study, with V5 development-only and V9 reserved.
 uv sync --extra pose --extra train
 TORCH_HOME="$PWD/weights/torch" uv run python -m boxing_motion_ai.training.rgb_study --help
 ```
+
+The first [causal binary detector smoke test](docs/BINARY_DETECTOR_SMOKE.md) uses
+only verified V4 positive/background windows, preserves unknown-label masks and
+exact source timing, and provides checkpoint-bound reviewed-frame inference. Its
+training fit is an engineering check, not generalization evidence:
+
+```sh
+uv run python -m boxing_motion_ai.detection --help
+```

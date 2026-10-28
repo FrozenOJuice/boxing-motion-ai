@@ -1,0 +1,20 @@
+{
+  "schema_version": "binary-detector-smoke-1.0",
+  "dataset": {
+    "path": "reports/boxingvi/continuous-dataset-v1/manifest.json",
+    "sha256": "c7993318ee8f8a16e2cd89f04ad0acaf7ce95c0cad8aabad0c70079b683b2d59"
+  },
+  "training_recording": "V4",
+  "held_intervals": ["V4-bg-4", "V4-bg-5"],
+  "seed": 20261021,
+  "epochs": 30,
+  "core_frames": 32,
+  "batch_size": 6,
+  "learning_rate": 0.001,
+  "hidden": 32,
+  "dropout": 0.1,
+  "mirror_probability": 0.5,
+  "threads": 2,
+  "decision_threshold": 0.5,
+  "purpose": "user_approved_v4_training_only_smoke_no_model_selection"
+}
