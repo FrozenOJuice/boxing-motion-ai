@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   checkpoint,
   clock,
@@ -24,7 +24,7 @@ import Timeline from "./Timeline";
 
 type Modal = "about" | "shortcuts" | "development" | null;
 export default function App() {
-  const [screen, setScreen] = useState<"analyze" | "videos">("analyze");
+  const [screen, setScreen] = useState<"analyze" | "videos">("videos");
   const [video, setVideo] = useState(sample),
     [recent, setRecent] = useState<VideoItem[]>([]);
   const [ready, setReady] = useState(false),
@@ -78,31 +78,30 @@ export default function App() {
         Skip to content
       </a>
       <header className="app-header">
-        <Brand onClick={() => setScreen("videos")} />
-        <nav aria-label="Main navigation">
-          <button
-            aria-current={screen === "analyze" ? "page" : undefined}
-            onClick={() => setScreen("analyze")}
-          >
-            Analyze
-          </button>
-          <button
-            aria-current={screen === "videos" ? "page" : undefined}
-            onClick={() => setScreen("videos")}
-          >
-            Videos
-          </button>
-        </nav>
-        <div className="header-secondary">
-          <button
-            className="text-button development-link"
-            onClick={() => setModal("development")}
-          >
-            Development
-          </button>
-          <button className="prototype-link" onClick={() => setModal("about")}>
-            Design prototype
-          </button>
+        <div className="header-inner">
+          <Brand onClick={() => setScreen("videos")} />
+          <nav aria-label="Main navigation">
+            <button
+              aria-current={screen === "videos" ? "page" : undefined}
+              onClick={() => setScreen("videos")}
+            >
+              Videos
+            </button>
+          </nav>
+          <div className="header-secondary">
+            <button
+              className="text-button development-link"
+              onClick={() => setModal("development")}
+            >
+              Development
+            </button>
+            <button
+              className="prototype-link"
+              onClick={() => setModal("about")}
+            >
+              Design prototype
+            </button>
+          </div>
         </div>
       </header>
       <input
@@ -153,8 +152,8 @@ export default function App() {
               </Button>
             </div>
             <div className="library-heading">
-              <h2>Recent videos</h2>
-              <span>Up to 30 seconds · 150 MB · Stored in this browser</span>
+              <h2>{recent.length ? "Recent videos" : "Library"}</h2>
+              <span>Up to 30 seconds · 150 MB · MP4, MOV, WebM</span>
             </div>
             <div className="video-grid">
               {recent.map((item) => (
@@ -164,21 +163,17 @@ export default function App() {
                   onOpen={() => open(item)}
                 />
               ))}
-              <VideoTile
-                video={sample}
-                disabled={!ready}
-                onOpen={() => open(sample)}
-              />
-              <button
-                className="upload-tile"
-                disabled={opening}
-                onClick={() => input.current?.click()}
-              >
-                <Icon name="upload" size={24} />
-                <strong>Upload footage</strong>
-                <span>MP4, MOV or WebM</span>
-              </button>
+              {ready && (
+                <VideoTile video={sample} onOpen={() => open(sample)} />
+              )}
             </div>
+            {!recent.length && !ready && (
+              <div className="library-empty">
+                <Icon name="file" size={32} />
+                <h2>No videos yet</h2>
+                <p>Upload a short shadowboxing video to get started.</p>
+              </div>
+            )}
           </section>
         ) : ready || video.kind === "local" ? (
           <Workspace
@@ -324,6 +319,22 @@ function Workspace({
   onShortcuts: () => void;
 }) {
   const player = usePlayer(video);
+  const viewer = useRef<HTMLDivElement>(null);
+  const [viewerWidth, setViewerWidth] = useState<number>();
+  useLayoutEffect(() => {
+    const element = viewer.current!;
+    const resize = () => {
+      const width = Math.min(
+        element.clientWidth,
+        (Math.max(1, element.clientHeight - 118) * video.width) / video.height,
+      );
+      setViewerWidth(width);
+    };
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [video.width, video.height]);
   const [bounds, setBounds] = useState<Bounds | null>(null),
     [result, setResult] = useState<Selection | null>(null),
     [busy, setBusy] = useState(false);
@@ -397,7 +408,9 @@ function Workspace({
     <section className="workspace" aria-label="Analyze workspace">
       <div className="workspace-heading">
         <div className="cluster">
-          <IconButton icon="back" label="Back to videos" onClick={onVideos} />
+          <Button variant="ghost" icon="back" onClick={onVideos}>
+            Back to Videos
+          </Button>
           <div>
             <h1>{video.title}</h1>
             <p>
@@ -413,76 +426,47 @@ function Workspace({
         />
       </div>
       <div className="workspace-grid">
-        <div className="video-workspace">
-          <VideoStage video={video} player={player} />
-          <Transport video={video} player={player} />
-          <div className="selection-tools">
-            <div className="cluster">
-              <Button
-                icon="bracket-in"
-                disabled={busy}
-                onClick={() => mark("start")}
-                aria-label="Set punch start (I)"
-              >
-                Set start <kbd>I</kbd>
-              </Button>
-              <Button
-                icon="bracket-out"
-                disabled={busy}
-                onClick={() => mark("end")}
-                aria-label="Set punch end (O)"
-              >
-                Set end <kbd>O</kbd>
-              </Button>
+        <div className="video-workspace" ref={viewer}>
+          <div className="viewer-stack" style={{ width: viewerWidth }}>
+            <VideoStage video={video} player={player} />
+            <Timeline
+              video={video}
+              current={player.current}
+              bounds={bounds}
+              onSeek={player.seek}
+              onBounds={change}
+            />
+            <div className="viewer-controls">
+              <Transport video={video} player={player} />
+              <div className="selection-tools">
+                <Button
+                  icon="bracket-in"
+                  disabled={busy}
+                  onClick={() => mark("start")}
+                  aria-label="Set punch start (I)"
+                >
+                  In <kbd>I</kbd>
+                </Button>
+                <Button
+                  icon="bracket-out"
+                  disabled={busy}
+                  onClick={() => mark("end")}
+                  aria-label="Set punch end (O)"
+                >
+                  Out <kbd>O</kbd>
+                </Button>
+              </div>
             </div>
-            <span>Drag on the timeline to select a punch</span>
-          </div>
-          <Timeline
-            video={video}
-            current={player.current}
-            bounds={bounds}
-            onSeek={player.seek}
-            onBounds={change}
-          />
-          <div className="saved-selections">
-            <div className="saved-heading">
-              <h2>Saved punches</h2>
-              <span>{selections.length}</span>
-            </div>
-            <div className="saved-list">
-              {selections.length ? (
-                selections.map((s, i) => (
-                  <button
-                    key={s.id}
-                    disabled={busy}
-                    className={result?.id === s.id ? "is-active" : ""}
-                    onClick={() => {
-                      setBounds(s.bounds);
-                      setResult(s);
-                      player.seek(s.bounds.start);
-                    }}
-                  >
-                    <span>
-                      {s.kind === "recorded"
-                        ? punchName(s.prediction)
-                        : `Selection ${i + 1}`}
-                    </span>
-                    <small>
-                      {clock(s.bounds.start, true)} –{" "}
-                      {clock(s.bounds.end, true)}
-                      {s.kind === "preview" ? " · Example" : ""}
-                    </small>
-                  </button>
-                ))
-              ) : (
-                <p>No saved punches yet</p>
-              )}
-            </div>
+            <p className="precision-note">
+              {video.frameTimes
+                ? "Source-frame selection"
+                : "Time-based selection · Exact frames unavailable in this prototype"}
+            </p>
           </div>
         </div>
         <aside className="analysis-panel" aria-label="Punch analysis">
           <div className="panel-heading">
-            <h2>Selected punch</h2>
+            <h2>{bounds ? "Selected punch" : "Punch analysis"}</h2>
             {bounds && (
               <IconButton
                 icon="close"
@@ -495,28 +479,42 @@ function Workspace({
               />
             )}
           </div>
-          <div className="panel-content">
-            {bounds ? (
-              <>
-                <div className="selection-times">
-                  <div>
-                    <span>Start</span>
-                    <strong>{clock(bounds.start, true)}</strong>
-                  </div>
-                  <div>
-                    <span>End</span>
-                    <strong>{clock(bounds.end, true)}</strong>
-                  </div>
-                  <div>
-                    <span>Duration</span>
-                    <strong>{(bounds.end - bounds.start).toFixed(3)}s</strong>
-                  </div>
+          {bounds && (
+            <div className="selection-summary">
+              {" "}
+              <div className="selection-times">
+                <div>
+                  <span>Start</span>
+                  <strong>{clock(bounds.start, true)}</strong>
                 </div>
-                <Button icon="play" onClick={() => void player.play(bounds)}>
-                  Replay selection
-                </Button>
-              </>
-            ) : (
+                <div>
+                  <span>End</span>
+                  <strong>{clock(bounds.end, true)}</strong>
+                </div>
+                <div>
+                  <span>Duration</span>
+                  <strong>{(bounds.end - bounds.start).toFixed(3)}s</strong>
+                </div>
+              </div>
+              <Button icon="play" onClick={() => void player.play(bounds)}>
+                Replay selection
+              </Button>
+            </div>
+          )}
+          {bounds && (
+            <div className="panel-action">
+              <Button
+                variant="primary"
+                disabled={!bounds || busy}
+                onClick={classify}
+              >
+                {busy ? "Loading…" : "Classify punch"}
+              </Button>
+              <span>Prototype · New predictions are example output</span>
+            </div>
+          )}
+          <div className="panel-content">
+            {!bounds && (
               <div className="selection-empty">
                 <Icon name="bracket-in" size={24} />
                 <h3>Select one punch</h3>
@@ -526,96 +524,117 @@ function Workspace({
                 </p>
               </div>
             )}
-            <section className="prediction" aria-live="polite" aria-busy={busy}>
-              <h3>AI prediction</h3>
-              {busy ? (
-                <p role="status">Loading example output…</p>
-              ) : result ? (
-                <>
-                  <div className="result-source">
-                    {result.kind === "recorded"
-                      ? "Saved model output"
-                      : "Prototype example"}
-                  </div>
-                  <h4>{punchName(result.prediction)}</h4>
-                  <p>
-                    {result.kind === "recorded"
-                      ? "Recorded output for this sample selection."
-                      : "No model ran for this selection."}
-                  </p>
-                  <div className="scores">
-                    {Object.entries(result.scores)
-                      .sort((a, b) => b[1] - a[1])
-                      .map(([name, score]) => (
-                        <div
-                          className={`score ${name === result.prediction ? "score--top" : ""}`}
-                          key={name}
-                        >
-                          <div>
-                            <span>{punchName(name)}</span>
-                            <span>{score.toFixed(3)}</span>
-                          </div>
+            {(busy || result) && (
+              <section
+                className="prediction"
+                aria-live="polite"
+                aria-busy={busy}
+              >
+                {busy ? (
+                  <p role="status">Loading example output…</p>
+                ) : result ? (
+                  <>
+                    <div className="result-source">
+                      {result.kind === "recorded"
+                        ? "Saved model output"
+                        : "Prototype example"}
+                    </div>
+                    <h3 className="prediction-title">
+                      {punchName(result.prediction)}
+                    </h3>
+                    <p>
+                      {result.kind === "recorded"
+                        ? "Recorded output for this sample selection."
+                        : "No model ran for this selection."}
+                    </p>
+                    <div className="scores">
+                      {Object.entries(result.scores)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([name, score]) => (
                           <div
-                            className="score-track"
-                            role="meter"
-                            aria-label={punchName(name)}
-                            aria-valuemin={0}
-                            aria-valuemax={1}
-                            aria-valuenow={score}
+                            className={`score ${name === result.prediction ? "score--top" : ""}`}
+                            key={name}
                           >
-                            <span style={{ width: `${score * 100}%` }} />
+                            <div>
+                              <span>{punchName(name)}</span>
+                              <span>{score.toFixed(3)}</span>
+                            </div>
+                            <div
+                              className="score-track"
+                              role="meter"
+                              aria-label={punchName(name)}
+                              aria-valuemin={0}
+                              aria-valuemax={1}
+                              aria-valuenow={score}
+                            >
+                              <span style={{ width: `${score * 100}%` }} />
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                  </div>
-                  <p className="score-note">
-                    Uncalibrated model scores, not probabilities of correctness.
-                  </p>
-                </>
-              ) : (
-                <p className="prediction-placeholder">
-                  {bounds
-                    ? "Ready to classify the selected punch."
-                    : "Prediction appears here after classification."}
+                        ))}
+                    </div>
+                    <p className="score-note">
+                      Uncalibrated model scores, not probabilities of
+                      correctness.
+                    </p>
+                  </>
+                ) : null}
+              </section>
+            )}
+            {result && (
+              <details className="model-details">
+                <summary>Model information</summary>
+                <p>Level 1 · Six punch categories</p>
+                <p>
+                  New selections use example output. Sample outputs are recorded
+                  from the existing trained checkpoint.
                 </p>
-              )}
-            </section>
-            <section className="quality">
-              <h3>Selection quality</h3>
-              <dl>
-                <dt>Time range</dt>
-                <dd>{bounds ? "Valid" : "Not selected"}</dd>
-                <dt>Pose coverage</dt>
-                <dd>Not evaluated live</dd>
-                <dt>Frame precision</dt>
-                <dd>{video.frameTimes ? "Source frames" : "Time based"}</dd>
-              </dl>
-            </section>
-            <details className="model-details">
-              <summary>Model information</summary>
-              <p>Level 1 · Six punch categories</p>
-              <p>
-                New selections use example output. Sample outputs are recorded
-                from the existing trained checkpoint.
-              </p>
-              <p>
-                Checkpoint <code>{checkpoint.slice(0, 12)}</code>
-              </p>
-              <p>
-                Experimental recognition. New-boxer performance is unvalidated.
-              </p>
-            </details>
+                <p>
+                  Checkpoint <code>{checkpoint.slice(0, 12)}</code>
+                </p>
+                <p>
+                  Experimental recognition. New-boxer performance is
+                  unvalidated.
+                </p>
+              </details>
+            )}
           </div>
-          <div className="panel-action">
-            <Button
-              variant="primary"
-              disabled={!bounds || busy}
-              onClick={classify}
-            >
-              {busy ? "Loading…" : "Classify punch"}
-            </Button>
-            <span>Prototype · New predictions are example output</span>
-          </div>
+          {selections.length > 0 && (
+            <section className="saved-selections">
+              <div className="saved-heading">
+                <h2>Classified punches</h2>
+                <span>{selections.length}</span>
+              </div>
+              <div className="saved-list">
+                {selections.length ? (
+                  selections.map((s, i) => (
+                    <button
+                      key={s.id}
+                      disabled={busy}
+                      className={result?.id === s.id ? "is-active" : ""}
+                      onClick={() => {
+                        setBounds(s.bounds);
+                        setResult(s);
+                        player.seek(s.bounds.start);
+                      }}
+                    >
+                      <span>
+                        {s.kind === "recorded"
+                          ? punchName(s.prediction)
+                          : `Selection ${i + 1}`}
+                      </span>
+                      <small>
+                        {clock(s.bounds.start, true)} –{" "}
+                        {clock(s.bounds.end, true)}
+                        {s.kind === "preview" ? " · Example" : ""}
+                      </small>
+                    </button>
+                  ))
+                ) : (
+                  <p>No saved punches yet</p>
+                )}
+              </div>
+            </section>
+          )}
         </aside>
       </div>
     </section>

@@ -1,6 +1,7 @@
 # Boxing Motion AI — isolated design prototype
 
-An isolated React + TypeScript design for Analyze, Videos and secondary Development. This is
+An isolated React + TypeScript design with Videos as home, an Analyze workspace opened
+from a video, and secondary Development. This is
 **not a production frontend migration**. No production components, styles, services,
 review workflows or API routes are imported or changed.
 
@@ -30,7 +31,7 @@ npm run prepare:demo -- /absolute/path/to/the/reference/upload
 The current checkout already has that local sample. No media, weights or datasets are
 downloaded. Without it, local uploads still work and the sample action is unavailable.
 The sample footage, generated build, screenshots and verification receipts stay ignored
-by Git. Review screenshots are available locally under `artifacts/refinement/screenshots/`.
+by Git. Review screenshots are available locally under `artifacts/proportions/screenshots/`.
 
 ## What is real, and what is simulated
 
@@ -61,7 +62,10 @@ accuracy evaluation. No model, pose extraction, training or review write runs he
 - Shared Button, IconButton, Dialog, Icon and Brand primitives in `src/ui.tsx`.
 - A single Analyze workspace for playback, selection and prediction; no Results page.
 - A single timeline component; no second scrubber or progress bar competing with it.
-- A scrollable right panel with a persistent primary classification action.
+- A native-aspect player fitted to available width and height, with timeline directly below.
+- A conditional right panel: instructions, selection/action, then prediction.
+- A fixed selection/action region and scrollable output and saved-punch list.
+- One primary Upload video action in the conventional thumbnail library.
 - Flat lists, separators and plain model details rather than dashboard cards or metrics.
 - Persistent prototype identification, specific simulation labels and no confidence claims.
 
@@ -82,8 +86,9 @@ npm run build
 ```
 
 The tests cover source-time/VFR selection, non-crossing keyboard handles, time formatting,
-preview provenance, storage restoring only previews, explicit simulation labels, model
-information, replay boundary races and absence of calls to the production API. Browser visual verification and
+preview provenance, storage restoring only previews, explicit simulation labels,
+library/navigation states, replay boundary races and absence of production API calls.
+Browser visual verification and
 remaining issues are recorded in [DESIGN_REVIEW.md](DESIGN_REVIEW.md).
 
 Prototype storage is scoped to origin/port 5186 and names prefixed with
