@@ -1,5 +1,9 @@
 # Punch-instance segmentation v2: real-motion diagnostics
 
+Follow-up: the [pose-observation study](POSE_OBSERVATION_STUDY.md) compares resolution,
+cropping, tracking and the previously investigated RTMPose model with this frozen policy.
+Its experimental outputs do not replace production poses or change the results below.
+
 2026-10-29. V2 now proposes real source-frame ranges and sends eligible ranges to the
 **unchanged trained six-class classifier**. It replaces neither trained model and does not
 change the frozen causal activity decoder. V1 code, policy and historical outputs remain intact.
