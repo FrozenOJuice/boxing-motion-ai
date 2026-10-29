@@ -5,8 +5,7 @@ from pathlib import Path
 
 import numpy as np
 
-from ..detection.instances import VERSION as SEGMENT_VERSION
-from ..detection.instances import Policy, segment
+from ..detection import instances, instances_v2
 from .automatic_contract import VERSION, activity_record, inputs
 from .common import regular, write_json
 from .inference import Classifier
@@ -35,10 +34,15 @@ def classify_candidates(segmentation, classifier, raw, video):
         candidate.update(
             candidate_id=f"candidate-{number}",
             verified=False,
-            source="pose_arm_cycle_heuristic",
+            source=candidate.get("source", "pose_arm_cycle_heuristic"),
             **bounds(candidate, video),
         )
         candidate["motion_evidence_through"] = video["frames"][candidate["evidence_through_frame"]]
+        if not candidate.get("classification_eligible", True):
+            candidate["classification"] = dict(
+                status="unavailable", reason=candidate["classification_unavailable_reason"]
+            )
+            continue
         try:
             result = classifier.classify(
                 raw,
@@ -70,7 +74,16 @@ def analyze(root, directory, key, expected, activity_sha256):
     activity = activity_record(directory, key, activity_fp, activity_sha256)
     with np.load(regular(directory / "poses.npz"), allow_pickle=False) as z:
         raw = {k: z[k] for k in z.files}
-    segmentation = segment(raw, video, activity, Policy.model_validate(policy))
+    schema = policy.get("schema_version")
+    if schema == "pose-reach-phase-policy-2.0":
+        implementation = instances_v2
+    elif schema == "pose-arm-cycle-policy-1.0":
+        implementation = instances
+    else:
+        raise ValueError("Unsupported punch-candidate segmentation policy")
+    segmentation = implementation.segment(
+        raw, video, activity, implementation.Policy.model_validate(policy)
+    )
     model = Classifier(
         root
     )  # Pinned model integrity required, even if no candidates are available.
@@ -84,7 +97,7 @@ def analyze(root, directory, key, expected, activity_sha256):
         provenance=identity,
         activity_input_fingerprint=activity_fp,
         activity_result_sha256=activity_sha256,
-        segmentation_version=SEGMENT_VERSION,
+        segmentation_version=implementation.VERSION,
         segmentation_policy=policy,
         classifier_checkpoint=model.pin["checkpoint"],
         classifier_feature_version=model.pin["feature_version"],

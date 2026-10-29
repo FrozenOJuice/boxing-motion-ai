@@ -19,8 +19,9 @@ manual selection to review experimental possible activity bouts beside the timel
 These ranges are not validated detections or individual punch counts.
 [Automatic candidate analysis](docs/AUTOMATIC_PUNCH_CANDIDATES.md) now attempts
 per-arm instance segmentation and six-class inference without manual boundaries.
-The conservative baseline left all tested real punching clips unresolved; reliable
-automatic labeling has not yet been demonstrated.
+The default [v2 segmentation baseline](docs/PUNCH_INSTANCE_SEGMENTATION_V2.md) now
+proposes real motion ranges and obtains trained-model predictions, but misses, boundary
+merges and false proposals remain. V1 is retained; reliable automatic labeling is unvalidated.
 
 See [setup, usage, limitations, cleanup and verification](docs/ASSISTED_PUNCH_RECOGNITION.md).
 Analyze requires the `dashboard`, `pose` and `train` extras plus the existing local

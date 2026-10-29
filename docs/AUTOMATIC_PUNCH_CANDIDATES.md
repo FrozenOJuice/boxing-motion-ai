@@ -1,5 +1,9 @@
 # Automatic punch candidates: conservative offline baseline
 
+**Historical v1 assessment.** The application now defaults to the
+[v2 reach-phase baseline](PUNCH_INSTANCE_SEGMENTATION_V2.md), which produces real proposals
+but remains unvalidated. V1 implementation, policy and the findings below are preserved.
+
 2026-10-29. The production upload workflow now has **Analyze automatically**. It reuses the
 existing binary activity scan, attempts per-arm motion segmentation, and runs the unchanged
 six-class classifier on accepted candidates. Manual selection/classification remains available.

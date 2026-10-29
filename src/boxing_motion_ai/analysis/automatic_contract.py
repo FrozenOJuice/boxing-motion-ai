@@ -7,8 +7,8 @@ from pathlib import Path
 from .activity_contract import inputs as activity_inputs
 from .common import pin, regular, sha
 
-VERSION = "automatic-punch-candidates-1.0"
-POLICY = "configs/punch_instances_v1.json"
+VERSION = "automatic-punch-candidates-2.0"
+POLICY = "configs/punch_instances_v2.json"
 
 
 def inputs(root, directory, key):
@@ -21,6 +21,7 @@ def inputs(root, directory, key):
         "analysis/automatic_contract.py",
         "analysis/inference.py",
         "detection/instances.py",
+        "detection/instances_v2.py",
     ]
     identity = dict(
         schema_version=VERSION,

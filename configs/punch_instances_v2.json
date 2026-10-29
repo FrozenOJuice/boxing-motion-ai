@@ -1,0 +1,17 @@
+{
+  "schema_version": "pose-reach-phase-policy-2.0",
+  "smoothing_radius_seconds": "3/50",
+  "minimum_prominence_torso": 0.18,
+  "onset_fraction": 0.1,
+  "recovery_fraction": 0.9,
+  "boundary_evidence_seconds": "2/25",
+  "minimum_phase_seconds": "1/25",
+  "minimum_cycle_seconds": "3/25",
+  "maximum_cycle_seconds": "3/2",
+  "maximum_turn_cosine": 0.5,
+  "maximum_wrist_speed_torso_per_second": 40.0,
+  "minimum_activity_overlap_seconds": "2/25",
+  "minimum_classification_arm_coverage": 0.7,
+  "overlap_peak_separation_seconds": "2/25",
+  "scope": "offline per-arm reach prominence and trajectory reversal; moving guard and changed return position allowed; development diagnostic baseline, not validated punches"
+}

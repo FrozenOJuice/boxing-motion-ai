@@ -245,7 +245,7 @@ def test_auto_jobs_reuse_activity_cache_preserve_manual_outputs_and_retry(tmp_pa
             write_json(
                 directory / f"automatic-{fingerprint[0]}.json",
                 dict(
-                    schema_version="automatic-punch-candidates-1.0",
+                    schema_version="automatic-punch-candidates-2.0",
                     video_id=key,
                     input_fingerprint=fingerprint[0],
                     activity_input_fingerprint="b" * 64,
@@ -343,7 +343,7 @@ def test_automatic_fingerprint_binds_classifier_and_policy(tmp_path):
         first = contract.inputs(tmp_path, tmp_path, "a")[0]
         assert first == contract.inputs(tmp_path, tmp_path, "a")[0]
         policy = json.loads((tmp_path / contract.POLICY).read_text())
-        policy["minimum_excursion_torso"] = 0.5
+        policy["minimum_prominence_torso"] = 0.5
         write_json(tmp_path / contract.POLICY, policy)
         assert contract.inputs(tmp_path, tmp_path, "a")[0] != first
         second = contract.inputs(tmp_path, tmp_path, "a")[0]
