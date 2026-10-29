@@ -1,0 +1,84 @@
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #e8edef;
+  color: #263d46;
+}
+.review-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+}
+.review-shell > header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 24px;
+  min-height: 58px;
+  background: white;
+  border-bottom: 1px solid #cbd5da;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.review-shell header > span {
+  color: #697b83;
+}
+.review-shell nav {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+.review-shell button {
+  font: inherit;
+  padding: 7px 10px;
+  border: 1px solid #cbd5da;
+  border-radius: 5px;
+  color: #324b56;
+  background: white;
+  cursor: pointer;
+}
+.review-shell button[aria-pressed="true"] {
+  background: #193d35;
+  border-color: #193d35;
+  color: white;
+}
+.review-shell a {
+  color: #324b56;
+  text-underline-offset: 4px;
+}
+.review-host {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.review-viewport {
+  box-shadow: 0 6px 35px #18354114;
+}
+.review-viewport iframe {
+  display: block;
+  border: 0;
+  transform-origin: top left;
+  background: #fff;
+}
+.review-shell > footer {
+  padding: 8px 24px;
+  font-size: 10px;
+  color: #5c737e;
+  text-align: center;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #176e58;
+  outline-offset: 3px;
+}
+@media (max-width: 800px) {
+  .review-shell nav {
+    margin-left: 0;
+  }
+}
