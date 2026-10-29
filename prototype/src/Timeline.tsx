@@ -156,7 +156,7 @@ export default function Timeline({
                   draggable="false"
                 />
               ) : (
-                <img src={video.poster} alt="" draggable="false" />
+                <span />
               )}
             </div>
           ))}

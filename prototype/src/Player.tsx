@@ -72,6 +72,8 @@ export function usePlayer(video: VideoItem) {
             range.start)
           : Math.max(range.start, range.end - 0.001);
         seek(last);
+        // Late compositor callbacks must remain bounded until the next explicit seek/play.
+        stopAt.current = range;
         return;
       }
       presented.current = time;

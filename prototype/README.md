@@ -1,6 +1,6 @@
 # Boxing Motion AI — isolated design prototype
 
-A new React + TypeScript interaction design for Upload, Analyze and Results. This is
+An isolated React + TypeScript design for Analyze, Videos and secondary Development. This is
 **not a production frontend migration**. No production components, styles, services,
 review workflows or API routes are imported or changed.
 
@@ -30,7 +30,7 @@ npm run prepare:demo -- /absolute/path/to/the/reference/upload
 The current checkout already has that local sample. No media, weights or datasets are
 downloaded. Without it, local uploads still work and the sample action is unavailable.
 The sample footage, generated build, screenshots and verification receipts stay ignored
-by Git. Review screenshots are available locally under `artifacts/screenshots/`.
+by Git. Review screenshots are available locally under `artifacts/refinement/screenshots/`.
 
 ## What is real, and what is simulated
 
@@ -43,8 +43,8 @@ by Git. Review screenshots are available locally under `artifacts/screenshots/`.
 | Frame buttons | Exact indexed sample frames. Disabled for arbitrary uploads, whose exact frame inventory is unavailable to this prototype. |
 | Speed / fullscreen / replay | Actual media controls, subject to browser support. |
 | New classification | A deliberately simulated 450 ms UI transition; **no model request**. |
-| Sample results | Two actual saved model outputs for the matching sample windows, labeled “Saved sample output.” |
-| New result | Clearly marked “EXAMPLE RESULT” and “This selection was not classified.” Scores are borrowed from the sample to review the layout, not generated or asserted for the chosen movement. |
+| Sample results | Two actual saved model outputs for the matching sample windows, labeled “Saved model output.” |
+| New result | Clearly marked “Prototype example” and “No model ran for this selection.” Scores are borrowed from the sample to review the layout, not generated or asserted for the chosen movement. |
 | Saved prototype selections | Actual browser-local metadata under a separate prototype storage key. They always reopen as previews, never verified predictions. |
 | Model information | Read-only descriptions of the pinned reference represented by the saved sample output. |
 | Development tools | Informational dialog. No connection to the existing development application. |
@@ -56,11 +56,12 @@ accuracy evaluation. No model, pose extraction, training or review write runs he
 
 ## Design system
 
-- Quiet light surfaces, dark ink and one green action/selection accent.
+- Neutral dark surfaces, light text and one restrained green action/selection accent.
 - Shared typography, spacing, border, radius and color tokens in `src/styles.css`.
 - Shared Button, IconButton, Dialog, Icon and Brand primitives in `src/ui.tsx`.
-- A shared media controller and video stage for Analyze and Results.
+- A single Analyze workspace for playback, selection and prediction; no Results page.
 - A single timeline component; no second scrubber or progress bar competing with it.
+- A scrollable right panel with a persistent primary classification action.
 - Flat lists, separators and plain model details rather than dashboard cards or metrics.
 - Persistent prototype identification, specific simulation labels and no confidence claims.
 
@@ -82,7 +83,7 @@ npm run build
 
 The tests cover source-time/VFR selection, non-crossing keyboard handles, time formatting,
 preview provenance, storage restoring only previews, explicit simulation labels, model
-information and absence of calls to the production API. Browser visual verification and
+information, replay boundary races and absence of calls to the production API. Browser visual verification and
 remaining issues are recorded in [DESIGN_REVIEW.md](DESIGN_REVIEW.md).
 
 Prototype storage is scoped to origin/port 5186 and names prefixed with
