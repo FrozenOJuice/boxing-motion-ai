@@ -67,6 +67,15 @@ def register(app, root):
     def frame(key: str, index: int):
         return FileResponse(jobs.asset(key, index), media_type="image/png")
 
+    @app.get("/api/analyze/videos/{key}/activity")
+    def activity(key: str):
+        return jobs.activity(key)
+
+    @app.post("/api/analyze/videos/{key}/scan")
+    def scan(key: str):
+        value = jobs.scan(key)
+        return JSONResponse(value, status_code=202 if value["status"] == "processing" else 200)
+
     @app.post("/api/analyze/videos/{key}/classify")
     def classify(key: str, selection: Selection):
         return jobs.classify(key, selection.start_frame, selection.stop_frame_exclusive)

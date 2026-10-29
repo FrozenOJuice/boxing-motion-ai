@@ -76,7 +76,11 @@ afterEach(() => {
 
 it("defaults to Analyze without querying development artifacts", async () => {
   const fetcher = vi.fn().mockResolvedValue(response({ videos: [] }));
-  vi.stubGlobal("fetch", fetcher);
+  vi.stubGlobal("fetch", (url: string, options?: RequestInit) =>
+    url.endsWith("/activity")
+      ? Promise.resolve(response({ video_id: job.id, status: "not_started" }))
+      : fetcher(url, options),
+  );
   render(<App />);
   await screen.findByRole("heading", {
     name: "See what your punch looks like to AI.",
@@ -99,7 +103,11 @@ it("maps variable timestamps to source frames without a nominal FPS", () => {
 
 it("requires displayed boundaries, submits exclusive source bounds and shows uncalibrated scores", async () => {
   const fetcher = vi.fn().mockResolvedValue(response(prediction));
-  vi.stubGlobal("fetch", fetcher);
+  vi.stubGlobal("fetch", (url: string, options?: RequestInit) =>
+    url.endsWith("/activity")
+      ? Promise.resolve(response({ video_id: job.id, status: "not_started" }))
+      : fetcher(url, options),
+  );
   render(<PunchSelection job={job} onBusy={() => {}} />);
   expect(
     screen.getByRole("button", { name: "Set punch start" }),
@@ -128,13 +136,17 @@ it("requires displayed boundaries, submits exclusive source bounds and shows unc
 it("shows unavailable pose results without inventing scores", async () => {
   vi.stubGlobal(
     "fetch",
-    vi.fn().mockResolvedValue(
-      response({
-        status: "unavailable",
-        reason: "Not enough reliable poses",
-        start_frame: 0,
-        stop_frame_exclusive: 3,
-      }),
+    vi.fn().mockImplementation((url: string) =>
+      Promise.resolve(
+        url.endsWith("/activity")
+          ? response({ video_id: job.id, status: "not_started" })
+          : response({
+              status: "unavailable",
+              reason: "Not enough reliable poses",
+              start_frame: 0,
+              stop_frame_exclusive: 3,
+            }),
+      ),
     ),
   );
   render(<PunchSelection job={job} onBusy={() => {}} />);
@@ -155,7 +167,11 @@ it("locks concurrent classifications and preserves errors for retry", async () =
         finish = r;
       }),
   );
-  vi.stubGlobal("fetch", fetcher);
+  vi.stubGlobal("fetch", (url: string, options?: RequestInit) =>
+    url.endsWith("/activity")
+      ? Promise.resolve(response({ video_id: job.id, status: "not_started" }))
+      : fetcher(url, options),
+  );
   render(<PunchSelection job={job} onBusy={() => {}} />);
   selectPunch();
   const classify = screen.getByRole("button", {
@@ -200,7 +216,7 @@ it("uses buffered media for play and exact source images for stepping", async ()
 
 it("uploads the real file body and follows processing status without development calls", async () => {
   let count = 0;
-  const fetcher = vi.fn(async (url: string) => {
+  const fetcher = vi.fn(async (url: string, _options?: RequestInit) => {
     if (url === "/api/analyze/videos")
       return response({ videos: count++ ? [job] : [] });
     if (url === "/api/analyze/uploads") return response({ id: job.id });
@@ -210,7 +226,11 @@ it("uploads the real file body and follows processing status without development
       message: "Video has invalid timestamps",
     });
   });
-  vi.stubGlobal("fetch", fetcher);
+  vi.stubGlobal("fetch", (url: string, options?: RequestInit) =>
+    url.endsWith("/activity")
+      ? Promise.resolve(response({ video_id: job.id, status: "not_started" }))
+      : fetcher(url, options),
+  );
   render(<Analyze />);
   await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
   const file = new File([new Uint8Array([1, 2, 3])], "shadowboxing.mp4", {
@@ -231,7 +251,11 @@ it("uploads the real file body and follows processing status without development
 
 it("rejects unsupported local files before sending them", async () => {
   const fetcher = vi.fn().mockResolvedValue(response({ videos: [] }));
-  vi.stubGlobal("fetch", fetcher);
+  vi.stubGlobal("fetch", (url: string, options?: RequestInit) =>
+    url.endsWith("/activity")
+      ? Promise.resolve(response({ video_id: job.id, status: "not_started" }))
+      : fetcher(url, options),
+  );
   render(<Analyze />);
   fireEvent.change(screen.getByLabelText("Upload shadowboxing video"), {
     target: { files: [new File(["x"], "unsafe.html")] },

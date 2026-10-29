@@ -2488,3 +2488,35 @@ footer span {
     text-align: center;
   }
 }
+.activity-scan {
+  margin: 12px 0;
+  padding: 12px 0;
+  border-block: 1px solid var(--border, #ddd);
+}
+.activity-scan-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.activity-ranges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  padding: 0;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.activity-ranges button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+}
+.activity-ranges span,
+.activity-scan small {
+  font-size: 12px;
+}

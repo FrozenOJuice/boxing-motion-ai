@@ -12,7 +12,11 @@ See [the project specification](docs/PROJECT_SPEC.md).
 shadowboxing video (up to 30 seconds), select one punch with exact-frame boundaries,
 and classify it with a pinned existing Level 1 checkpoint. Buffered playback, cached
 MediaPipe poses, six uncalibrated model scores and additional selections are working.
-This is experimental assisted recognition; it does not automatically find punches.
+This is experimental assisted recognition; it does not automatically find individual punches.
+Analyze also supports [full-video activity scanning](docs/UPLOADED_ACTIVITY_DETECTION.md)
+with the pinned training-only binary smoke model. Choose **Scan for activity** without
+manual selection to review experimental possible activity bouts beside the timeline.
+These ranges are not validated detections or individual punch counts.
 
 See [setup, usage, limitations, cleanup and verification](docs/ASSISTED_PUNCH_RECOGNITION.md).
 Analyze requires the `dashboard`, `pose` and `train` extras plus the existing local

@@ -11,6 +11,8 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from time import perf_counter
 
+from .activity_contract import VERSION as ACTIVITY_VERSION
+from .activity_contract import inputs as activity_inputs
 from .common import EXTENSIONS, MAX_BYTES, pin, regular, sha, write_json
 
 
@@ -28,6 +30,7 @@ class AnalysisJobs:
         self.executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="assisted-analysis")
         self.active = set()
         self.classifying = set()
+        self.scanning = set()
 
     def directory(self, key):
         if not re.fullmatch(r"[0-9a-f]{32}", key):
@@ -173,6 +176,138 @@ class AnalysisJobs:
                 ]
             return job
 
+    def _activity_identity(self, key):
+        if self.status(key)["status"] != "ready":
+            raise AnalysisError("Wait for video preparation before scanning for activity.", 409)
+        try:
+            return activity_inputs(self.root, self.directory(key), key)[0]
+        except (OSError, ValueError, KeyError) as exc:
+            raise AnalysisError(f"Activity detector unavailable: {exc}") from exc
+
+    def _activity_result(self, key, state, fingerprint):
+        if state.get("input_fingerprint") != fingerprint:
+            raise ValueError("Activity scan inputs have changed. Run Scan for activity again.")
+        name = f"activity-{fingerprint}.json"
+        if sha(regular(self.directory(key) / name)) != state["result_sha256"]:
+            raise ValueError("Cached activity output has changed. Run Scan for activity again.")
+        result = self.read(key, name)
+        if not (
+            result.get("schema_version") == ACTIVITY_VERSION
+            and result.get("video_id") == key
+            and result.get("input_fingerprint") == fingerprint
+        ):
+            raise ValueError("Activity result does not match this video and input version.")
+        return result
+
+    def activity(self, key):
+        self.status(key)  # Validate this upload ID before inspecting its scoped artifacts.
+        path = self.directory(key) / "activity-state.json"
+        if not path.exists():
+            return dict(video_id=key, status="not_started")
+        with self.lock:
+            try:
+                state = self.read(key, path.name)
+                if state.get("status") not in {"processing", "ready", "failed"}:
+                    raise ValueError("Invalid activity state")
+            except (AnalysisError, ValueError, AttributeError):
+                return dict(
+                    video_id=key,
+                    status="failed",
+                    message="Activity state is unavailable. Retry the scan.",
+                )
+            if state.get("video_id") != key:
+                return dict(
+                    video_id=key,
+                    status="failed",
+                    message="Activity state belongs to another video.",
+                )
+            if state["status"] == "processing" and key not in self.scanning:
+                return dict(
+                    video_id=key,
+                    status="failed",
+                    message="Activity scanning was interrupted. Retry the scan.",
+                )
+            if state["status"] == "ready":
+                try:
+                    result = self._activity_result(key, state, self._activity_identity(key))
+                    return {**state, "result": result}
+                except (OSError, ValueError, KeyError, AnalysisError) as exc:
+                    return dict(video_id=key, status="failed", message=str(exc))
+            return state
+
+    def scan(self, key):
+        with self.lock:
+            fingerprint = self._activity_identity(key)
+            if key in self.scanning:
+                state = self.read(key, "activity-state.json")
+                if state["input_fingerprint"] != fingerprint:
+                    raise AnalysisError(
+                        "Scan inputs changed while processing. Wait and retry.", 409
+                    )
+                return state
+            old = self.activity(key)
+            if old["status"] == "ready":
+                return old
+            if self.active or self.classifying or self.scanning:
+                raise AnalysisError(
+                    "Analysis is busy. Wait for processing or classification to finish.", 409
+                )
+            request_id = uuid.uuid4().hex
+            state = dict(
+                video_id=key,
+                status="processing",
+                request_id=request_id,
+                input_fingerprint=fingerprint,
+                message="Scanning cached poses for possible activity",
+            )
+            write_json(self.directory(key) / "activity-state.json", state)
+            self.scanning.add(key)
+            try:
+                self.executor.submit(self.process_scan, key, fingerprint, request_id)
+            except Exception as exc:
+                self.scanning.discard(key)
+                state.update(status="failed", message="Could not start activity scan. Retry.")
+                write_json(self.directory(key) / "activity-state.json", state)
+                raise AnalysisError(state["message"]) from exc
+            return state
+
+    def process_scan(self, key, fingerprint, request_id):
+        began = perf_counter()
+        state = dict(video_id=key, request_id=request_id, input_fingerprint=fingerprint)
+        try:
+            self.run(
+                key,
+                "boxing_motion_ai.detection.upload",
+                self.root,
+                self.directory(key),
+                key,
+                fingerprint,
+                timeout=120,
+            )
+            if self._activity_identity(key) != fingerprint:
+                raise AnalysisError("Activity inputs changed during scanning. Retry.")
+            state["result_sha256"] = sha(
+                regular(self.directory(key) / f"activity-{fingerprint}.json")
+            )
+            self._activity_result(key, state, fingerprint)
+            state.update(
+                status="ready", message="Experimental possible punching activity available"
+            )
+        except Exception as exc:
+            state.update(
+                status="failed",
+                message=str(exc)
+                if isinstance(exc, (AnalysisError, ValueError))
+                else "Activity inference failed. Check local artifacts and retry.",
+            )
+        finally:
+            state["scan_wall_seconds"] = perf_counter() - began
+            with self.lock:
+                try:
+                    write_json(self.directory(key) / "activity-state.json", state)
+                finally:
+                    self.scanning.discard(key)
+
     def classify(self, key, start, stop):
         with self.lock:
             job = self.status(key)
@@ -181,7 +316,7 @@ class AnalysisJobs:
             count = job["video"]["frame_count"]
             if not (0 <= start < stop <= count):
                 raise AnalysisError("Choose a start frame before the end frame, within the video.")
-            if key in self.classifying or self.classifying or self.active:
+            if key in self.classifying or self.classifying or self.active or self.scanning:
                 raise AnalysisError(
                     "Analysis is busy. Wait for processing to finish and try again.", 409
                 )
@@ -215,7 +350,7 @@ class AnalysisJobs:
 
     def remove(self, key):
         with self.lock:
-            if key in self.active or key in self.classifying:
+            if key in self.active or key in self.classifying or key in self.scanning:
                 raise AnalysisError(
                     "Wait for processing to finish before removing this video.", 409
                 )

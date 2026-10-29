@@ -1,5 +1,9 @@
 # Milestone 1: Assisted Punch Recognition
 
+Later addition: [continuous uploaded-video activity scanning](UPLOADED_ACTIVITY_DETECTION.md)
+now runs the separate binary smoke model without manual selection. The six-class workflow
+described here remains assisted; the original milestone scope below is historical.
+
 Analyze is the default local application. Upload a short continuous shadowboxing video,
 select one punch, and run an existing six-class model. Review, Dataset, Experiments and
 Models remain under Development, with their existing workflows and preservation guards.

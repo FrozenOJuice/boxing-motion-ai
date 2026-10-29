@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import ActivityScan from "./ActivityScan";
 
 export type Prediction = {
   status: "available" | "unavailable";
@@ -162,8 +163,8 @@ export default function Analyze() {
         <span className="eyebrow">ASSISTED PUNCH RECOGNITION</span>
         <h1>See what your punch looks like to AI.</h1>
         <p>
-          Upload a short shadowboxing video. Select one punch, then get an
-          experimental prediction.
+          Upload a short shadowboxing video. Scan for possible activity, or
+          select one punch for an experimental classification.
         </p>
       </header>
       <section className="panel upload-panel">
@@ -253,9 +254,9 @@ export default function Analyze() {
         <PunchSelection key={job.id} job={job} onBusy={setAnalyzing} />
       )}
       <p className="analysis-footnote">
-        Experimental predictions, not verified punch labels. You select the
-        punch; the AI does not find punches automatically. Local videos and
-        results stay here until you remove them.
+        Experimental predictions, not verified punch labels. Activity scans show
+        possible bouts; six-class recognition still requires selecting one
+        punch. Local videos and results stay here until you remove them.
       </p>
     </div>
   );
@@ -292,6 +293,10 @@ export function PunchSelection({
   const [prediction, setPrediction] = useState<Prediction | null>(null);
   const [history, setHistory] = useState(job.predictions ?? []);
   const [busy, setBusy] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  useEffect(() => {
+    onBusy(busy || scanning);
+  }, [busy, scanning, onBusy]);
   const lock = useRef(false);
   const replayEnd = useRef<number | null>(null);
   const replayLast = useRef<number | null>(null);
@@ -384,10 +389,9 @@ export function PunchSelection({
     selectFrame(frameAtTime(frames, media.currentTime));
   }
   async function classify() {
-    if (!canClassify || lock.current) return;
+    if (!canClassify || lock.current || scanning) return;
     lock.current = true;
     setBusy(true);
-    onBusy(true);
     setError("");
     const generation = ++request.current;
     try {
@@ -417,7 +421,6 @@ export function PunchSelection({
     } finally {
       lock.current = false;
       setBusy(false);
-      onBusy(false);
     }
   }
   return (
@@ -425,7 +428,7 @@ export function PunchSelection({
       <div className="analysis-grid">
         <section className="panel selection-panel">
           <div className="selection-title">
-            <h2>1. Select a single punch</h2>
+            <h2>Review your video</h2>
             <small>
               {video.duration_seconds.toFixed(2)} s · {video.frame_count} frames
             </small>
@@ -524,6 +527,12 @@ export function PunchSelection({
               onChange={(e) => selectFrame(Number(e.target.value))}
             />
           </label>
+          <ActivityScan
+            videoId={job.id}
+            disabled={busy}
+            onBusy={setScanning}
+            onSeek={selectFrame}
+          />
           <div className="boundary-controls">
             <button
               disabled={busy || !exact || loaded !== index}
@@ -583,7 +592,7 @@ export function PunchSelection({
           </p>
           <button
             className="primary classify-button"
-            disabled={!canClassify || busy}
+            disabled={!canClassify || busy || scanning}
             onClick={classify}
           >
             {busy ? "Running trained model…" : "Classify selected punch"}
