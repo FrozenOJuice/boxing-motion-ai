@@ -30,6 +30,7 @@ it("keeps both keyboard handles on real boundaries and prevents them crossing", 
   expect(start).toHaveAttribute("aria-valuenow", "0.1");
   fireEvent.keyDown(start, { key: "ArrowRight" });
   expect(start).toHaveAttribute("aria-valuenow", "0.1");
+  expect(seek).toHaveBeenLastCalledWith(0.1);
   fireEvent.keyDown(end, { key: "ArrowLeft" });
   expect(end).toHaveAttribute("aria-valuenow", "0.14");
   fireEvent.keyDown(end, { key: "End" });

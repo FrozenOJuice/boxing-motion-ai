@@ -7,20 +7,38 @@ import {
   type VideoItem,
 } from "./model";
 import { Icon, IconButton } from "./ui";
+import { lastIncluded } from "./selection";
 
-export function usePlayer(video: VideoItem) {
+export function usePlayer(video: VideoItem, initialTime = 0) {
   const media = useRef<HTMLVideoElement>(null);
   const stage = useRef<HTMLDivElement>(null);
-  const [current, setCurrent] = useState(0),
+  const [current, setCurrent] = useState(() => frameTime(video, initialTime)),
     [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1),
     [ready, setReady] = useState(false),
     [error, setError] = useState("");
   const stopAt = useRef<Bounds | null>(null);
-  const presented = useRef(0);
+  const [visibleFrame, setVisibleFrame] = useState<number | null>(null);
+  const presented = useRef(frameTime(video, initialTime));
+  const ended = useRef(
+    initialTime >= (video.frameTimes?.at(-1) ?? video.duration),
+  );
+  const playRequest = useRef(0);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    const element = media.current;
+    return () => {
+      mounted.current = false;
+      playRequest.current++;
+      element?.pause();
+    };
+  }, []);
   const seek = useCallback(
     (time: number) => {
       const value = frameTime(video, time);
+      playRequest.current++;
+      ended.current = false;
       media.current?.pause();
       stopAt.current = null;
       setPlaying(false);
@@ -45,18 +63,36 @@ export function usePlayer(video: VideoItem) {
   async function play(bounds?: Bounds) {
     const element = media.current;
     if (!element) return;
+    const ticket = ++playRequest.current;
     setError("");
-    if (bounds) {
-      element.currentTime = bounds.start;
-      setCurrent(bounds.start);
-    } else if (element.ended) element.currentTime = 0;
+    const atEnd =
+      ended.current ||
+      element.ended ||
+      presented.current >= (video.frameTimes?.at(-1) ?? video.duration - 0.001);
+    const target = bounds ? bounds.start : atEnd ? 0 : presented.current;
+    ended.current = false;
+    element.currentTime = target;
+    presented.current = target;
+    setCurrent(target);
     stopAt.current = bounds ?? null;
     try {
       await element.play();
-      setPlaying(true);
+      if (mounted.current && ticket === playRequest.current) setPlaying(true);
     } catch {
-      setError("Playback could not start. Press Play to try again.");
+      if (mounted.current && ticket === playRequest.current) {
+        setPlaying(false);
+        setError("Playback could not start. Press Play to try again.");
+      }
     }
+  }
+  function finish() {
+    const range = stopAt.current;
+    const last = range
+      ? Math.max(range.start, lastIncluded(video, range.end))
+      : (video.frameTimes?.at(-1) ?? Math.max(0, video.duration - 0.001));
+    seek(last);
+    stopAt.current = range;
+    ended.current = !range;
   }
   function pause() {
     seek(media.current?.currentTime ?? current);
@@ -67,10 +103,7 @@ export function usePlayer(video: VideoItem) {
       if (!element) return;
       const range = stopAt.current;
       if (range && time >= range.end - 1e-5) {
-        const last = video.frameTimes
-          ? (video.frameTimes.filter((t) => t < range.end - 1e-6).at(-1) ??
-            range.start)
-          : Math.max(range.start, range.end - 0.001);
+        const last = Math.max(range.start, lastIncluded(video, range.end));
         seek(last);
         // Late compositor callbacks must remain bounded until the next explicit seek/play.
         stopAt.current = range;
@@ -88,7 +121,7 @@ export function usePlayer(video: VideoItem) {
       disposed = false;
     const tick: VideoFrameRequestCallback = (_now, data) => {
       if (disposed) return;
-      if (!element.paused) update(data.mediaTime);
+      if (!element.paused && !element.seeking) update(data.mediaTime);
       id = element.requestVideoFrameCallback(tick);
     };
     id = element.requestVideoFrameCallback(tick);
@@ -108,6 +141,11 @@ export function usePlayer(video: VideoItem) {
   return {
     media,
     stage,
+    inspectionReady:
+      !video.frameTimes ||
+      playing ||
+      visibleFrame === frameIndex(video.frameTimes, current),
+    sourceFrameLoaded: setVisibleFrame,
     current,
     playing,
     speed,
@@ -118,6 +156,7 @@ export function usePlayer(video: VideoItem) {
     play,
     pause,
     fullscreen,
+    finish,
     setPlaying,
     setReady,
     setError,
@@ -160,22 +199,26 @@ export function VideoStage({
         poster={video.poster}
         preload="auto"
         playsInline
-        onLoadedData={() => player.setReady(true)}
+        onLoadedData={() => {
+          if (player.media.current)
+            player.media.current.currentTime = player.current;
+          player.setReady(true);
+        }}
         onPlay={() => player.setPlaying(true)}
         onPause={() => player.setPlaying(false)}
-        onEnded={() => {
-          player.setPlaying(false);
-          player.seek(
-            video.frameTimes?.at(-1) ?? Math.max(0, video.duration - 0.001),
-          );
-        }}
+        onEnded={player.finish}
         onError={() =>
           player.setError(
             "This video could not be played. Return to Videos and choose another file.",
           )
         }
         onTimeUpdate={(e) => {
-          if (player.playing && !e.currentTarget.requestVideoFrameCallback)
+          if (
+            player.playing &&
+            !e.currentTarget.paused &&
+            !e.currentTarget.seeking &&
+            !e.currentTarget.requestVideoFrameCallback
+          )
             player.update(e.currentTarget.currentTime);
         }}
       />
@@ -185,7 +228,10 @@ export function VideoStage({
           className="exact-frame"
           src={`/demo/frames/${index.toString().padStart(4, "0")}.png`}
           alt={`Sample source frame ${index + 1}`}
-          onLoad={() => setLoadedFrame(index)}
+          onLoad={() => {
+            setLoadedFrame(index);
+            player.sourceFrameLoaded(index);
+          }}
         />
       )}
       {video.kind === "sample" && !player.playing && loadedFrame !== index && (

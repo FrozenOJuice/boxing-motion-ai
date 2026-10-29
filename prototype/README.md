@@ -14,7 +14,7 @@ npm run prepare:demo
 npm run dev
 ```
 
-Open **http://127.0.0.1:5186/**. For viewport review, open
+Open **http://127.0.0.1:5186/videos**. For viewport review, open
 **http://127.0.0.1:5186/review.html**. The separate review page embeds the actual app
 in an iframe with a real 1440×900, 1280×800, 1024×768 or 1920×1080 CSS viewport.
 It scales the display to fit the browser window; it does not change the app's layout
@@ -31,24 +31,41 @@ npm run prepare:demo -- /absolute/path/to/the/reference/upload
 The current checkout already has that local sample. No media, weights or datasets are
 downloaded. Without it, local uploads still work and the sample action is unavailable.
 The sample footage, generated build, screenshots and verification receipts stay ignored
-by Git. Review screenshots are available locally under `artifacts/proportions/screenshots/`.
+by Git. Review screenshots are available locally under `artifacts/phase1/screenshots/`.
+
+## Phase 1 workflow
+
+Opening a video uses `/videos/:videoId`. Browser Back/Forward, Back to Videos and
+reopening preserve each video's playhead, boundary draft, selected result and inspector
+tab. Prototype-only sessionStorage restores this session on refresh. A missing video URL
+shows a recovery screen; the app never substitutes another video's results.
+
+Set both start and end, or drag a complete range. The indexed sample requires at least
+two source frames and uses the existing three-second elapsed-frame gate. There is no
+automatic boundary, punch detection or pose-quality assessment. Set start alone never
+enables classification. Source-frame marking waits for the requested frame to load.
+
+Use Selection for the current candidate and Saved punches to reopen prior outputs.
+Repeating the same range reuses the saved result. Natural end-of-video Play restarts the
+video; Replay selection stays inside its own exclusive boundaries. New results remain
+explicit examples, while the two preserved recorded outputs retain their source labels.
 
 ## What is real, and what is simulated
 
-| Interaction | Behavior |
-| --- | --- |
-| Choose/drop footage | Actual browser metadata/codec checks and local video playback. No server upload. |
-| Recent videos | Actual video blobs and thumbnails in a prototype-only IndexedDB database. Reopen works after refresh. |
-| Sample playback | Actual video; source frame timestamps and indexed PNGs from the existing local upload. |
-| Timeline | One source-time track for playhead and selection. Drag a range, drag handles, or use I/O. End boundaries are exclusive; replay stops on the final included frame. |
-| Frame buttons | Exact indexed sample frames. Disabled for arbitrary uploads, whose exact frame inventory is unavailable to this prototype. |
-| Speed / fullscreen / replay | Actual media controls, subject to browser support. |
-| New classification | A deliberately simulated 450 ms UI transition; **no model request**. |
-| Sample results | Two actual saved model outputs for the matching sample windows, labeled “Saved model output.” |
-| New result | Clearly marked “Prototype example” and “No model ran for this selection.” Scores are borrowed from the sample to review the layout, not generated or asserted for the chosen movement. |
-| Saved prototype selections | Actual browser-local metadata under a separate prototype storage key. They always reopen as previews, never verified predictions. |
-| Model information | Read-only descriptions of the pinned reference represented by the saved sample output. |
-| Development tools | Informational dialog. No connection to the existing development application. |
+| Interaction                 | Behavior                                                                                                                                                                               |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Choose/drop footage         | Actual browser metadata/codec checks and local video playback. No server upload.                                                                                                       |
+| Recent videos               | Actual video blobs and thumbnails in a prototype-only IndexedDB database. Reopen works after refresh.                                                                                  |
+| Sample playback             | Actual video; source frame timestamps and indexed PNGs from the existing local upload.                                                                                                 |
+| Timeline                    | One source-time track for playhead and selection. Drag a range, drag handles, or use I/O. End boundaries are exclusive; replay stops on the final included frame.                      |
+| Frame buttons               | Exact indexed sample frames. Disabled for arbitrary uploads, whose exact frame inventory is unavailable to this prototype.                                                             |
+| Speed / fullscreen / replay | Actual media controls, subject to browser support.                                                                                                                                     |
+| New classification          | A deliberately simulated 450 ms UI transition; **no model request**.                                                                                                                   |
+| Sample results              | Two actual saved model outputs for the matching sample windows, labeled “Saved model output.”                                                                                          |
+| New result                  | Clearly marked “Prototype example” and “No model ran for this selection.” Scores are borrowed from the sample to review the layout, not generated or asserted for the chosen movement. |
+| Saved prototype selections  | Actual browser-local metadata under a separate prototype storage key. They always reopen as previews, never verified predictions.                                                      |
+| Model information           | Read-only descriptions of the pinned reference represented by the saved sample output.                                                                                                 |
+| Development tools           | Informational dialog. No connection to the existing development application.                                                                                                           |
 
 The sample scores in `src/demo-data.json` come from existing local outputs
 `prediction-26-35.json` and `prediction-84-101.json`, with their checkpoint hash and
@@ -64,7 +81,7 @@ accuracy evaluation. No model, pose extraction, training or review write runs he
 - A single timeline component; no second scrubber or progress bar competing with it.
 - A native-aspect player fitted to available width and height, with timeline directly below.
 - A conditional right panel: instructions, selection/action, then prediction.
-- A fixed selection/action region and scrollable output and saved-punch list.
+- A fixed range/action region with Selection and Saved punches inspector tabs.
 - One primary Upload video action in the conventional thumbnail library.
 - Flat lists, separators and plain model details rather than dashboard cards or metrics.
 - Persistent prototype identification, specific simulation labels and no confidence claims.
@@ -87,9 +104,10 @@ npm run build
 
 The tests cover source-time/VFR selection, non-crossing keyboard handles, time formatting,
 preview provenance, storage restoring only previews, explicit simulation labels,
-library/navigation states, replay boundary races and absence of production API calls.
-Browser visual verification and
-remaining issues are recorded in [DESIGN_REVIEW.md](DESIGN_REVIEW.md).
+explicit/incomplete boundary states, browser history/focus/scroll and refresh,
+per-video isolation, playback completion/replay races, deduplication, cancelled
+classification and absence of production API calls.
+Browser visual verification and remaining issues are recorded in [DESIGN_REVIEW.md](DESIGN_REVIEW.md).
 
 Prototype storage is scoped to origin/port 5186 and names prefixed with
 `boxing-motion-design-prototype`. It never reads production browser preferences or

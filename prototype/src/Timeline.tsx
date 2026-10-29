@@ -1,3 +1,4 @@
+import type { Draft } from "./selection";
 import { useRef, type KeyboardEvent, type PointerEvent } from "react";
 import {
   clamp,
@@ -13,6 +14,8 @@ type Props = {
   video: VideoItem;
   current: number;
   bounds: Bounds | null;
+  draft?: Draft;
+  disabled?: boolean;
   onSeek: (time: number) => void;
   onBounds: (bounds: Bounds) => void;
 };
@@ -20,6 +23,8 @@ export default function Timeline({
   video,
   current,
   bounds,
+  draft,
+  disabled = false,
   onSeek,
   onBounds,
 }: Props) {
@@ -53,14 +58,16 @@ export default function Timeline({
       : Math.max(0, bounds.end - 0.01);
     const firstEnd = nextBoundary(video, bounds.start);
     const n = snapBoundary(video, time);
-    onBounds(
+    const next =
       mode === "start"
         ? { start: Math.min(n, lastStart), end: bounds.end }
-        : { start: bounds.start, end: Math.max(n, firstEnd) },
-    );
+        : { start: bounds.start, end: Math.max(n, firstEnd) };
+    onBounds(next);
+    return next[mode];
   }
+
   function pointerDown(e: PointerEvent<HTMLDivElement>) {
-    if (e.button !== 0) return;
+    if (e.button !== 0 || disabled) return;
     const mode = (e.target as HTMLElement).closest<HTMLElement>("[data-handle]")
       ?.dataset.handle as "start" | "end" | undefined;
     const anchor = timeAt(e.clientX);
@@ -72,18 +79,19 @@ export default function Timeline({
     };
     e.currentTarget.setPointerCapture(e.pointerId);
     if (mode) {
-      change(mode, anchor);
-      seekBoundary(mode, anchor);
+      const applied = change(mode, anchor);
+      if (applied !== undefined) seekBoundary(mode, applied);
     }
   }
   function pointerMove(e: PointerEvent<HTMLDivElement>) {
+    if (disabled) return;
     const value = drag.current;
     if (!value) return;
     if (Math.abs(e.clientX - value.x) > 4) value.moved = true;
     const now = timeAt(e.clientX);
     if (value.mode !== "range") {
-      change(value.mode, now);
-      seekBoundary(value.mode, now);
+      const applied = change(value.mode, now);
+      if (applied !== undefined) seekBoundary(value.mode, applied);
     } else if (value.moved) {
       const start = snapBoundary(video, Math.min(value.anchor, now));
       const end = snapBoundary(video, Math.max(value.anchor, now));
@@ -102,7 +110,7 @@ export default function Timeline({
     e: KeyboardEvent<HTMLButtonElement>,
     mode: "start" | "end",
   ) {
-    if (!bounds) return;
+    if (!bounds || disabled) return;
     const value = bounds[mode],
       times = [...(video.frameTimes ?? []), video.duration];
     let next = value;
@@ -127,8 +135,8 @@ export default function Timeline({
     else return;
     e.preventDefault();
     e.stopPropagation();
-    change(mode, clamp(next, 0, video.duration));
-    seekBoundary(mode, next);
+    const applied = change(mode, clamp(next, 0, video.duration));
+    if (applied !== undefined) seekBoundary(mode, applied);
   }
   return (
     <div className="timeline" aria-label="Video timeline">
@@ -171,7 +179,23 @@ export default function Timeline({
             aria-hidden="true"
           />
         )}
+        {!bounds &&
+          draft &&
+          (["start", "end"] as const).map(
+            (mode) =>
+              draft[mode] !== null && (
+                <div
+                  key={mode}
+                  className="draft-marker"
+                  style={{ left: position(draft[mode]!) }}
+                  aria-hidden="true"
+                >
+                  <span>{mode === "start" ? "S" : "E"}</span>
+                </div>
+              ),
+          )}
         <input
+          disabled={disabled}
           type="range"
           className="timeline-seek"
           aria-label="Video position"
@@ -201,6 +225,7 @@ export default function Timeline({
               className={`timeline-handle timeline-handle--${mode}`}
               style={{ left: position(bounds[mode]) }}
               data-handle={mode}
+              disabled={disabled}
               role="slider"
               aria-label={`Punch ${mode}`}
               aria-valuemin={0}
@@ -222,7 +247,9 @@ export default function Timeline({
       </div>
       <div className="timeline-ruler" aria-hidden="true">
         {Array.from({ length: 7 }, (_, i) => (
-          <span key={i}>{clock((video.duration * i) / 6)}</span>
+          <span key={i}>
+            {clock((video.duration * i) / 6, video.duration < 6)}
+          </span>
         ))}
       </div>
     </div>

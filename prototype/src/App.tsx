@@ -1,17 +1,24 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
-  checkpoint,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import {
   clock,
-  nextBoundary,
-  snapBoundary,
-  previewSelection,
-  punchName,
   recordedSelections,
   sample,
-  type Bounds,
   type Selection,
   type VideoItem,
 } from "./model";
+import Workspace from "./Workspace";
+import {
+  readSession,
+  writeSession,
+  useNavigation,
+  type WorkspaceSession,
+} from "./navigation";
 import {
   importVideo,
   loadPreviews,
@@ -19,14 +26,23 @@ import {
   savePreviews,
 } from "./storage";
 import { Brand, Button, Dialog, Icon, IconButton } from "./ui";
-import { Transport, usePlayer, VideoStage } from "./Player";
-import Timeline from "./Timeline";
 
 type Modal = "about" | "shortcuts" | "development" | null;
 export default function App() {
-  const [screen, setScreen] = useState<"analyze" | "videos">("videos");
-  const [video, setVideo] = useState(sample),
-    [recent, setRecent] = useState<VideoItem[]>([]);
+  const { route, navigate } = useNavigation();
+  const [recent, setRecent] = useState<VideoItem[]>([]);
+  const [libraryLoaded, setLibraryLoaded] = useState(false),
+    [sampleLoaded, setSampleLoaded] = useState(false);
+  const sessions = useRef(new Map<string, WorkspaceSession>());
+  const library = useRef<HTMLElement>(null),
+    libraryHeading = useRef<HTMLHeadingElement>(null);
+  const tiles = useRef(new Map<string, HTMLButtonElement>());
+  const returnedVideo = useRef<string | null>(null),
+    libraryScroll = useRef(0);
+  const onSession = useCallback((id: string, state: WorkspaceSession) => {
+    sessions.current.set(id, state);
+    writeSession(id, state);
+  }, []);
   const [ready, setReady] = useState(false),
     [opening, setOpening] = useState(false);
   const [error, setError] = useState(""),
@@ -40,19 +56,49 @@ export default function App() {
   useEffect(() => {
     recentVideos()
       .then(setRecent)
-      .catch(() => setNotice("Recent videos could not be loaded."));
+      .catch(() => setNotice("Recent videos could not be loaded."))
+      .finally(() => setLibraryLoaded(true));
     fetch("/demo/manifest.json")
       .then((r) => (r.ok ? r.json() : null))
       .then((v) => setReady(!!v?.source_sha256))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setSampleLoaded(true));
   }, []);
   useEffect(() => {
     savePreviews(selections);
   }, [selections]);
+  const video =
+    route.page === "analyze"
+      ? [sample, ...recent].find(
+          (v) => v.id === route.videoId && (v.kind !== "sample" || ready),
+        )
+      : undefined;
+  const pageKey = route.page === "analyze" ? route.videoId : route.page;
+  const previousPage = useRef(pageKey);
+  useLayoutEffect(() => {
+    if (previousPage.current !== pageKey && previousPage.current !== "videos")
+      returnedVideo.current = previousPage.current;
+    previousPage.current = pageKey;
+    if (route.page === "videos") {
+      if (library.current) library.current.scrollTop = libraryScroll.current;
+      (
+        tiles.current.get(returnedVideo.current ?? "") ?? libraryHeading.current
+      )?.focus({ preventScroll: true });
+    }
+  }, [pageKey, route.page, libraryLoaded, ready]);
+  function home() {
+    navigate("/videos");
+  }
   function open(item: VideoItem) {
-    setVideo(item);
-    setScreen("analyze");
+    libraryScroll.current = library.current?.scrollTop ?? libraryScroll.current;
+    returnedVideo.current = item.id;
     setError("");
+    navigate(`/videos/${encodeURIComponent(item.id)}`);
+  }
+  function saveResult(s: Selection) {
+    setSelections((items) =>
+      items.some((item) => item.id === s.id) ? items : [...items, s],
+    );
   }
   async function upload(file?: File) {
     if (!file || opening) return;
@@ -79,11 +125,12 @@ export default function App() {
       </a>
       <header className="app-header">
         <div className="header-inner">
-          <Brand onClick={() => setScreen("videos")} />
+          <Brand onClick={home} />
           <nav aria-label="Main navigation">
             <button
-              aria-current={screen === "videos" ? "page" : undefined}
-              onClick={() => setScreen("videos")}
+              aria-current={route.page === "videos" ? "page" : undefined}
+              data-active="true"
+              onClick={home}
             >
               Videos
             </button>
@@ -128,9 +175,13 @@ export default function App() {
         </div>
       )}
       <main id="main">
-        {screen === "videos" ? (
+        {route.page === "videos" ? (
           <section
+            ref={library}
             className="library"
+            onScroll={(e) => {
+              libraryScroll.current = e.currentTarget.scrollTop;
+            }}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
               e.preventDefault();
@@ -139,7 +190,9 @@ export default function App() {
           >
             <div className="page-heading">
               <div>
-                <h1>Videos</h1>
+                <h1 ref={libraryHeading} tabIndex={-1}>
+                  Videos
+                </h1>
                 <p>Open a video to analyze a punch.</p>
               </div>
               <Button
@@ -160,11 +213,22 @@ export default function App() {
                 <VideoTile
                   key={item.id}
                   video={item}
+                  buttonRef={(el) => {
+                    if (el) tiles.current.set(item.id, el);
+                    else tiles.current.delete(item.id);
+                  }}
                   onOpen={() => open(item)}
                 />
               ))}
               {ready && (
-                <VideoTile video={sample} onOpen={() => open(sample)} />
+                <VideoTile
+                  video={sample}
+                  buttonRef={(el) => {
+                    if (el) tiles.current.set(sample.id, el);
+                    else tiles.current.delete(sample.id);
+                  }}
+                  onOpen={() => open(sample)}
+                />
               )}
             </div>
             {!recent.length && !ready && (
@@ -175,23 +239,35 @@ export default function App() {
               </div>
             )}
           </section>
-        ) : ready || video.kind === "local" ? (
+        ) : video ? (
           <Workspace
             key={video.id}
             video={video}
             selections={selections.filter((s) => s.videoId === video.id)}
-            onSave={(s) => setSelections((items) => [...items, s])}
-            onVideos={() => setScreen("videos")}
+            initialSession={
+              sessions.current.get(video.id) ?? readSession(video.id)
+            }
+            onSession={onSession}
+            onSave={saveResult}
+            onVideos={home}
             onShortcuts={() => setModal("shortcuts")}
           />
         ) : (
-          <div className="loading-state">
-            <h1>Analyze</h1>
-            <p>Sample media unavailable. Upload a video to begin.</p>
-            <Button icon="upload" onClick={() => input.current?.click()}>
-              Upload video
+          <section className="loading-state" aria-live="polite">
+            <h1>
+              {!libraryLoaded || !sampleLoaded
+                ? "Opening saved video…"
+                : "Video unavailable"}
+            </h1>
+            <p>
+              {!libraryLoaded || !sampleLoaded
+                ? "Restoring this browser's local workspace."
+                : "This video is unavailable in this browser, or its sample media is missing. Your other videos and saved results are unchanged."}
+            </p>
+            <Button icon="back" onClick={home}>
+              Back to Videos
             </Button>
-          </div>
+          </section>
         )}
       </main>
       {modal && (
@@ -254,14 +330,17 @@ function VideoTile({
   video,
   onOpen,
   disabled = false,
+  buttonRef,
 }: {
   video: VideoItem;
   onOpen: () => void;
   disabled?: boolean;
+  buttonRef?: (element: HTMLButtonElement | null) => void;
 }) {
   const [failed, setFailed] = useState(false);
   return (
     <button
+      ref={buttonRef}
       className="video-tile"
       onClick={onOpen}
       disabled={disabled}
@@ -303,340 +382,5 @@ function VideoTile({
           : `${video.width} × ${video.height} · Local video`}
       </span>
     </button>
-  );
-}
-function Workspace({
-  video,
-  selections,
-  onSave,
-  onVideos,
-  onShortcuts,
-}: {
-  video: VideoItem;
-  selections: Selection[];
-  onSave: (s: Selection) => void;
-  onVideos: () => void;
-  onShortcuts: () => void;
-}) {
-  const player = usePlayer(video);
-  const viewer = useRef<HTMLDivElement>(null);
-  const [viewerWidth, setViewerWidth] = useState<number>();
-  useLayoutEffect(() => {
-    const element = viewer.current!;
-    const resize = () => {
-      const width = Math.min(
-        element.clientWidth,
-        (Math.max(1, element.clientHeight - 118) * video.width) / video.height,
-      );
-      setViewerWidth(width);
-    };
-    resize();
-    const observer = new ResizeObserver(resize);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [video.width, video.height]);
-  const [bounds, setBounds] = useState<Bounds | null>(null),
-    [result, setResult] = useState<Selection | null>(null),
-    [busy, setBusy] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(
-    () => () => {
-      if (timer.current) clearTimeout(timer.current);
-    },
-    [],
-  );
-  function change(next: Bounds) {
-    if (busy) return;
-    setBounds(next);
-    setResult(null);
-  }
-  function mark(mode: "start" | "end") {
-    const t = snapBoundary(video, player.current);
-    change(
-      mode === "start"
-        ? {
-            start: Math.min(
-              t,
-              video.frameTimes?.at(-1) ?? video.duration - 0.001,
-            ),
-            end: bounds && bounds.end > t ? bounds.end : nextBoundary(video, t),
-          }
-        : {
-            start: bounds && bounds.start < t ? bounds.start : 0,
-            end: nextBoundary(video, t),
-          },
-    );
-  }
-  useEffect(() => {
-    function key(e: KeyboardEvent) {
-      if (
-        (e.target instanceof HTMLElement &&
-          e.target.closest("button,input,dialog,a")) ||
-        e.altKey ||
-        e.metaKey ||
-        e.ctrlKey
-      )
-        return;
-      if (e.code === "Space") {
-        e.preventDefault();
-        if (player.playing) player.pause();
-        else void player.play();
-      }
-      if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
-        e.preventDefault();
-        player.step(e.key === "ArrowLeft" ? -1 : 1);
-      }
-      if (e.key.toLowerCase() === "i") mark("start");
-      if (e.key.toLowerCase() === "o") mark("end");
-      if (e.key.toLowerCase() === "f") void player.fullscreen();
-    }
-    window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
-  });
-  function classify() {
-    if (!bounds || busy) return;
-    player.pause();
-    setBusy(true);
-    timer.current = setTimeout(() => {
-      const s = previewSelection(video.id, bounds);
-      onSave(s);
-      setResult(s);
-      setBusy(false);
-    }, 450);
-  }
-  return (
-    <section className="workspace" aria-label="Analyze workspace">
-      <div className="workspace-heading">
-        <div className="cluster">
-          <Button variant="ghost" icon="back" onClick={onVideos}>
-            Back to Videos
-          </Button>
-          <div>
-            <h1>{video.title}</h1>
-            <p>
-              {video.kind === "sample" ? "Reference sample" : "Local video"} ·{" "}
-              {video.width} × {video.height} · {clock(video.duration)}
-            </p>
-          </div>
-        </div>
-        <IconButton
-          icon="keyboard"
-          label="Keyboard shortcuts"
-          onClick={onShortcuts}
-        />
-      </div>
-      <div className="workspace-grid">
-        <div className="video-workspace" ref={viewer}>
-          <div className="viewer-stack" style={{ width: viewerWidth }}>
-            <VideoStage video={video} player={player} />
-            <Timeline
-              video={video}
-              current={player.current}
-              bounds={bounds}
-              onSeek={player.seek}
-              onBounds={change}
-            />
-            <div className="viewer-controls">
-              <Transport video={video} player={player} />
-              <div className="selection-tools">
-                <Button
-                  icon="bracket-in"
-                  disabled={busy}
-                  onClick={() => mark("start")}
-                  aria-label="Set punch start (I)"
-                >
-                  In <kbd>I</kbd>
-                </Button>
-                <Button
-                  icon="bracket-out"
-                  disabled={busy}
-                  onClick={() => mark("end")}
-                  aria-label="Set punch end (O)"
-                >
-                  Out <kbd>O</kbd>
-                </Button>
-              </div>
-            </div>
-            <p className="precision-note">
-              {video.frameTimes
-                ? "Source-frame selection"
-                : "Time-based selection · Exact frames unavailable in this prototype"}
-            </p>
-          </div>
-        </div>
-        <aside className="analysis-panel" aria-label="Punch analysis">
-          <div className="panel-heading">
-            <h2>{bounds ? "Selected punch" : "Punch analysis"}</h2>
-            {bounds && (
-              <IconButton
-                icon="close"
-                label="Clear selection"
-                disabled={busy}
-                onClick={() => {
-                  setBounds(null);
-                  setResult(null);
-                }}
-              />
-            )}
-          </div>
-          {bounds && (
-            <div className="selection-summary">
-              {" "}
-              <div className="selection-times">
-                <div>
-                  <span>Start</span>
-                  <strong>{clock(bounds.start, true)}</strong>
-                </div>
-                <div>
-                  <span>End</span>
-                  <strong>{clock(bounds.end, true)}</strong>
-                </div>
-                <div>
-                  <span>Duration</span>
-                  <strong>{(bounds.end - bounds.start).toFixed(3)}s</strong>
-                </div>
-              </div>
-              <Button icon="play" onClick={() => void player.play(bounds)}>
-                Replay selection
-              </Button>
-            </div>
-          )}
-          {bounds && (
-            <div className="panel-action">
-              <Button
-                variant="primary"
-                disabled={!bounds || busy}
-                onClick={classify}
-              >
-                {busy ? "Loading…" : "Classify punch"}
-              </Button>
-              <span>Prototype · New predictions are example output</span>
-            </div>
-          )}
-          <div className="panel-content">
-            {!bounds && (
-              <div className="selection-empty">
-                <Icon name="bracket-in" size={24} />
-                <h3>Select one punch</h3>
-                <p>
-                  Drag a range on the timeline, or set the start and end during
-                  playback.
-                </p>
-              </div>
-            )}
-            {(busy || result) && (
-              <section
-                className="prediction"
-                aria-live="polite"
-                aria-busy={busy}
-              >
-                {busy ? (
-                  <p role="status">Loading example output…</p>
-                ) : result ? (
-                  <>
-                    <div className="result-source">
-                      {result.kind === "recorded"
-                        ? "Saved model output"
-                        : "Prototype example"}
-                    </div>
-                    <h3 className="prediction-title">
-                      {punchName(result.prediction)}
-                    </h3>
-                    <p>
-                      {result.kind === "recorded"
-                        ? "Recorded output for this sample selection."
-                        : "No model ran for this selection."}
-                    </p>
-                    <div className="scores">
-                      {Object.entries(result.scores)
-                        .sort((a, b) => b[1] - a[1])
-                        .map(([name, score]) => (
-                          <div
-                            className={`score ${name === result.prediction ? "score--top" : ""}`}
-                            key={name}
-                          >
-                            <div>
-                              <span>{punchName(name)}</span>
-                              <span>{score.toFixed(3)}</span>
-                            </div>
-                            <div
-                              className="score-track"
-                              role="meter"
-                              aria-label={punchName(name)}
-                              aria-valuemin={0}
-                              aria-valuemax={1}
-                              aria-valuenow={score}
-                            >
-                              <span style={{ width: `${score * 100}%` }} />
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                    <p className="score-note">
-                      Uncalibrated model scores, not probabilities of
-                      correctness.
-                    </p>
-                  </>
-                ) : null}
-              </section>
-            )}
-            {result && (
-              <details className="model-details">
-                <summary>Model information</summary>
-                <p>Level 1 · Six punch categories</p>
-                <p>
-                  New selections use example output. Sample outputs are recorded
-                  from the existing trained checkpoint.
-                </p>
-                <p>
-                  Checkpoint <code>{checkpoint.slice(0, 12)}</code>
-                </p>
-                <p>
-                  Experimental recognition. New-boxer performance is
-                  unvalidated.
-                </p>
-              </details>
-            )}
-          </div>
-          {selections.length > 0 && (
-            <section className="saved-selections">
-              <div className="saved-heading">
-                <h2>Classified punches</h2>
-                <span>{selections.length}</span>
-              </div>
-              <div className="saved-list">
-                {selections.length ? (
-                  selections.map((s, i) => (
-                    <button
-                      key={s.id}
-                      disabled={busy}
-                      className={result?.id === s.id ? "is-active" : ""}
-                      onClick={() => {
-                        setBounds(s.bounds);
-                        setResult(s);
-                        player.seek(s.bounds.start);
-                      }}
-                    >
-                      <span>
-                        {s.kind === "recorded"
-                          ? punchName(s.prediction)
-                          : `Selection ${i + 1}`}
-                      </span>
-                      <small>
-                        {clock(s.bounds.start, true)} –{" "}
-                        {clock(s.bounds.end, true)}
-                        {s.kind === "preview" ? " · Example" : ""}
-                      </small>
-                    </button>
-                  ))
-                ) : (
-                  <p>No saved punches yet</p>
-                )}
-              </div>
-            </section>
-          )}
-        </aside>
-      </div>
-    </section>
   );
 }
