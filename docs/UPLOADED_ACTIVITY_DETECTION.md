@@ -1,5 +1,9 @@
 # Continuous uploaded-video activity scanning
 
+Later addition: [automatic punch-candidate analysis](AUTOMATIC_PUNCH_CANDIDATES.md)
+reuses these activity records with a conservative offline segmentation baseline.
+The activity detector and frozen decoder described here remain unchanged.
+
 Implemented locally on 2026-10-29. This extends the production Analyze upload workflow;
 the separate frontend prototype is unchanged.
 

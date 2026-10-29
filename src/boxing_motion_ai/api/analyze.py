@@ -76,6 +76,15 @@ def register(app, root):
         value = jobs.scan(key)
         return JSONResponse(value, status_code=202 if value["status"] == "processing" else 200)
 
+    @app.get("/api/analyze/videos/{key}/automatic")
+    def automatic_status(key: str):
+        return jobs.automatic.status(key)
+
+    @app.post("/api/analyze/videos/{key}/automatic")
+    def automatic_start(key: str):
+        value = jobs.automatic.start(key)
+        return JSONResponse(value, status_code=202 if value["status"] == "processing" else 200)
+
     @app.post("/api/analyze/videos/{key}/classify")
     def classify(key: str, selection: Selection):
         return jobs.classify(key, selection.start_frame, selection.stop_frame_exclusive)

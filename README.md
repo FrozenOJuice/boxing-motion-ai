@@ -17,6 +17,10 @@ Analyze also supports [full-video activity scanning](docs/UPLOADED_ACTIVITY_DETE
 with the pinned training-only binary smoke model. Choose **Scan for activity** without
 manual selection to review experimental possible activity bouts beside the timeline.
 These ranges are not validated detections or individual punch counts.
+[Automatic candidate analysis](docs/AUTOMATIC_PUNCH_CANDIDATES.md) now attempts
+per-arm instance segmentation and six-class inference without manual boundaries.
+The conservative baseline left all tested real punching clips unresolved; reliable
+automatic labeling has not yet been demonstrated.
 
 See [setup, usage, limitations, cleanup and verification](docs/ASSISTED_PUNCH_RECOGNITION.md).
 Analyze requires the `dashboard`, `pose` and `train` extras plus the existing local

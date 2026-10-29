@@ -13,6 +13,7 @@ from time import perf_counter
 
 from .activity_contract import VERSION as ACTIVITY_VERSION
 from .activity_contract import inputs as activity_inputs
+from .automatic_jobs import AutomaticJobs
 from .common import EXTENSIONS, MAX_BYTES, pin, regular, sha, write_json
 
 
@@ -31,6 +32,7 @@ class AnalysisJobs:
         self.active = set()
         self.classifying = set()
         self.scanning = set()
+        self.automatic = AutomaticJobs(self)
 
     def directory(self, key):
         if not re.fullmatch(r"[0-9a-f]{32}", key):
@@ -248,7 +250,7 @@ class AnalysisJobs:
             old = self.activity(key)
             if old["status"] == "ready":
                 return old
-            if self.active or self.classifying or self.scanning:
+            if self.active or self.classifying or self.scanning or self.automatic.running:
                 raise AnalysisError(
                     "Analysis is busy. Wait for processing or classification to finish.", 409
                 )
@@ -316,7 +318,7 @@ class AnalysisJobs:
             count = job["video"]["frame_count"]
             if not (0 <= start < stop <= count):
                 raise AnalysisError("Choose a start frame before the end frame, within the video.")
-            if key in self.classifying or self.classifying or self.active or self.scanning:
+            if self.classifying or self.active or self.scanning or self.automatic.running:
                 raise AnalysisError(
                     "Analysis is busy. Wait for processing to finish and try again.", 409
                 )
@@ -350,7 +352,12 @@ class AnalysisJobs:
 
     def remove(self, key):
         with self.lock:
-            if key in self.active or key in self.classifying or key in self.scanning:
+            if (
+                key in self.active
+                or key in self.classifying
+                or key in self.scanning
+                or key in self.automatic.running
+            ):
                 raise AnalysisError(
                     "Wait for processing to finish before removing this video.", 409
                 )

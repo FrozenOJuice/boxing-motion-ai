@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useAnalysisTask } from "./useAnalysisTask";
 
 type Range = {
   bout_id: string;
@@ -9,21 +9,15 @@ type Range = {
   left_censored: boolean;
   right_censored: boolean;
 };
-type Scan = {
-  video_id: string;
-  status: "not_started" | "processing" | "ready" | "failed";
-  message?: string;
-  scan_wall_seconds?: number;
-  result?: {
-    bouts: Range[];
-    observable_frames: number;
-    total_frames: number;
-    unobservable_intervals: {
-      reason: string;
-      start_media_time: number;
-      end_media_time: number;
-    }[];
-  };
+type ActivityResult = {
+  bouts: Range[];
+  observable_frames: number;
+  total_frames: number;
+  unobservable_intervals: {
+    reason: string;
+    start_media_time: number;
+    end_media_time: number;
+  }[];
 };
 
 export default function ActivityScan({
@@ -31,92 +25,27 @@ export default function ActivityScan({
   disabled,
   onBusy,
   onSeek,
+  refreshKey = 0,
 }: {
   videoId: string;
   disabled: boolean;
   onBusy: (value: boolean) => void;
   onSeek: (frame: number) => void;
+  refreshKey?: number;
 }) {
-  const [value, setScan] = useState<Scan | null>(null);
-  const scan = value?.video_id === videoId ? value : null;
-  const [error, setError] = useState("");
-  const [requesting, setRequesting] = useState(false);
-  const generation = useRef(0);
-  const locked = useRef(false);
-  const processing = requesting || scan?.status === "processing";
-  useEffect(() => {
-    onBusy(processing);
-    return () => onBusy(false);
-  }, [processing, onBusy]);
-
-  async function read(method: "GET" | "POST", signal?: AbortSignal) {
-    const response = await fetch(
-      `/api/analyze/videos/${videoId}/${method === "POST" ? "scan" : "activity"}`,
-      method === "POST"
-        ? {
-            method,
-            headers: {
-              "Content-Type": "application/json",
-              "X-Review-Client": "dashboard-v0.2",
-            },
-            body: "{}",
-          }
-        : { signal },
-    );
-    const value = await response.json();
-    if (!response.ok)
-      throw new Error(value.detail || "Activity scan failed. Retry.");
-    if (value.video_id !== videoId)
-      throw new Error("Activity result does not match this video.");
-    return value as Scan;
-  }
-
-  useEffect(() => {
-    const controller = new AbortController();
-    const current = ++generation.current;
-    let timer: ReturnType<typeof setTimeout>;
-    async function poll() {
-      try {
-        const value = await read("GET", controller.signal);
-        if (current !== generation.current) return;
-        setScan(value);
-        setError("");
-        if (value.status === "processing") timer = setTimeout(poll, 1000);
-      } catch (e) {
-        if (!controller.signal.aborted && current === generation.current) {
-          setError((e as Error).message);
-          setScan(null);
-        }
-      }
-    }
-    void poll();
-    return () => {
-      generation.current++;
-      controller.abort();
-      clearTimeout(timer);
-    };
-    // A new processing scan starts polling; a video change invalidates old requests.
-  }, [videoId, scan?.status === "processing"]);
-
-  async function start() {
-    if (locked.current || disabled || processing) return;
-    locked.current = true;
-    const current = ++generation.current;
-    setRequesting(true);
-    setError("");
-    try {
-      const value = await read("POST");
-      if (current === generation.current) setScan(value);
-    } catch (e) {
-      if (current === generation.current) {
-        setError((e as Error).message);
-        setScan(null);
-      }
-    } finally {
-      locked.current = false;
-      setRequesting(false);
-    }
-  }
+  const {
+    task: scan,
+    error,
+    processing,
+    start,
+  } = useAnalysisTask<ActivityResult>(
+    videoId,
+    "activity",
+    "scan",
+    disabled,
+    onBusy,
+    refreshKey,
+  );
 
   return (
     <section className="activity-scan" aria-label="Automatic activity scan">

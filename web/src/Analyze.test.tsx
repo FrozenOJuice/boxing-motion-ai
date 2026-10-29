@@ -77,7 +77,7 @@ afterEach(() => {
 it("defaults to Analyze without querying development artifacts", async () => {
   const fetcher = vi.fn().mockResolvedValue(response({ videos: [] }));
   vi.stubGlobal("fetch", (url: string, options?: RequestInit) =>
-    url.endsWith("/activity")
+    url.endsWith("/activity") || url.endsWith("/automatic")
       ? Promise.resolve(response({ video_id: job.id, status: "not_started" }))
       : fetcher(url, options),
   );
@@ -104,7 +104,7 @@ it("maps variable timestamps to source frames without a nominal FPS", () => {
 it("requires displayed boundaries, submits exclusive source bounds and shows uncalibrated scores", async () => {
   const fetcher = vi.fn().mockResolvedValue(response(prediction));
   vi.stubGlobal("fetch", (url: string, options?: RequestInit) =>
-    url.endsWith("/activity")
+    url.endsWith("/activity") || url.endsWith("/automatic")
       ? Promise.resolve(response({ video_id: job.id, status: "not_started" }))
       : fetcher(url, options),
   );
@@ -138,7 +138,7 @@ it("shows unavailable pose results without inventing scores", async () => {
     "fetch",
     vi.fn().mockImplementation((url: string) =>
       Promise.resolve(
-        url.endsWith("/activity")
+        url.endsWith("/activity") || url.endsWith("/automatic")
           ? response({ video_id: job.id, status: "not_started" })
           : response({
               status: "unavailable",
@@ -168,7 +168,7 @@ it("locks concurrent classifications and preserves errors for retry", async () =
       }),
   );
   vi.stubGlobal("fetch", (url: string, options?: RequestInit) =>
-    url.endsWith("/activity")
+    url.endsWith("/activity") || url.endsWith("/automatic")
       ? Promise.resolve(response({ video_id: job.id, status: "not_started" }))
       : fetcher(url, options),
   );
@@ -227,7 +227,7 @@ it("uploads the real file body and follows processing status without development
     });
   });
   vi.stubGlobal("fetch", (url: string, options?: RequestInit) =>
-    url.endsWith("/activity")
+    url.endsWith("/activity") || url.endsWith("/automatic")
       ? Promise.resolve(response({ video_id: job.id, status: "not_started" }))
       : fetcher(url, options),
   );
@@ -252,7 +252,7 @@ it("uploads the real file body and follows processing status without development
 it("rejects unsupported local files before sending them", async () => {
   const fetcher = vi.fn().mockResolvedValue(response({ videos: [] }));
   vi.stubGlobal("fetch", (url: string, options?: RequestInit) =>
-    url.endsWith("/activity")
+    url.endsWith("/activity") || url.endsWith("/automatic")
       ? Promise.resolve(response({ video_id: job.id, status: "not_started" }))
       : fetcher(url, options),
   );
@@ -282,4 +282,104 @@ it("replays only the selected span and returns to its exact last frame", async (
   fireEvent.timeUpdate(media);
   expect(screen.getByAltText("Selected source frame 3")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Play" })).toBeInTheDocument();
+});
+
+it("replays an automatic candidate without manufacturing a manual selection", async () => {
+  const fetcher = vi.fn(async (url: string) =>
+    response(
+      url.endsWith("/automatic")
+        ? {
+            video_id: job.id,
+            status: "ready",
+            analysis_wall_seconds: 1,
+            result: {
+              classifier_checkpoint: { sha256: "synthetic" },
+              unresolved_activity: [],
+              candidates: [
+                {
+                  candidate_id: "one",
+                  start_frame: 1,
+                  stop_frame_exclusive: 4,
+                  start_media_time: 0.04,
+                  end_media_time: 0.2,
+                  classification: {
+                    status: "unavailable",
+                    reason: "synthetic quality failure",
+                  },
+                },
+              ],
+            },
+          }
+        : { video_id: job.id, status: "not_started" },
+    ),
+  );
+  vi.stubGlobal("fetch", fetcher);
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+  const { container } = render(<PunchSelection job={job} onBusy={() => {}} />);
+  const media = container.querySelector("video")!;
+  fireEvent.loadedData(media);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Replay candidate" }),
+  );
+  await waitFor(() => expect(media.currentTime).toBe(0.04));
+  expect(screen.getByRole("button", { name: "Start: not set" })).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Classify selected punch" }),
+  ).toBeDisabled();
+  media.currentTime = 0.2;
+  fireEvent.timeUpdate(media);
+  expect(screen.getByAltText("Selected source frame 4")).toBeInTheDocument();
+});
+
+it("keeps the replay endpoint when a decoded-frame callback arrives ahead of the media clock", async () => {
+  let callback!: (now: number, metadata: { mediaTime: number }) => void;
+  const prototype = HTMLVideoElement.prototype;
+  const original = Object.getOwnPropertyDescriptor(
+    prototype,
+    "requestVideoFrameCallback",
+  );
+  Object.defineProperty(prototype, "requestVideoFrameCallback", {
+    configurable: true,
+    value: (cb: typeof callback) => {
+      callback = cb;
+      return 1;
+    },
+  });
+  try {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          response({ video_id: job.id, status: "not_started" }),
+        ),
+    );
+    vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
+    const { container } = render(
+      <PunchSelection job={job} onBusy={() => {}} />,
+    );
+    const media = container.querySelector("video")!;
+    fireEvent.loadedData(media);
+    selectPunch(); // [0,3), final included frame 2, exclusive end .14 s.
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: "Replay selection" })),
+    );
+    Object.defineProperty(media, "paused", {
+      configurable: true,
+      value: false,
+    });
+    media.currentTime = 0.04; // Decoder has presented a future frame ahead of this clock.
+    act(() => {
+      callback(0, { mediaTime: 0.14 });
+      fireEvent.timeUpdate(media);
+    });
+    expect(screen.getByAltText("Selected source frame 3")).toBeInTheDocument();
+    expect(media.currentTime).toBe(0.1);
+    fireEvent.timeUpdate(media);
+    expect(screen.getByAltText("Selected source frame 3")).toBeInTheDocument();
+  } finally {
+    if (original)
+      Object.defineProperty(prototype, "requestVideoFrameCallback", original);
+    else Reflect.deleteProperty(prototype, "requestVideoFrameCallback");
+  }
 });

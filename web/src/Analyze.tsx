@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import ActivityScan from "./ActivityScan";
+import AutomaticPunches from "./AutomaticPunches";
 
 export type Prediction = {
   status: "available" | "unavailable";
@@ -255,8 +256,9 @@ export default function Analyze() {
       )}
       <p className="analysis-footnote">
         Experimental predictions, not verified punch labels. Activity scans show
-        possible bouts; six-class recognition still requires selecting one
-        punch. Local videos and results stay here until you remove them.
+        possible bouts. Automatic candidates and their predicted types need
+        review; manual classification remains available. Local videos and
+        results stay here until you remove them.
       </p>
     </div>
   );
@@ -294,12 +296,19 @@ export function PunchSelection({
   const [history, setHistory] = useState(job.predictions ?? []);
   const [busy, setBusy] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [automaticBusy, setAutomaticBusy] = useState(false);
+  const [activityRefresh, setActivityRefresh] = useState(0);
+  const automaticComplete = useCallback(
+    () => setActivityRefresh((n) => n + 1),
+    [],
+  );
   useEffect(() => {
-    onBusy(busy || scanning);
-  }, [busy, scanning, onBusy]);
+    onBusy(busy || scanning || automaticBusy);
+  }, [busy, scanning, automaticBusy, onBusy]);
   const lock = useRef(false);
   const replayEnd = useRef<number | null>(null);
   const replayLast = useRef<number | null>(null);
+  const replayFinished = useRef(false);
   const request = useRef(0);
   const [retry, setRetry] = useState(0);
   const canClassify = start !== null && end !== null && end > start;
@@ -309,11 +318,25 @@ export function PunchSelection({
     element.current?.pause();
     replayEnd.current = null;
     replayLast.current = null;
+    replayFinished.current = false;
     setPlaying(false);
     setIndex(Math.max(0, Math.min(video.frame_count - 1, n)));
     setExact(true);
     setError("");
   };
+  const stopReplay = useCallback(
+    (media: HTMLVideoElement) => {
+      const last = replayLast.current;
+      if (last === null) return;
+      replayFinished.current = true;
+      media.pause();
+      media.currentTime = frames[last].media_time;
+      setPlaying(false);
+      setIndex(last);
+      setExact(true);
+    },
+    [frames],
+  );
   useEffect(() => {
     setLoaded(null);
   }, [index, retry]);
@@ -331,18 +354,13 @@ export function PunchSelection({
       disposed = false;
     const update = (_now: number, metadata: { mediaTime: number }) => {
       if (disposed) return;
-      if (!media.paused) {
+      if (!media.paused && !replayFinished.current) {
         setIndex(frameAtTime(frames, metadata.mediaTime));
         if (
           replayEnd.current !== null &&
           metadata.mediaTime >= replayEnd.current
         ) {
-          media.pause();
-          setPlaying(false);
-          if (replayLast.current !== null) {
-            setIndex(replayLast.current);
-            setExact(true);
-          }
+          stopReplay(media);
         }
       }
       callback = source.requestVideoFrameCallback?.(update) ?? 0;
@@ -352,21 +370,30 @@ export function PunchSelection({
       disposed = true;
       if (callback) source.cancelVideoFrameCallback?.(callback);
     };
-  }, [frames]);
+  }, [frames, stopReplay]);
   useEffect(
     () => () => {
       request.current++;
     },
     [],
   );
-  async function play(replay = false) {
+  async function play(
+    replay = false,
+    candidate?: { start: number; stop: number },
+  ) {
     const media = element.current;
     if (!media || !ready) return;
     setError("");
-    if (replay && start !== null && end !== null) {
-      media.currentTime = frames[start].media_time;
-      replayEnd.current = frames[end + 1]?.media_time ?? video.duration_seconds;
-      replayLast.current = end;
+    replayFinished.current = false;
+    if (candidate || (replay && start !== null && end !== null)) {
+      const first = candidate?.start ?? start!;
+      const last = candidate ? candidate.stop - 1 : end!;
+      media.currentTime = frames[first].media_time;
+      replayEnd.current =
+        frames[last + 1]?.media_time ?? video.duration_seconds;
+      replayLast.current = last;
+      if (candidate)
+        media.scrollIntoView?.({ block: "center", behavior: "smooth" });
     } else {
       replayEnd.current = null;
       replayLast.current = null;
@@ -389,7 +416,7 @@ export function PunchSelection({
     selectFrame(frameAtTime(frames, media.currentTime));
   }
   async function classify() {
-    if (!canClassify || lock.current || scanning) return;
+    if (!canClassify || lock.current || scanning || automaticBusy) return;
     lock.current = true;
     setBusy(true);
     setError("");
@@ -446,24 +473,20 @@ export function PunchSelection({
               onPlay={() => setPlaying(true)}
               onPause={() => setPlaying(false)}
               onEnded={() => {
+                replayFinished.current = true;
                 setPlaying(false);
                 setIndex(replayLast.current ?? video.frame_count - 1);
                 setExact(true);
               }}
               onTimeUpdate={(e) => {
-                if (!playing) return;
+                if (!playing || replayFinished.current) return;
                 const media = e.currentTarget;
                 setIndex(frameAtTime(frames, media.currentTime));
                 if (
                   replayEnd.current !== null &&
                   media.currentTime >= replayEnd.current
                 ) {
-                  media.pause();
-                  setPlaying(false);
-                  if (replayLast.current !== null) {
-                    setIndex(replayLast.current);
-                    setExact(true);
-                  }
+                  stopReplay(media);
                 }
               }}
               onError={() =>
@@ -529,9 +552,20 @@ export function PunchSelection({
           </label>
           <ActivityScan
             videoId={job.id}
-            disabled={busy}
+            disabled={busy || automaticBusy}
+            refreshKey={activityRefresh}
             onBusy={setScanning}
             onSeek={selectFrame}
+          />
+          <AutomaticPunches
+            videoId={job.id}
+            disabled={busy || scanning}
+            ready={ready}
+            onBusy={setAutomaticBusy}
+            onComplete={automaticComplete}
+            onReplay={(start, stop) => {
+              void play(false, { start, stop });
+            }}
           />
           <div className="boundary-controls">
             <button
@@ -592,7 +626,7 @@ export function PunchSelection({
           </p>
           <button
             className="primary classify-button"
-            disabled={!canClassify || busy || scanning}
+            disabled={!canClassify || busy || scanning || automaticBusy}
             onClick={classify}
           >
             {busy ? "Running trained model…" : "Classify selected punch"}

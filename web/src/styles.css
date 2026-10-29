@@ -2520,3 +2520,18 @@ footer span {
 .activity-scan small {
   font-size: 12px;
 }
+
+.automatic-candidates {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.automatic-candidates > li {
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+}
+.automatic-candidates details {
+  margin-top: 8px;
+}

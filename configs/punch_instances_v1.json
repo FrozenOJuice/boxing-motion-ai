@@ -1,0 +1,15 @@
+{
+  "schema_version": "pose-arm-cycle-policy-1.0",
+  "quiet_speed_torso_per_second": 1.0,
+  "quiet_seconds": "2/25",
+  "maximum_guard_extension_ratio": 0.8,
+  "minimum_excursion_torso": 0.45,
+  "maximum_return_distance_torso": 0.20,
+  "minimum_cycle_seconds": "4/25",
+  "maximum_cycle_seconds": "3/2",
+  "maximum_radial_variation_ratio": 1.25,
+  "minimum_phase_path_efficiency": 0.55,
+  "overlap_policy": "reject_entire_overlapping_cycle_cluster_without_trimming",
+  "activity_gate": "peak_frame_inside_observed_activity_bout",
+  "scope": "offline complete 2D wrist excursions relative to ipsilateral shoulder; engineering defaults, not tuned or validated punch thresholds"
+}
