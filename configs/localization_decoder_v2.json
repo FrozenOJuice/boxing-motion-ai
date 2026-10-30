@@ -1,0 +1,13 @@
+{
+  "version": "offline-boundary-pair-decoder-2.0",
+  "activity_threshold": 0.5,
+  "boundary_threshold": 0.5,
+  "peak_radius_seconds": "2/25",
+  "minimum_span_seconds": "2/25",
+  "maximum_span_seconds": "2",
+  "minimum_activity_fraction": 0.5,
+  "inactivity_reset_seconds": "1/4",
+  "assignment": "first_compatible_ending_phase_unique_components",
+  "coincident_boundaries": "unresolved",
+  "overlapping_pairs": "unresolved_without_arm_assignment"
+}
