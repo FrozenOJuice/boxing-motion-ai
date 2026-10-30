@@ -64,3 +64,32 @@ it("preserves literal source label wording with an honest unknown fallback", () 
     "Unknown",
   );
 });
+
+it("uses only the explicitly prepared legacy V5 native slice, without raw-cell offsets", () => {
+  const legacy = {
+    ...source(386, 8140, 8146),
+    schema_version: "v5-candidate-1.0",
+    video_id: "V5",
+    source_interval_half_open: undefined,
+    array_slice_half_open: [8140, 8146],
+    raw_start: 123,
+    raw_end: 456,
+  } as IntervalAnnotation;
+  const before = JSON.stringify(legacy);
+  expect(
+    annotationSegments([legacy], 8100, 8460).map((s) => [
+      s.originalStart,
+      s.originalStop,
+    ]),
+  ).toEqual([[8140, 8146]]);
+  expect(JSON.stringify(legacy)).toBe(before);
+  for (const altered of [
+    { ...legacy, schema_version: "unknown" },
+    { ...legacy, video_id: "V6" },
+    { ...legacy, source_interval_half_open: null },
+    { ...legacy, array_slice_half_open: [8146, 8140] },
+  ])
+    expect(
+      annotationSegments([altered as IntervalAnnotation], 8100, 8460),
+    ).toEqual([]);
+});

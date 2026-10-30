@@ -153,13 +153,11 @@ export default function BufferedIntervalViewer({
     const tick = (_now: number, metadata: VideoFrameCallbackMetadata) => {
       if (cancelled) return;
       const slot = frameAt(clip, metadata.mediaTime, true);
-      if (slot !== null) {
+      if (slot !== null && active.current && !v.paused && !v.seeking) {
         shown.current = clip.frames[slot];
-        if (!v.paused && !v.seeking) {
-          setPosition(clip.frames[slot]);
-          setExact(false);
-          setExactReady(false);
-        }
+        setPosition(clip.frames[slot]);
+        setExact(false);
+        setExactReady(false);
       }
       handle = v.requestVideoFrameCallback(tick);
     };
@@ -271,16 +269,17 @@ export default function BufferedIntervalViewer({
     ) {
       callbacks.current.onVisible(lastExact.current);
     }
-    resumeAt.current = null;
     const wasExact = exactMode.current;
     invalidate();
     exactMode.current = true;
+    target.current = n;
     video.current?.pause();
+    resumeAt.current = null;
     setPlaying(false);
     setIndex(n);
     setExact(true);
     // Keep the existing decoded still until its replacement is ready.
-    if (!wasExact) setExactReady(false);
+    if (!wasExact || lastExact.current?.frame_index !== n) setExactReady(false);
   }
   function playPause() {
     const v = video.current;
@@ -295,7 +294,9 @@ export default function BufferedIntervalViewer({
     }
     const n = exact ? index : (shown.current ?? interval.start);
     const replay =
-      v.ended || n >= maximum || (!hasPlayed && n === interval.start);
+      (!exact && v.ended) ||
+      n >= maximum ||
+      (!hasPlayed && n === interval.start);
     const slot = replay ? 0 : clip.frames.indexOf(n);
     if (slot < 0) return;
     invalidate();
@@ -310,6 +311,9 @@ export default function BufferedIntervalViewer({
         v.currentTime = resumeAt.current;
     } else if (exact) v.currentTime = clip.media_times[slot];
     v.playbackRate = speed;
+    exactMode.current = false;
+    setExact(false);
+    setExactReady(false);
     // Anchor before play() advances the clock; the asynchronous playing event
     // may arrive after the first displayed fraction of a second.
     active.current = true;
@@ -349,7 +353,8 @@ export default function BufferedIntervalViewer({
             minimum,
             Math.min(
               maximum,
-              (position ?? index) + (e.key === "ArrowLeft" ? -1 : 1),
+              (exactMode.current ? target.current : (position ?? index)) +
+                (e.key === "ArrowLeft" ? -1 : 1),
             ),
           ),
         );
@@ -372,6 +377,12 @@ export default function BufferedIntervalViewer({
     });
   }
   const displayed = position ?? index;
+  const navigationFrame = exact ? index : displayed;
+  const inspectionReady =
+    exact &&
+    exactReady &&
+    displayed === index &&
+    lastExact.current?.frame_index === index;
   const slot = clip?.frames.indexOf(displayed) ?? -1;
   const remaining = Array.from(
     { length: interval.end - interval.start + 1 },
@@ -459,12 +470,14 @@ export default function BufferedIntervalViewer({
               }
             }}
             onPause={() => {
-              resumeAt.current = video.current?.currentTime ?? null;
               sampleViewing();
               invalidate();
               setPlaying(false);
               setBuffering(false);
               if (!exactMode.current && shown.current !== null) {
+                resumeAt.current = video.current?.currentTime ?? null;
+                exactMode.current = true;
+                target.current = shown.current;
                 setIndex(shown.current);
                 setExact(true);
                 setExactReady(false);
@@ -474,6 +487,13 @@ export default function BufferedIntervalViewer({
               sampleViewing();
               invalidate();
               setPlaying(false);
+              if (!exactMode.current || target.current !== maximum)
+                setExactReady(false);
+              exactMode.current = true;
+              target.current = maximum;
+              shown.current = maximum;
+              setIndex(maximum);
+              setExact(true);
             }}
             onError={() => {
               invalidate();
@@ -485,20 +505,13 @@ export default function BufferedIntervalViewer({
           />
         )}
         {exact && (
-          <div
-            className="buffered-inspection"
-            style={{ opacity: exactReady ? 1 : 0 }}
-          >
+          <div className="buffered-inspection">
             <ExactFrame
               recording={recording}
               retryToken={frameRetry}
               index={index}
               overlay={overlay}
-              onFailure={() =>
-                setError(
-                  "Exact frame unavailable. Retry the frame before certifying coverage.",
-                )
-              }
+              onFailure={() => setExactReady(false)}
               onVisible={(f) => {
                 if (f.frame_index !== target.current || !exactMode.current)
                   return;
@@ -554,8 +567,8 @@ export default function BufferedIntervalViewer({
         <div className="playback-buttons">
           <button
             aria-label="Previous frame"
-            disabled={displayed <= minimum}
-            onClick={() => seek(displayed - 1)}
+            disabled={navigationFrame <= minimum}
+            onClick={() => seek(navigationFrame - 1)}
           >
             ‹
           </button>
@@ -577,8 +590,8 @@ export default function BufferedIntervalViewer({
           </button>
           <button
             aria-label="Next frame"
-            disabled={displayed >= maximum}
-            onClick={() => seek(displayed + 1)}
+            disabled={navigationFrame >= maximum}
+            onClick={() => seek(navigationFrame + 1)}
           >
             ›
           </button>
@@ -622,7 +635,7 @@ export default function BufferedIntervalViewer({
       </div>
       {inspectionControls?.(
         displayed,
-        exact && exactReady && !playing,
+        inspectionReady && !playing,
         inspectLoaded,
       )}
       {humanEvents.length > 0 && (
@@ -776,8 +789,12 @@ export default function BufferedIntervalViewer({
           aria-label="Native frame"
           min={minimum}
           max={maximum}
-          value={displayed}
-          aria-valuetext={`Showing frame ${displayed}`}
+          value={navigationFrame}
+          aria-valuetext={
+            exact && displayed !== index
+              ? `Loading frame ${index}; showing frame ${displayed}`
+              : `Showing frame ${displayed}`
+          }
           onChange={(e) => seek(Number(e.target.value))}
         />
       </div>

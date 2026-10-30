@@ -90,17 +90,36 @@ export function ExactFrame({
     result.error ||
     (mismatch ? "Frame identity mismatch" : undefined) ||
     (failure?.key === key ? failure.message : undefined);
+  const decoded =
+    !!frame &&
+    displayed?.frame_index === index &&
+    displayed.image_url === frame.image_url;
+  function fail(message: string) {
+    if (latest.current.key !== key || latest.current.generation !== generation)
+      return;
+    // A timed-out decode may still resolve. It must never replace current pixels.
+    latest.current.generation++;
+    setFailure({ key, message });
+  }
   useEffect(() => {
     if (error) callbacks.current.onFailure();
   }, [error]);
+  useEffect(() => {
+    if (decoded || error) return;
+    const timer = window.setTimeout(() => {
+      fail("Frame load timed out. Retry or choose another frame");
+    }, 15000);
+    return () => window.clearTimeout(timer);
+  }, [key, decoded, error]);
   // Publish metadata before paint, in the same commit as the decoded image and overlay.
   useLayoutEffect(() => {
-    if (displayed) callbacks.current.onVisible(displayed);
-  }, [displayed]);
+    // Returning to the retained decoded image does not fire another image load event.
+    if (!error && decoded && displayed) callbacks.current.onVisible(displayed);
+  }, [displayed, frame, index, error]);
   const candidate =
     !error && frame && frame.image_url !== displayed?.image_url ? frame : null;
   const images = [displayed, candidate].filter((f): f is Frame => !!f);
-  const pending = displayed?.frame_index !== index || !!candidate;
+  const pending = !decoded;
   return (
     <div className="image-stage" aria-busy={!error && pending}>
       {images.map((f) => (
@@ -133,7 +152,7 @@ export function ExactFrame({
                   latest.current.generation === generation &&
                   latest.current.key === key
                 )
-                  setFailure({ key, message: "Image could not be decoded" });
+                  fail("Image could not be decoded");
               }
             }}
             onError={() => {
@@ -142,7 +161,7 @@ export function ExactFrame({
                 latest.current.generation === generation &&
                 latest.current.key === key
               )
-                setFailure({ key, message: "Image could not be loaded" });
+                fail("Image could not be loaded");
             }}
           />
           {f === displayed && overlay && <Skeleton frame={f} />}

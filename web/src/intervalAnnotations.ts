@@ -2,6 +2,8 @@
 import { type Source, title } from "./api";
 export type IntervalAnnotation = Source & {
   source_interval_half_open?: [number, number] | null;
+  schema_version?: string;
+  array_slice_half_open?: [number, number] | null;
 };
 export type AnnotationSegment = {
   source: IntervalAnnotation;
@@ -26,7 +28,14 @@ export function annotationSegments(
 ): AnnotationSegment[] {
   const mapped: AnnotationSegment[] = [];
   for (const source of annotations) {
-    const bounds = source.source_interval_half_open;
+    // The original V5 schema predates source_interval_half_open. Its prepared
+    // native array slice is the existing provisional mapping, not a new offset.
+    const bounds =
+      source.source_interval_half_open === undefined &&
+      source.schema_version === "v5-candidate-1.0" &&
+      source.video_id === "V5"
+        ? source.array_slice_half_open
+        : source.source_interval_half_open;
     if (
       !bounds ||
       bounds.length !== 2 ||

@@ -119,7 +119,8 @@ function mount(
   vi.stubGlobal("fetch", fetchMock);
   const viewing = vi.fn(),
     visible = vi.fn(),
-    humanSelect = vi.fn();
+    humanSelect = vi.fn(),
+    inspection = vi.fn();
   render(
     <BufferedIntervalViewer
       intervalId={pilot === "original" ? "V4-bg-1" : "V4-motion-1"}
@@ -129,6 +130,10 @@ function mount(
       humanEvents={humanEvents}
       draftBounds={draftBounds}
       onHumanSelect={humanSelect}
+      inspectionControls={(frame, ready) => {
+        inspection(frame, ready);
+        return null;
+      }}
       recording="V4"
       interval={{
         start: 10,
@@ -143,7 +148,7 @@ function mount(
       onViewing={viewing}
     />,
   );
-  return { viewing, visible, fetchMock, humanSelect };
+  return { viewing, visible, fetchMock, humanSelect, inspection };
 }
 async function readyPlayer() {
   const v = await screen.findByLabelText("Buffered interval video");
@@ -513,4 +518,87 @@ it("keeps source suggestions unverified, shares a compact lane and exposes exact
   fireEvent.click(screen.getByRole("button", { name: "Proposed end · 11" }));
   fireEvent.load(await screen.findByAltText("V4, native frame 11"));
   expect(viewing.mock.lastCall?.[0]?.complete).not.toBe(true);
+});
+
+it("keeps requested timeline/step targets progressing while old pixels remain displayed", async () => {
+  const { fetchMock, visible, inspection } = mount();
+  fireEvent.load(await screen.findByAltText("V4, native frame 10"));
+  await waitFor(() => expect(inspection.mock.lastCall).toEqual([10, true]));
+  const original = fetchMock.getMockImplementation()!;
+  let release!: (value: any) => void;
+  fetchMock.mockImplementation((url) =>
+    String(url).endsWith("/frames/11")
+      ? new Promise((resolve) => {
+          release = resolve;
+        })
+      : original(url),
+  );
+  fireEvent.click(screen.getByLabelText("Next frame"));
+  await waitFor(() => expect(release).toBeDefined());
+  expect(screen.getByLabelText("Native frame")).toHaveValue("11");
+  expect(screen.getByText("Frame 10")).toBeInTheDocument();
+  expect(inspection.mock.lastCall).toEqual([10, false]);
+  fireEvent.click(screen.getByLabelText("Next frame"));
+  expect(screen.getByLabelText("Native frame")).toHaveValue("12");
+  fireEvent.load(await screen.findByAltText("V4, native frame 12"));
+  await waitFor(() => expect(inspection.mock.lastCall).toEqual([12, true]));
+  await act(async () =>
+    release(await original("/api/recordings/V4/frames/11")),
+  );
+  expect(visible).toHaveBeenLastCalledWith(
+    expect.objectContaining({ frame_index: 12 }),
+  );
+  expect(visible.mock.calls.some(([f]) => f.frame_index === 11)).toBe(false);
+});
+
+it("can return to retained decoded pixels without waiting for a second image load", async () => {
+  const { inspection } = mount();
+  const first = await screen.findByAltText("V4, native frame 10");
+  fireEvent.load(first);
+  fireEvent.click(screen.getByLabelText("Next frame"));
+  await screen.findByAltText("V4, native frame 11");
+  fireEvent.change(screen.getByLabelText("Native frame"), {
+    target: { value: "10" },
+  });
+  await waitFor(() => expect(inspection.mock.lastCall).toEqual([10, true]));
+  expect(screen.getByAltText("V4, native frame 10")).toBe(first);
+  expect(screen.queryByText(/Loading frame/)).not.toBeInTheDocument();
+});
+
+it("plays from a manually selected frame after ended, rather than replaying from zero", async () => {
+  mount();
+  const v = (await readyPlayer()) as HTMLVideoElement;
+  let now = 1000;
+  vi.spyOn(performance, "now").mockImplementation(() => now);
+  fireEvent.click(screen.getByLabelText("Play"));
+  tick(12, 3);
+  Object.defineProperty(v, "paused", { configurable: true, value: true });
+  Object.defineProperty(v, "ended", { configurable: true, value: true });
+  v.currentTime = 0.16;
+  fireEvent.pause(v);
+  fireEvent.ended(v);
+  fireEvent.load(await screen.findByAltText("V4, native frame 13"));
+  fireEvent.change(screen.getByLabelText("Native frame"), {
+    target: { value: "11" },
+  });
+  fireEvent.load(await screen.findByAltText("V4, native frame 11"));
+  now = 2000;
+  fireEvent.click(screen.getByLabelText("Play"));
+  expect(v.currentTime).toBe(0.04);
+});
+
+it("ignores delayed playback callbacks and pause events after an explicit backwards seek", async () => {
+  const { viewing, inspection } = mount();
+  const v = (await readyPlayer()) as HTMLVideoElement;
+  fireEvent.click(screen.getByLabelText("Play"));
+  tick(12, 3);
+  fireEvent.change(screen.getByLabelText("Native frame"), {
+    target: { value: "10" },
+  });
+  tick(13, 4);
+  fireEvent.pause(v);
+  fireEvent.load(await screen.findByAltText("V4, native frame 10"));
+  await waitFor(() => expect(inspection.mock.lastCall).toEqual([10, true]));
+  expect(screen.getByLabelText("Native frame")).toHaveValue("10");
+  expect(viewing.mock.lastCall?.[0].complete).toBe(false);
 });
