@@ -1,0 +1,15 @@
+{
+  "version": "source-event-balanced-localization-1.0",
+  "baseline_config": "configs/punch_localization_blue_v1.json",
+  "baseline_run": "reports/boxingvi/punch-localization-blue-v1",
+  "feature_cache": "reports/boxingvi/blue-localization-features-v1-redacted",
+  "sources": ["V4", "V6"],
+  "heads": "equal_activity_onset_end",
+  "signs": "equal_positive_negative_terms_within_source_head",
+  "activity_positive": "source_normalized_existing_positive_target_mass",
+  "boundary_positive": "equal_events_then_observable_owned_target_mass",
+  "boundary_ownership": "max_triangle_contributors_equal_ties",
+  "negative": "source_normalized_existing_mask_times_one_minus_target",
+  "unknown": "zero_weight_no_new_targets",
+  "selection": "unchanged_seed_budget_optimizer_final_epoch_no_search"
+}
