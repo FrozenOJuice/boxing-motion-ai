@@ -1,5 +1,9 @@
 # Pose-observation reliability study
 
+Follow-up: the [bounded localization experiment](PUNCH_LOCALIZATION_SMOKE_V1.md) implements
+native RGB/motion caching and a three-head class-agnostic temporal model. Its training-source
+fit does not promote a model or change the production pose pipeline described here.
+
 Development-source investigation, 2026-10-29; starting revision `fb961a9`.
 
 **Decision:** retain production extraction. Cropping has selective experimental benefits, but

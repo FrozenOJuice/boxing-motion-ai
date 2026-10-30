@@ -1,0 +1,23 @@
+{
+  "schema_version": "punch-localization-smoke-1.0",
+  "dataset_sha256": "c7993318ee8f8a16e2cd89f04ad0acaf7ce95c0cad8aabad0c70079b683b2d59",
+  "seed": 20261029,
+  "epochs": 120,
+  "hidden": 32,
+  "dropout": 0.1,
+  "learning_rate": 0.003,
+  "weight_decay": 0.0001,
+  "gradient_clip": 1.0,
+  "threads": 2,
+  "boundary_radius_seconds": "1/12",
+  "maximum_positive_weight": 40.0,
+  "decoder": {
+    "activity_threshold": 0.5,
+    "boundary_threshold": 0.5,
+    "peak_radius_seconds": "2/25",
+    "minimum_span_seconds": "2/25",
+    "maximum_span_seconds": "2",
+    "minimum_activity_fraction": 0.5
+  },
+  "purpose": "user_authorized_v4_v6_training_source_engineering_only_no_selection"
+}
