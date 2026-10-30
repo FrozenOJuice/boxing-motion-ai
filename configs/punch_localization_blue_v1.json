@@ -1,0 +1,29 @@
+{
+  "schema_version": "blue-punch-localization-experiment-1.0",
+  "dataset": {
+    "path": "reports/boxingvi/blue-localization-dataset-v1/manifest.json",
+    "sha256": "af3a30e400609cd5c1d3c5c7718f6b3e5c49f85dfede25aa95ba3d7211d5dd26"
+  },
+  "training": {
+    "seed": 20261029,
+    "epochs": 120,
+    "hidden": 32,
+    "dropout": 0.1,
+    "learning_rate": 0.003,
+    "weight_decay": 0.0001,
+    "gradient_clip": 1.0,
+    "threads": 2,
+    "boundary_radius_seconds": "1/12",
+    "maximum_positive_weight": 40.0,
+    "decoder": {
+      "activity_threshold": 0.5,
+      "boundary_threshold": 0.5,
+      "peak_radius_seconds": "2/25",
+      "minimum_span_seconds": "2/25",
+      "maximum_span_seconds": "2",
+      "minimum_activity_fraction": 0.5
+    }
+  },
+  "purpose": "user_authorized_blue_subset_three_arm_no_production_promotion",
+  "evaluation": "V5 development positive-reference matching; Unknown outside sparse labels; no selection"
+}
