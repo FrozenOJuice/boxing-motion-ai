@@ -72,7 +72,7 @@ export default function IntervalReview({
   onSaving: (value: boolean) => void;
 }) {
   const [pilot, setPilot] = useState<
-    "original" | "motion-v2" | "events" | "activity"
+    "original" | "motion-v2" | "events" | "activity" | "localization"
   >("original");
   return (
     <IntervalQueue
@@ -93,20 +93,29 @@ function IntervalQueue({
 }: {
   onDirty: (value: boolean) => void;
   onSaving: (value: boolean) => void;
-  pilot: "original" | "motion-v2" | "events" | "activity";
-  onPilot: (pilot: "original" | "motion-v2" | "events" | "activity") => void;
+  pilot: "original" | "motion-v2" | "events" | "activity" | "localization";
+  onPilot: (
+    pilot: "original" | "motion-v2" | "events" | "activity" | "localization",
+  ) => void;
 }) {
-  const query = pilot === "motion-v2" ? "?pilot=motion-v2" : "";
+  const localization = pilot === "localization";
+  const query = localization
+    ? "?pilot=localization-v1"
+    : pilot === "motion-v2"
+      ? "?pilot=motion-v2"
+      : "";
   const activity = pilot === "activity";
-  const labeling = pilot === "events" || activity;
+  const labeling = pilot === "events" || activity || localization;
   const statuses = useRequest<
     Result<Record<string, { complete: boolean; events: HumanPunch[] }>>
   >(
-    activity
-      ? "/api/activity-evaluation/status"
-      : labeling
-        ? "/api/interval-event-status"
-        : null,
+    localization
+      ? "/api/localization-events/status"
+      : activity
+        ? "/api/activity-evaluation/status"
+        : labeling
+          ? "/api/interval-event-status"
+          : null,
   );
   const [progress, setProgress] = useState<
     Record<string, { complete: boolean; events: HumanPunch[] }>
@@ -120,7 +129,7 @@ function IntervalQueue({
   const entries = (queue.data?.data?.manifest.entries ?? []).filter((e) =>
     activity
       ? /^(V7|V8|V10)-eval-[12]$/.test(e.id)
-      : !labeling || /^V4-bg-[1-5]$/.test(e.id),
+      : localization || !labeling || /^V4-bg-[1-5]$/.test(e.id),
   );
   useEffect(() => {
     if (!selected && entries.length) setSelected(entries[0].id);
@@ -153,12 +162,17 @@ function IntervalQueue({
                 change(false);
                 onPilot(
                   event.target.value as
-                    "original" | "motion-v2" | "events" | "activity",
+                    | "original"
+                    | "motion-v2"
+                    | "events"
+                    | "activity"
+                    | "localization",
                 );
               }
             }}
           >
             <option value="activity">Activity evaluation · V7/V8/V10</option>
+            <option value="localization">Individual punches · V6 / V5</option>
             <option value="events">Label missing punches · V4</option>
             <option value="original">Original pilot</option>
             <option value="motion-v2">Motion pilot 2 · V4/V6</option>
@@ -240,7 +254,9 @@ function IntervalQueue({
         ) : labeling ? (
           <PunchLabeling
             key={selected}
-            mode={activity ? "activity" : "punch"}
+            mode={
+              localization ? "localization" : activity ? "activity" : "punch"
+            }
             entry={data.entry}
             annotations={data.annotations}
             onDirty={change}

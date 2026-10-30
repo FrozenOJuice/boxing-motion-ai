@@ -18,8 +18,12 @@ from .viewing_coverage import PlaybackCoverage, validate_viewing
 
 DIRECTORY = "reports/boxingvi/interval-reviews-v1"
 CONFIG = "configs/interval_review_pilot_v1.json"
-Pilot = Literal["original", "motion-v2"]
+Pilot = Literal["original", "motion-v2", "localization-v1"]
 PILOTS = {
+    "localization-v1": (
+        "configs/localization_review_v1.json",
+        "reports/boxingvi/localization-interval-reviews-v1",
+    ),
     "original": (CONFIG, DIRECTORY),
     "motion-v2": (
         "configs/interval_review_motion_v2.json",
@@ -128,7 +132,8 @@ class IntervalWorkspace:
                 "interval_role_mismatch",
             )
             require(
-                e["purpose"] in ("background_candidate", "evaluation_block"),
+                e["purpose"] in ("background_candidate", "evaluation_block")
+                or (self.pilot == "localization-v1" and e["purpose"] == "localization_review"),
                 "invalid_interval_purpose",
             )
             require(
@@ -152,7 +157,23 @@ class IntervalWorkspace:
             if e["purpose"] == "evaluation_block"
         )
         require(0 <= duration <= 360, "evaluation_budget_exceeded")
-        if self.pilot == "motion-v2":
+        if self.pilot == "localization-v1":
+            from ..data.interval_pilot import GROUPS
+
+            require(
+                len(entries) <= 6
+                and all(
+                    e["recording"] in ("V5", "V6")
+                    and e["role"]
+                    == ("development" if e["recording"] == "V5" else "train_candidate")
+                    and e["purpose"] == "localization_review"
+                    and e["source_group_guard"] == GROUPS[e["recording"]]
+                    and e["id"] in ("V5-motion-101", *[f"V6-motion-{i}" for i in range(101, 106)])
+                    for e in entries
+                ),
+                "invalid_localization_review_scope",
+            )
+        elif self.pilot == "motion-v2":
             require(
                 len(entries) <= 12
                 and all(
@@ -263,7 +284,7 @@ class IntervalWorkspace:
         rows = self.base._rows(e["recording"], spec)
         refs = []
         for row in rows:
-            bounds = row.get("source_interval_half_open")
+            bounds = row.get("source_interval_half_open") or row.get("array_slice_half_open")
             if bounds and bounds[0] < e["stop"] and bounds[1] > e["start"]:
                 refs.append(row)
         history = [r for r in snap["history"] if r["interval_id"] == key]

@@ -11,7 +11,7 @@ export type HumanPunch = {
   stop: number;
   punch_type?: string;
   type_uncertain?: boolean;
-  kind?: "activity" | "uncertain";
+  kind?: "activity" | "uncertain" | "punch";
   partial_overlap?: boolean;
   unverified?: boolean;
   members?: {
@@ -61,7 +61,7 @@ const labels = [
   ["rear_uppercut", "Rear Uppercut"],
 ];
 const name = (p: HumanPunch) =>
-  p.kind
+  p.kind && p.kind !== "punch"
     ? p.kind === "activity"
       ? "Punching activity"
       : "Uncertain section"
@@ -78,7 +78,7 @@ export default function PunchLabeling({
   onProgress,
 }: {
   entry: Entry;
-  mode?: "punch" | "activity";
+  mode?: "punch" | "activity" | "localization";
   annotations: IntervalAnnotation[];
   onDirty: (v: boolean) => void;
   onSaving: (v: boolean) => void;
@@ -86,9 +86,12 @@ export default function PunchLabeling({
   onProgress: (s: { complete: boolean; events: HumanPunch[] }) => void;
 }) {
   const activity = mode === "activity";
-  const endpoint = activity
-    ? `/api/activity-evaluation/${e.id}`
-    : `/api/intervals/${e.id}/events`;
+  const localization = mode === "localization";
+  const endpoint = localization
+    ? `/api/localization-events/${e.id}`
+    : activity
+      ? `/api/activity-evaluation/${e.id}`
+      : `/api/intervals/${e.id}/events`;
   const query = useRequest<Result<State>>(endpoint);
   const [state, setState] = useState<State | null>(null);
   const [draft, setDraft] = useState<{
@@ -135,7 +138,7 @@ export default function PunchLabeling({
       end: p.stop - 1,
       punch_type: p.punch_type ?? "",
       type_uncertain: p.type_uncertain ?? false,
-      kind: p.kind ?? "activity",
+      kind: p.kind === "punch" ? "activity" : (p.kind ?? "activity"),
       suggestion_id: state?.suggestions?.find((s) => s.event_id === p.event_id)
         ?.event_id,
     });
@@ -181,6 +184,12 @@ export default function PunchLabeling({
             ...(activity
               ? { kind: draft.kind }
               : {
+                  ...(localization
+                    ? {
+                        kind:
+                          draft.kind === "uncertain" ? "uncertain" : "punch",
+                      }
+                    : {}),
                   punch_type: draft.punch_type,
                   type_uncertain: draft.type_uncertain,
                 }),
@@ -217,7 +226,15 @@ export default function PunchLabeling({
                     : {}),
                   no_activity_observed: state.events.length === 0,
                 }
-              : { all_punches_labeled: true }),
+              : {
+                  all_punches_labeled: true,
+                  ...(localization
+                    ? {
+                        no_punches_observed: state.events.length === 0,
+                        visible_continuous: state.events.length === 0,
+                      }
+                    : {}),
+                }),
             ...(viewing?.evidence.segments.length
               ? { playback_coverage: viewing.evidence }
               : {}),
@@ -354,6 +371,7 @@ export default function PunchLabeling({
     <>
       <BufferedIntervalViewer
         intervalId={e.id}
+        pilot={localization ? "localization-v1" : "original"}
         recording={e.recording}
         annotations={activity ? [] : annotations}
         showSourceAnnotations={!activity}
@@ -364,7 +382,9 @@ export default function PunchLabeling({
           ...pendingSuggestions.map((s) => ({ ...s, unverified: true })),
         ]}
         draftBounds={
-          activity && draft ? { start: draft.start, end: draft.end } : undefined
+          (activity || localization) && draft
+            ? { start: draft.start, end: draft.end }
+            : undefined
         }
         onHumanSelect={(id) => {
           const p = [...state.events, ...pendingSuggestions].find(
@@ -389,18 +409,31 @@ export default function PunchLabeling({
       />
       <section className="panel interval-form">
         <div className="event-heading">
-          <h2>{activity ? "Punching activity" : "Punches you added"}</h2>
+          <h2>
+            {activity
+              ? "Punching activity"
+              : localization
+                ? "Punches and uncertain sections"
+                : "Punches you added"}
+          </h2>
           <span className="muted">
             {state.complete && !draft
-              ? activity
+              ? activity || localization
                 ? state.events.some((e) => e.kind === "uncertain")
                   ? "Reviewed · uncertainty"
                   : "Reviewed"
                 : "Completely labeled"
               : "In progress"}{" "}
-            · {state.events.length} {activity ? "sections" : "punches"}
+            · {state.events.length}{" "}
+            {activity || localization ? "sections" : "punches"}
           </span>
         </div>
+        {localization && (
+          <p className="muted">
+            Mark each punch. Mark occluded or unclear motion as uncertain. Punch
+            types are optional.
+          </p>
+        )}
         {activity && (
           <p className="muted">
             One activity interval can contain several punches. Keep pauses under
@@ -408,7 +441,7 @@ export default function PunchLabeling({
             uncertain.
           </p>
         )}
-        {(activity
+        {(activity || localization
           ? (["activity", "uncertain"] as const)
           : (["activity"] as const)
         ).map((kind) => (
@@ -420,24 +453,26 @@ export default function PunchLabeling({
                 event_id: crypto.randomUUID(),
                 start: null,
                 end: null,
-                punch_type: "",
-                type_uncertain: false,
+                punch_type: localization ? "unknown" : "",
+                type_uncertain: localization,
                 kind,
               });
               onDirty(true);
               setFeedback("");
             }}
           >
-            {activity
+            {activity || localization
               ? kind === "activity"
-                ? "Add activity"
+                ? localization
+                  ? "Add punch"
+                  : "Add activity"
                 : "Mark uncertain section"
               : "Add punch"}
           </button>
         ))}
         {draft && (
           <div className="event-editor">
-            {!activity && (
+            {!activity && draft.kind !== "uncertain" && (
               <>
                 {" "}
                 <label>
@@ -506,7 +541,7 @@ export default function PunchLabeling({
                 disabled={saving}
                 onClick={() => void save("upsert")}
               >
-                {activity
+                {activity || (localization && draft.kind === "uncertain")
                   ? draft.suggestion_id
                     ? "Confirm period"
                     : "Save section"
@@ -589,7 +624,11 @@ export default function PunchLabeling({
               ? state.events.length || pendingSuggestions.length
                 ? "I watched the entire block and marked all punching activity and uncertain sections."
                 : "I watched the entire block and saw no punching activity."
-              : "I watched the entire interval and labeled every punch."}
+              : localization
+                ? state.events.length
+                  ? "I watched the entire interval and marked every punch and uncertain section."
+                  : "I watched the entire interval and saw no punches; the boxer was visible throughout."
+                : "I watched the entire interval and labeled every punch."}
           </label>
         </div>
         <div className="interval-save">
@@ -598,7 +637,7 @@ export default function PunchLabeling({
             disabled={
               saving ||
               !attest ||
-              (!activity && !state.events.length) ||
+              (!activity && !localization && !state.events.length) ||
               !!draft ||
               pendingSuggestions.length > 0
             }

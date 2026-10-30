@@ -79,6 +79,7 @@ function setup(
     failComplete?: boolean;
     pending?: Promise<void>;
     activity?: boolean;
+    localization?: boolean;
     suggestions?: boolean;
   } = {},
 ) {
@@ -152,7 +153,13 @@ function setup(
             ? { ...entry, id: "V7-eval-1", recording: "V7" }
             : entry
         }
-        mode={options.activity ? "activity" : "punch"}
+        mode={
+          options.localization
+            ? "localization"
+            : options.activity
+              ? "activity"
+              : "punch"
+        }
         annotations={[]}
         onDirty={dirty}
         onSaving={vi.fn()}
@@ -393,4 +400,65 @@ it("dismisses a source suggestion without creating a human event and can revisit
   );
   expect(screen.getByText("Start 10")).toBeVisible();
   expect(screen.getByRole("button", { name: "Confirm period" })).toBeVisible();
+});
+
+it("localization uses separate endpoints, unknown types and explicit no-punch visibility", async () => {
+  const { bodies } = setup({ localization: true });
+  await screen.findByRole("button", { name: "Add punch" });
+  expect(fetch).toHaveBeenCalledWith(
+    "/api/localization-events/V4-bg-1",
+    expect.anything(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Watch interval" }));
+  fireEvent.click(
+    screen.getByRole("checkbox", {
+      name: /saw no punches; the boxer was visible/,
+    }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Save complete & Next" }));
+  await waitFor(() => expect(bodies).toHaveLength(1));
+  expect(bodies[0]).toMatchObject({
+    operation: "complete",
+    no_punches_observed: true,
+    visible_continuous: true,
+  });
+});
+it("localization records uncertain motion without a verified class", async () => {
+  const { bodies } = setup({ localization: true });
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Mark uncertain section" }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Inspect 10" }));
+  fireEvent.click(screen.getByRole("button", { name: "Set start here" }));
+  fireEvent.click(screen.getByRole("button", { name: "Inspect 11" }));
+  fireEvent.click(screen.getByRole("button", { name: "Set end here" }));
+  expect(
+    screen.queryByRole("combobox", { name: "Punch type" }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Save section" }));
+  await waitFor(() => expect(bodies).toHaveLength(1));
+  expect(bodies[0].event).toMatchObject({
+    kind: "uncertain",
+    start: 10,
+    stop: 12,
+    punch_type: "unknown",
+    type_uncertain: true,
+  });
+});
+it("localization saves class-agnostic punches without manufacturing a type", async () => {
+  const { bodies } = setup({ localization: true });
+  fireEvent.click(await screen.findByRole("button", { name: "Add punch" }));
+  fireEvent.click(screen.getByRole("button", { name: "Inspect 10" }));
+  fireEvent.click(screen.getByRole("button", { name: "Set start here" }));
+  fireEvent.click(screen.getByRole("button", { name: "Inspect 11" }));
+  fireEvent.click(screen.getByRole("button", { name: "Set end here" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save punch" }));
+  await waitFor(() => expect(bodies).toHaveLength(1));
+  expect(bodies[0].event).toMatchObject({
+    kind: "punch",
+    start: 10,
+    stop: 12,
+    punch_type: "unknown",
+    type_uncertain: true,
+  });
 });

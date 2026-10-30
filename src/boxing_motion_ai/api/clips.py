@@ -217,7 +217,11 @@ class ClipService:
                         cache_key=cache_key,
                         video_url=(
                             f"/api/intervals/{key}/clip"
-                            + ("?pilot=motion-v2" if self.intervals.pilot == "motion-v2" else "")
+                            + (
+                                f"?pilot={self.intervals.pilot}"
+                                if self.intervals.pilot != "original"
+                                else ""
+                            )
                         ),
                         width=width,
                         height=height,

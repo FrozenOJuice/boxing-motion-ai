@@ -14,6 +14,7 @@ from boxing_motion_ai.services.artifacts import ServiceError
 from boxing_motion_ai.services.contracts import QueryResult
 from boxing_motion_ai.services.interval_events import SCOPE, EventDecision, IntervalEvents
 from boxing_motion_ai.services.interval_review import IntervalDecision, IntervalWorkspace, Pilot
+from boxing_motion_ai.services.localization_review import LocalizationDecision, LocalizationReview
 from boxing_motion_ai.services.review_workspace import Decision, ReviewWorkspace
 
 from .analyze import register as register_analysis
@@ -31,7 +32,10 @@ def create_app(root: Path):
     service = DashboardService(root)
     frames = FrameService(service)
     workspace = ReviewWorkspace(service)
-    intervals = {p: IntervalWorkspace(service, frames, p) for p in ("original", "motion-v2")}
+    intervals = {
+        p: IntervalWorkspace(service, frames, p)
+        for p in ("original", "motion-v2", "localization-v1")
+    }
     clips = {p: ClipService(w, frames) for p, w in intervals.items()}
     app = FastAPI(
         title="Boxing Motion AI — local review", version="0.2.0", docs_url=None, redoc_url=None
@@ -128,6 +132,32 @@ def create_app(root: Path):
     @app.post("/api/activity-evaluation/{key}")
     def activity_save(key: str, decision: ActivityDecision):
         return interval_reply(lambda: ActivityEvaluation(intervals["original"]).save(key, decision))
+
+    @app.get("/api/localization-events/status")
+    def localization_status():
+        def statuses():
+            review = LocalizationReview(intervals["localization-v1"])
+            manifest, _ = review.intervals.manifest()
+            return {
+                e["id"]: {
+                    k: v
+                    for k, v in review.detail(e["id"]).items()
+                    if k in ("complete", "events", "uncertain_types")
+                }
+                for e in manifest["entries"]
+            }
+
+        return interval_reply(statuses)
+
+    @app.get("/api/localization-events/{key}")
+    def localization_detail(key: str):
+        return interval_reply(lambda: LocalizationReview(intervals["localization-v1"]).detail(key))
+
+    @app.post("/api/localization-events/{key}")
+    def localization_save(key: str, decision: LocalizationDecision):
+        return interval_reply(
+            lambda: LocalizationReview(intervals["localization-v1"]).save(key, decision)
+        )
 
     @app.get("/api/interval-event-status")
     def interval_event_status():

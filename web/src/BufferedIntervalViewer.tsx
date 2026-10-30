@@ -39,7 +39,7 @@ export default function BufferedIntervalViewer({
   draftBounds,
 }: {
   intervalId: string;
-  pilot?: "original" | "motion-v2";
+  pilot?: "original" | "motion-v2" | "localization-v1";
   interval: Interval;
   recording: string;
   onVisible: (frame: Frame) => void;
@@ -54,7 +54,7 @@ export default function BufferedIntervalViewer({
     stop: number;
     punch_type?: string;
     type_uncertain?: boolean;
-    kind?: "activity" | "uncertain";
+    kind?: "activity" | "uncertain" | "punch";
     unverified?: boolean;
   }[];
   onHumanSelect?: (id: string) => void;
@@ -68,7 +68,7 @@ export default function BufferedIntervalViewer({
   const [mediaReady, setMediaReady] = useState(false);
   const lastToggle = useRef(-Infinity);
   const result = useRequest<Result<Playback>>(
-    `/api/intervals/${intervalId}/playback${pilot === "original" ? "" : "?pilot=motion-v2"}`,
+    `/api/intervals/${intervalId}/playback${pilot === "original" ? "" : `?pilot=${pilot}`}`,
   );
   const clip = result.data?.data;
   const video = useRef<HTMLVideoElement>(null),
@@ -632,7 +632,7 @@ export default function BufferedIntervalViewer({
         >
           <strong>
             {humanEvents.filter((e) => !e.unverified).length}{" "}
-            {humanEvents.some((e) => e.kind)
+            {humanEvents.some((e) => e.kind && e.kind !== "punch")
               ? "sections you added"
               : "punches you added"}
           </strong>
@@ -648,7 +648,7 @@ export default function BufferedIntervalViewer({
         <div
           className="human-event-track"
           aria-label={
-            humanEvents.some((e) => e.kind)
+            humanEvents.some((e) => e.kind && e.kind !== "punch")
               ? "Human activity timeline"
               : "Human punch timeline"
           }
@@ -665,8 +665,8 @@ export default function BufferedIntervalViewer({
                 width: `${(100 * (event.stop - event.start)) / Math.max(1, maximum - minimum + 1)}%`,
                 top: `${(event.unverified ? 0 : lane + Number(humanEvents.some((e) => e.unverified))) * 20 + 2}px`,
               }}
-              title={`${event.unverified ? "Unverified source suggestion" : "Human"} · ${event.type_uncertain ? "Type uncertain" : event.kind ? (event.kind === "activity" ? "Punching activity" : "Uncertain section") : event.punch_type?.replaceAll("_", " ")} · ${event.start}–${event.stop - 1}${event.start < interval.start || event.stop > interval.end + 1 ? " · Partial overlap" : ""}`}
-              aria-label={`${event.unverified ? "Unverified suggestion" : "Human"} ${event.kind ? "section" : "punch"} ${lane + 1}: ${event.type_uncertain ? "Type uncertain" : event.kind ? (event.kind === "activity" ? "Punching activity" : "Uncertain section") : event.punch_type?.replaceAll("_", " ")}`}
+              title={`${event.unverified ? "Unverified source suggestion" : "Human"} · ${event.type_uncertain ? "Type uncertain" : event.kind && event.kind !== "punch" ? (event.kind === "activity" ? "Punching activity" : "Uncertain section") : event.punch_type?.replaceAll("_", " ")} · ${event.start}–${event.stop - 1}${event.start < interval.start || event.stop > interval.end + 1 ? " · Partial overlap" : ""}`}
+              aria-label={`${event.unverified ? "Unverified suggestion" : "Human"} ${event.kind && event.kind !== "punch" ? "section" : "punch"} ${lane + 1}: ${event.type_uncertain ? "Type uncertain" : event.kind && event.kind !== "punch" ? (event.kind === "activity" ? "Punching activity" : "Uncertain section") : event.punch_type?.replaceAll("_", " ")}`}
               onClick={() => {
                 seek(event.start);
                 onHumanSelect?.(event.event_id);
