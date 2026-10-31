@@ -1,0 +1,13 @@
+{
+  "version": "rgb-overlay-integrity-results-1.0",
+  "root": "reports/boxingvi/rgb-overlay-integrity-v1",
+  "passed": false,
+  "protocol_sha256": "420729200c40de8c2ede85fcf6611372c2f77ff3fec6c2454aa004554205e244",
+  "measurements_sha256": "1e4bb7a61572fc25b1ff7ea4008828202840435a3bde4174167e909e4bee7ca3",
+  "summary_sha256": "f9264f4b0d4d7a9cb68ffc6217cc2fe2839698c73c8415e1607b468a11577595",
+  "gate_sha256": "1373d43d348de5104ee27c8d9f464d0086f7cc98a22ac72a3baaffc10ff40f9a",
+  "galleries_sha256": {
+    "reports/boxingvi/rgb-overlay-integrity-v1/V4-eligible-clip-gallery.jpg": "c3af85d0b6637a04955b1284113e8498aa30df533466c7738208ec929c7c26b6",
+    "reports/boxingvi/rgb-overlay-integrity-v1/V6-eligible-clip-gallery.jpg": "6db7d9a671df24697690cd027e60aafee37b474fac1d61d9c79646a0801f9c20"
+  }
+}

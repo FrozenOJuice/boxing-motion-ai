@@ -1,0 +1,348 @@
+{
+  "version": "body-feature-groups-results-1.0",
+  "root": "reports/boxingvi/body-feature-groups-v1",
+  "protocol_sha256": "c92c4429a3a01b5c4ab6c4b0b935e61633f76ed625476c9424c3fec88e651464",
+  "training_freeze_sha256": "19ce6711cd3772ef0a58770362ab0a17b97c677fab3cb10bceff04abdb1a24a6",
+  "source_findings_sha256": "eb8bd865079fcc34be83ab1f88918dab2034bffe828b4e525b2093ff4d7945af",
+  "development_sha256": "ba5de2d474a332b4b4bbcd0ab683dcdefb99e805ef9d656eb6c18767a89a1d42",
+  "summary_sha256": "149babee2394efb932e1cfb21e47b0944a6936830400139caf50623da034fe94",
+  "reference_replay_sha256": "6bae560e7bb69777a70e536dcbb3c402d679acdc5634785e59d821445d6ec28f",
+  "runs": [
+    {
+      "fold": "hold-V6",
+      "mode": "core65",
+      "seed": 20261021,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V6/core65-20261021/final.pt",
+      "sha256": "0140c88057873508418f07ef8f0e9b74ed2b728508ffc18514884f3317f8eccf",
+      "training_sha256": "d09d3a616161bfad87830b6cd65fa2a2087459a024469c9cf567d820dea8feba",
+      "comparison_predictions_sha256": "966d0aba5541c9487779ede2a15b99e5b656476171c7a090b7455fdedd02b2ef"
+    },
+    {
+      "fold": "hold-V6",
+      "mode": "upper",
+      "seed": 20261021,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V6/upper-20261021/final.pt",
+      "sha256": "1ba76c3b71e2eba04950b04dc2b9dbcbd841dc3f891f9892cf0b86c88e0c0b65",
+      "training_sha256": "4c4247b3e9fd2920b29ffa884f404936d0c4ce9ba7e2cf18c0aa353729676423",
+      "comparison_predictions_sha256": "7b3e3119af9af233db635d8e8ff041aab221518ca313b0fba8a944b1e36538c7"
+    },
+    {
+      "fold": "hold-V6",
+      "mode": "lower",
+      "seed": 20261021,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V6/lower-20261021/final.pt",
+      "sha256": "8cd07427eb35607518ce604440028dbff6f5ea3ad1e4481e3dc53055b78f8af9",
+      "training_sha256": "89848c0450d4e4512df6d11e9fa3d14caa4456a96ea2cc7618600d85d5d42c58",
+      "comparison_predictions_sha256": "84705299b10193218ad012d892d96e0e25edd31650a3764116b0886a4713c984"
+    },
+    {
+      "fold": "hold-V6",
+      "mode": "torso",
+      "seed": 20261021,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V6/torso-20261021/final.pt",
+      "sha256": "d0b51ddedd5f2d1acee6876784bffc2add61e57826abb467d64ddda70c8d21ea",
+      "training_sha256": "292941f05c43be9f1b68dd946bb4fad4abc9f125c4b873be2c0451980173ef69",
+      "comparison_predictions_sha256": "d0084055243e2644eec486d598171abaabc814158eeb467b9db9b6430c4c0559"
+    },
+    {
+      "fold": "hold-V6",
+      "mode": "core65",
+      "seed": 20261022,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V6/core65-20261022/final.pt",
+      "sha256": "cf4f6b9e80a29504b45281fec4a6adff77f26c77bdf3606d034254af5032312d",
+      "training_sha256": "951c850435e965bfd33f50d746c38a4b2783c03eb4a5d1bb74f2a53c21106f3b",
+      "comparison_predictions_sha256": "131de0fa1442e7ec847a88087e939cb501f9b8b52d54c94778aafa6551289d63"
+    },
+    {
+      "fold": "hold-V6",
+      "mode": "upper",
+      "seed": 20261022,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V6/upper-20261022/final.pt",
+      "sha256": "65f51eb3edcc538381abc3a9e1ed509850f38496ee626aca26eb6496bf31af44",
+      "training_sha256": "7db65a740a767080ae4d17c977ca53ca73bb172374c234852fee7f1b90cdb92c",
+      "comparison_predictions_sha256": "a154005b904a56a32d6d38d104189fa4f49ce9e818dc3f439baef1aa4ac04cd7"
+    },
+    {
+      "fold": "hold-V6",
+      "mode": "lower",
+      "seed": 20261022,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V6/lower-20261022/final.pt",
+      "sha256": "69e81a666e518954240b7c600a3d414a368f3379ddac5f6d2f83e15cceec9085",
+      "training_sha256": "035037266f2e9166cd23cfdaeeca743f7954e0c821069af6010c1acb1b2b1912",
+      "comparison_predictions_sha256": "3295a9cf29bbd4352faeb5790c8b6129cc7c8670fdac5958d4287ce68ae60eeb"
+    },
+    {
+      "fold": "hold-V6",
+      "mode": "torso",
+      "seed": 20261022,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V6/torso-20261022/final.pt",
+      "sha256": "9592afd69b1e107a23e6d8e540ebab3d399ecd4bf619408ed28ca1e4c467cf74",
+      "training_sha256": "a739469ef3c7ebfb553c09e8bf99a097a15776d767734591e2236871f2b0c6bb",
+      "comparison_predictions_sha256": "50a7309f9103b2dc81f3562effe22efbb278e8b3a3252eaf8a4ef9f32e7dcb06"
+    },
+    {
+      "fold": "hold-V6",
+      "mode": "core65",
+      "seed": 20261023,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V6/core65-20261023/final.pt",
+      "sha256": "79d325a417a378222d9bfd200ddc451ddaa3b9cdf7e137d8239169dfb4814fcf",
+      "training_sha256": "0b50ed5d290fa3bc849db8361a989571877139ec43e3a94bfba5d53b6e3cddf3",
+      "comparison_predictions_sha256": "8af658d5eeadf350da65844723652c904df9efe36dfdb0d6c0481a33d4456036"
+    },
+    {
+      "fold": "hold-V6",
+      "mode": "upper",
+      "seed": 20261023,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V6/upper-20261023/final.pt",
+      "sha256": "b5da470d4c0af3183d27bc5947e4697361b8e5d2bfa72fbe78c2c92235292cba",
+      "training_sha256": "8d0770832f2257508463fa70bbd711911a49b6e07b06742f89699f50021b0ae0",
+      "comparison_predictions_sha256": "1b4ae01fa960cf1cad6096be10446a879cdcce4663786765fb76ed84663379aa"
+    },
+    {
+      "fold": "hold-V6",
+      "mode": "lower",
+      "seed": 20261023,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V6/lower-20261023/final.pt",
+      "sha256": "9165ffac5bf706b161fb31b37cc2fcc925a4fc596b763a75d16d356debca81cb",
+      "training_sha256": "85632ca437f5b12a295abe11f5cab92422618e46a9f2ef71310f0d54726579e5",
+      "comparison_predictions_sha256": "16845a8ad83f4489d900a6cf8659c3488926b5d946d1d7cc43270223c520d989"
+    },
+    {
+      "fold": "hold-V6",
+      "mode": "torso",
+      "seed": 20261023,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V6/torso-20261023/final.pt",
+      "sha256": "f941dae1d3e7651c927b39ee691ecce538a5dfba57b92ff0aeb9cef9fef78a7b",
+      "training_sha256": "7992dda0afc1af31c137c46c9cdf1d0a0c173177b15d1a86783d28d36a153bed",
+      "comparison_predictions_sha256": "c62558c237faa0deb2a838476f1319b00b54b46135b1295f2afb4a9b78497ca8"
+    },
+    {
+      "fold": "hold-V4",
+      "mode": "core65",
+      "seed": 20261021,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V4/core65-20261021/final.pt",
+      "sha256": "bebdec2aba567d6af598502c64d14197d0d05d05caa26f72cdbc497fefb84dbd",
+      "training_sha256": "6da897081962bb539ad10d444d7abacd298cc92ae88c936d06cceb57978c920f",
+      "comparison_predictions_sha256": "749fd68fe59997c38df4ebd0663be5da3d350d922d8e649012fd313b494e66c9"
+    },
+    {
+      "fold": "hold-V4",
+      "mode": "upper",
+      "seed": 20261021,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V4/upper-20261021/final.pt",
+      "sha256": "eaaf1e151a8718cb15a1bb194770c78cab9b6e17b7b876756d08a177ff40952a",
+      "training_sha256": "b8ba32afff3daf45b60d05e5263c3f1f9278b26ee6b8bae81347be3a8a40d3a8",
+      "comparison_predictions_sha256": "21c824a0f30201af43834e4812c40a3bd0d080a0e0c3bac80a1c153d0d5f692c"
+    },
+    {
+      "fold": "hold-V4",
+      "mode": "lower",
+      "seed": 20261021,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V4/lower-20261021/final.pt",
+      "sha256": "e11a524fdc3f61730036065c94105ab08aff6d3b5766184eecfdf12426b7af4f",
+      "training_sha256": "afc3c92e4ac4c8dd0506595e304a4a2107169c0aeff00dc0f5bfd56abe209acb",
+      "comparison_predictions_sha256": "9b8635c762867c9b67cc66449e121d7f9f8c62d8a54b344124f9c9c8c5816f8c"
+    },
+    {
+      "fold": "hold-V4",
+      "mode": "torso",
+      "seed": 20261021,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V4/torso-20261021/final.pt",
+      "sha256": "9362e5aae96b148fe4b35a6879f31c32ff16357a07986cb2e2ea990c64bef3fc",
+      "training_sha256": "5b10b2184a32c1c752a39a2137b52ad6cca3d2cf70ae52a1c836fdfd7775d2ab",
+      "comparison_predictions_sha256": "8b8aa12359afc2ac4101d3793836f2cb1a4ecc41f6d191e22b40b3e106414b43"
+    },
+    {
+      "fold": "hold-V4",
+      "mode": "core65",
+      "seed": 20261022,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V4/core65-20261022/final.pt",
+      "sha256": "7578de384b64e865190c1f3b43bb89f00388f7a0641713032aaf1f0c79ddd86b",
+      "training_sha256": "2aecc68e6123e4d5da6a5dd81803f5923abb4107eca14cdeec9139610293f1d8",
+      "comparison_predictions_sha256": "b7322e4d2e8e0804cf133fa7bcb59269046ed2491d83025fb96a07d721729ddd"
+    },
+    {
+      "fold": "hold-V4",
+      "mode": "upper",
+      "seed": 20261022,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V4/upper-20261022/final.pt",
+      "sha256": "91aa3d91110f78187350a8af55ce1cf58bfaf0fe78212feb94214778ad871eb6",
+      "training_sha256": "f9d8f796a0ac6ddf6f1fa6b158800d0365e8980c11b78800a1d702c830137339",
+      "comparison_predictions_sha256": "28e82e382b1cde8cf5f363436dd764181bf9a80545430c88873f9b2d1a8633b7"
+    },
+    {
+      "fold": "hold-V4",
+      "mode": "lower",
+      "seed": 20261022,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V4/lower-20261022/final.pt",
+      "sha256": "11943c9585421082e7a175f4b1f04a4ae84f1a0d6152c508f12811449c757026",
+      "training_sha256": "afbe50a1bab2d7dcd47f9be2c2a28a86b6e1c1c2dd35b8619b0cd55d17ebcdb0",
+      "comparison_predictions_sha256": "d432e87ae2b2c69b84701bfd59c841e5c8a5223760ef4c4120e60dcbcf445cd2"
+    },
+    {
+      "fold": "hold-V4",
+      "mode": "torso",
+      "seed": 20261022,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V4/torso-20261022/final.pt",
+      "sha256": "868ad39a755a27df7bde1fc34253f7ecf32a83864168a61f20b1252f3b209536",
+      "training_sha256": "59f2ef4d23837f221a474ae644c7b9d8559bef0afdf966f3d14f80e34990f432",
+      "comparison_predictions_sha256": "c7072b88d2acae2a3df980a6e638faad4df3971ddfc4bbc10b701a92fd8f28c5"
+    },
+    {
+      "fold": "hold-V4",
+      "mode": "core65",
+      "seed": 20261023,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V4/core65-20261023/final.pt",
+      "sha256": "0e9e5c4a7c8fb2594d1aff7469f2f0eb328adb34fd59b236b3aca2e10b928e16",
+      "training_sha256": "08482efefded82a4d5ccaa69b12f2e43fe95f213bb5b0d3ecb15b4ec3f3ad88e",
+      "comparison_predictions_sha256": "3fe970c1748b24a45f055ea845e6f1e5c220e37b60c41719ec755870a3308b69"
+    },
+    {
+      "fold": "hold-V4",
+      "mode": "upper",
+      "seed": 20261023,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V4/upper-20261023/final.pt",
+      "sha256": "637c6dc6e772a76440284228ebfeaab26ddf165a7878bc72165b4a29ed4f4afc",
+      "training_sha256": "2aceeca3b3f8a046a26955ae842ae2b5d0f4e632910e2b3b244633c7d3d351c2",
+      "comparison_predictions_sha256": "188d4c8c083f5ed62ffc4cbe6fe9808b56e3b7cdc828237163239e9960c3170c"
+    },
+    {
+      "fold": "hold-V4",
+      "mode": "lower",
+      "seed": 20261023,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V4/lower-20261023/final.pt",
+      "sha256": "c5aa54a275e8eaf09039a2001ce793becbeed90e0a7219b7bcd049135c5ed140",
+      "training_sha256": "5e1339ad7bfd52910c22cd3f0f577cb9fffc2eea62093ff1ecc1792ab3554f4b",
+      "comparison_predictions_sha256": "3da6b03da0ed829c921154d5d8c3831c16dde5ac3ef232c32299c54eb605153c"
+    },
+    {
+      "fold": "hold-V4",
+      "mode": "torso",
+      "seed": 20261023,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/hold-V4/torso-20261023/final.pt",
+      "sha256": "e4d7b22500f3bb4f51133fe4fccf413a4a978da49e96b8c19a38579bf9ae3bd7",
+      "training_sha256": "cbc6a07324afbb2762f4d991adc41dfd8d0ca27b1d71b33985da9fd64c50492f",
+      "comparison_predictions_sha256": "34bcff853c476bff056376b54194a6ce0efe90dff305c2d74cd0bf21b2dac6c0"
+    },
+    {
+      "fold": "pooled",
+      "mode": "core65",
+      "seed": 20261021,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/pooled/core65-20261021/final.pt",
+      "sha256": "80f622987873ddf6d42f3e75aabf5fb6f083cfc2d2fd08824ff87daf971b9174",
+      "training_sha256": "a0dba5d7d7530d879cbea97e39d91115adc8b19e9897cb2a35b12e62f547fac9",
+      "development_metrics_sha256": "4f19126ff364f6c33f81a1707b3e2e7ebd9501706355d53f2c324045209fbf85",
+      "development_predictions_sha256": "13ca53e807ea95b1bfef62ab2e7a49007dcd492476a44519f389178bf53ae36f"
+    },
+    {
+      "fold": "pooled",
+      "mode": "upper",
+      "seed": 20261021,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/pooled/upper-20261021/final.pt",
+      "sha256": "d61fe338174230c4a900a347ab81a25bbc97016260255c466e530adc6e31e2b1",
+      "training_sha256": "b70b0792e3341643d62202f600f16c36d6bed7ae549c46faa1b427e1a1cda3e3",
+      "development_metrics_sha256": "b8ee0ab0dd517b5522be91520ca7fdedcd4f0a1cdda37438947d1ccac433f929",
+      "development_predictions_sha256": "a93fcba2407ed59f2eb1c25db59de4be87fcee38d153eef3c6b761e32833f653"
+    },
+    {
+      "fold": "pooled",
+      "mode": "lower",
+      "seed": 20261021,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/pooled/lower-20261021/final.pt",
+      "sha256": "78050da2a75336973853af719746f8ea0d907a2a2f2563794e920546f01e6724",
+      "training_sha256": "2da551c2148a5ab4d40eb06a6e38a23eb7a0ad32241453bb60c6eabeb750e6b9",
+      "development_metrics_sha256": "3728ceb86abfc07486b6c2634ff83d293527af4cce0f3fd6de8080ee1da19018",
+      "development_predictions_sha256": "661f11dd999bd746f676c8bbe457ddbcecbeaac4f039186807b50bf14b61e4d9"
+    },
+    {
+      "fold": "pooled",
+      "mode": "torso",
+      "seed": 20261021,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/pooled/torso-20261021/final.pt",
+      "sha256": "e7ae1d07bc5467d818ae4fa6304e9ab6b09c5d419fb2c083505aafa26dd40a9d",
+      "training_sha256": "3a6e823309382af81c540e8b3617083300bfecf842060e082abefb9e66abdf6f",
+      "development_metrics_sha256": "a8c0cb4841efa21ad69b1c9bcb5754b5db35d4a32b1f9f54c2c4d297ac1ef543",
+      "development_predictions_sha256": "ec3dcc142804b2265e819577d458efe31919ec852376576016252a44fb169043"
+    },
+    {
+      "fold": "pooled",
+      "mode": "core65",
+      "seed": 20261022,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/pooled/core65-20261022/final.pt",
+      "sha256": "dc7fbc9999672a5fc7878fbdf1ab80ba1edd95fd760ad4c47615257505dff3f8",
+      "training_sha256": "2b70d75a58cf9703f6e13e1feb93e6963714833928db1d109ddf64d535a0d314",
+      "development_metrics_sha256": "a21ab2ced46072425cda610108d93abeb4bd1baf21d09b5247ee2743f23c1796",
+      "development_predictions_sha256": "c72cf8b0134255882e666dbf1c683477b1af4a33b6e6ae4b24c65391e7b229dc"
+    },
+    {
+      "fold": "pooled",
+      "mode": "upper",
+      "seed": 20261022,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/pooled/upper-20261022/final.pt",
+      "sha256": "916d2169a4e9ce256db521fffdf7eae0c110757bf56cdec8c2e7ecf2094627e2",
+      "training_sha256": "523cba80dce51059b5af74cd94a7c48866cf8aba011ae1dce95e8ed40fda730b",
+      "development_metrics_sha256": "3a02196aa4878c17f70dfbc9cc9c682a0cc601c0fb0836761384e4ead5d7d967",
+      "development_predictions_sha256": "c955fe6d908b9ede18d04e29e791e84a81751ce309309d92937aa78f7a870460"
+    },
+    {
+      "fold": "pooled",
+      "mode": "lower",
+      "seed": 20261022,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/pooled/lower-20261022/final.pt",
+      "sha256": "1773e0003dce1a7a7699cbeaba3d43c03a1490e59682f04e52f441eeffaba6a5",
+      "training_sha256": "1844be8a56d3b8d190dade292291e8165ad37107d54952f5a4e7de32b905bec8",
+      "development_metrics_sha256": "fad09eea1adb51a13a69496fa723a882c18f12341bfe4468a261eb822b9eb032",
+      "development_predictions_sha256": "560557a3e93efde2e4c0bd43ef9ebd335b67a8475f2e88f7fac84ef9a6f8ab1c"
+    },
+    {
+      "fold": "pooled",
+      "mode": "torso",
+      "seed": 20261022,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/pooled/torso-20261022/final.pt",
+      "sha256": "8bf000789ccd823ff4f2c2d5dad19720ec85c8099ae73df60d945168e0626198",
+      "training_sha256": "3c7d23ae2e8dbfa5236c4787c1b078468598b1221ed44f248a08bce281c73ca8",
+      "development_metrics_sha256": "77952a92fa9269303c88f5fa3884bf00bad928a68cf66a87351e371aaadcb6a0",
+      "development_predictions_sha256": "4c693aa683e3669a5c3c590ff991ecf4ab1a1b71dddc4f16d472caee63e5efbc"
+    },
+    {
+      "fold": "pooled",
+      "mode": "core65",
+      "seed": 20261023,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/pooled/core65-20261023/final.pt",
+      "sha256": "d906b06853047b153ef8aa85e3509cfc2f9ad759249d8d9ba017bc6ed628bb8a",
+      "training_sha256": "ea990085c6530bd31a2f476c8af538fd4d473bd6ce254c20b264bb8f7e1cce33",
+      "development_metrics_sha256": "a1c6b0cff7ae4e7937fb8bfb4f15cea007c0eee2e6a1eb02d2e9df23ae0f59e4",
+      "development_predictions_sha256": "3f67f98837fddd33b51dd14e872cffd0c4cfd99ed5af461d1b1d4f2ecafcf608"
+    },
+    {
+      "fold": "pooled",
+      "mode": "upper",
+      "seed": 20261023,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/pooled/upper-20261023/final.pt",
+      "sha256": "4f6a8cdb13fa70ad0fc3fa485fb6df41ae48362e7c249a55d49765af907cea54",
+      "training_sha256": "4beb70bff8e3808f0723cebe252ab2a7935c9fe8e6a21709eec77cbb4786d69b",
+      "development_metrics_sha256": "4fc92fdce05d213c879f2e07ac65cb15aa737b1777c99b79c61c8ed366048afe",
+      "development_predictions_sha256": "d4ee1e19c4c8721bc044b713ef8cd5e2d1536e92ea355ca2213b6a31e26b3935"
+    },
+    {
+      "fold": "pooled",
+      "mode": "lower",
+      "seed": 20261023,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/pooled/lower-20261023/final.pt",
+      "sha256": "cbaa516f887ed7dc1a175606b74130553765b4c154b480cf7226140fe832153d",
+      "training_sha256": "a8e3d232103a4cacff8ee8175d4f70816924d54517de4858686c44d37b6061c3",
+      "development_metrics_sha256": "ea10b1a545494fb1cdcd820747d81368b5f0828abe3b38f46c7aca77c8db5cca",
+      "development_predictions_sha256": "cc53e0d108b8619aa36690b06304f3ae51568a77721f5a366a1da8d6073fd434"
+    },
+    {
+      "fold": "pooled",
+      "mode": "torso",
+      "seed": 20261023,
+      "checkpoint": "reports/boxingvi/body-feature-groups-v1/pooled/torso-20261023/final.pt",
+      "sha256": "2142c96715f03b210cd3ca0123e64bdafee9fda1a491bf96b532b70736b7dcd2",
+      "training_sha256": "ed050011a3c5a628012d3789a0a94f3b57369133af76411f4014b746f6a52248",
+      "development_metrics_sha256": "482e84f086786cf1c56bc7e52cc206718f41bd0e3f8ea5b0bedf984910599e84",
+      "development_predictions_sha256": "24b62bbdefdb9d70b9fc2533457925dcc948e73c28ff4e98120e571ac0ff57f7"
+    }
+  ]
+}

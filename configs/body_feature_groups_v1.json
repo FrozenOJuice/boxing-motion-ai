@@ -1,0 +1,25 @@
+{
+  "version": "body-feature-groups-1.0",
+  "base_protocol": "configs/fullbody_classification_v1.json",
+  "modes": ["core65", "upper", "lower", "torso"],
+  "groups": {
+    "upper": "fullbody[48:96] hand landmarks plus [176:188] arm geometry",
+    "lower": "fullbody[112:176] knee/ankle/heel/foot landmarks plus [188:192] knee geometry",
+    "torso": "fullbody[192:208] axes/alignment/root velocity/wrist-foot coordination"
+  },
+  "group_channels": {"upper": 60, "lower": 68, "torso": 16},
+  "folds": [
+    {"name": "hold-V6", "training": ["V4"], "comparison": ["V6"]},
+    {"name": "hold-V4", "training": ["V6"], "comparison": ["V4"]},
+    {"name": "pooled", "training": ["V4", "V6"], "comparison": []}
+  ],
+  "heldout_metric": "macro_f1_on_target_classes_supported_by_training_and_comparison_predictions_remain_six_way",
+  "missing_class_sampler": "single_recording_only_uniform_supported_classes_no_invented_examples",
+  "initialization": "exact_core65_shared_weights_extra_input_columns_zero_preserve_rng",
+  "scaling": "unchanged_raw_features_no_search_or_fitted_scaling",
+  "selection": "fixed_final_epoch_all_groups_reported_no_group_or_seed_selection",
+  "repeat": "exact_fit_repeat_and_checkpoint_reload_every_run",
+  "development": "one_V5_pass_all_pooled_runs_only_after_source_comparison_and_hash_freeze",
+  "benefit_rule": "positive_mean_and_at_least_two_of_three_positive_paired_seeds_in_both_source_folds_and_all_three_V5_paired_seeds_positive_not_a_significance_test",
+  "additional_controls": "post_fit_source_training_only_feature_validity_and_magnitude_audit_no_extra_models"
+}

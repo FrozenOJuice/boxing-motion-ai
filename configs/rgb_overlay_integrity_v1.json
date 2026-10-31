@@ -1,0 +1,26 @@
+{
+  "version": "rgb-overlay-integrity-1.0",
+  "recordings": ["V4", "V6"],
+  "diagnostic_cases": ["V4-bg-1", "V6-motion-101", "V6-motion-105"],
+  "sampling": "same_96_native_diagnostic_frames_plus_first_middle_last_eligible_clip_per_source_class_center_frame",
+  "model": "weights/pose_landmarker_full.task",
+  "matte_threshold": 0.5,
+  "matte_dilation_pixels": 5,
+  "comparison": ["matte_only", "targeted_bright_ink", "whole_footer_removed"],
+  "targeted_ink": {
+    "V4": "fixed_HUD_rectangles_plus_bright_garment_ink_within_observed_torso_to_upper_thigh_ROI",
+    "V6": "bright_ink_in_fixed_bottom_20_percent_footer",
+    "minimum_rgb_channel": 180,
+    "maximum_channel_spread": 55,
+    "dilation_pixels": 1,
+    "no_ocr": true
+  },
+  "gate": {
+    "joint_disc_retention_minimum_each_arm_and_feet": 0.95,
+    "motion_retention_minimum_each_arm_and_feet": 0.8,
+    "no_visible_punch_text_digits_or_identifiers": true,
+    "partial_transparent_text_or_unreviewed_clean_subset_does_not_pass": true
+  },
+  "no_inpainting_or_reconstructed_body": true,
+  "no_further_video_training_in_this_milestone": true
+}
