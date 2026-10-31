@@ -1,0 +1,21 @@
+{
+  "version": "video-foundation-snapshot-pin-1.0",
+  "status": "blocked_for_expanded_training_experiment",
+  "dataset": {
+    "path": "reports/boxingvi/video-foundation-dataset-v1-1/manifest.json",
+    "sha256": "e54b8aecd37bfbddfcd52c7eeb6a2c9cd37891f82a6ce627883572a050393f3d"
+  },
+  "eligibility": {
+    "path": "reports/boxingvi/video-foundation-validation-v1-1/eligibility.json",
+    "sha256": "134ea69d51b7e827011207a621080f3965103f3931e3f998061a5e6a5a6fef98"
+  },
+  "pretrained_features": {
+    "path": "reports/boxingvi/video-foundation-features-v1-2/manifest.json",
+    "sha256": "0408925e8f860818b7fba6fbabb075b6ac54c1c022f573ce38cf529ae7cb8b2c"
+  },
+  "weak_inventory": 815,
+  "eligible_weak_clips": 812,
+  "new_verified_instance_events": 0,
+  "new_recordings": 0,
+  "models_trained": false
+}

@@ -1,0 +1,44 @@
+{
+  "version": "fullbody-video-foundation-1.0",
+  "training_recordings": ["V4", "V6"],
+  "weak_supervision": "existing_curated_clip_classes_only_not_instance_boundaries_or_background",
+  "localization_pin": "configs/blue_localization_dataset_v1.json",
+  "curation_approval": "configs/level1_curated_subset_v1.json",
+  "excluded_manual_events": 18,
+  "new_recordings_admitted": [],
+  "pretrained_encoder": {
+    "name": "torchvision.r3d_18.KINETICS400_V1",
+    "path": "weights/torch/hub/checkpoints/r3d_18-b3b3357e.pth",
+    "url": "https://download.pytorch.org/models/r3d_18-b3b3357e.pth",
+    "sha256": "b3b3357ead25631ec9c57362ff2128a92d0427e01e2cd184951a44380c3f2e9d",
+    "channels": 512,
+    "frames": 16,
+    "sampling": "every_native_center_full_16_frame_window_no_padding_or_hold",
+    "crop": "fixed_whole_case_full_body_union_letterbox_171x128_then_official_center112",
+    "frozen": true,
+    "code_license": "BSD-3-Clause",
+    "rights_scope": "official_research_weight_distribution_not_a_clearance_for_source_media_or_production"
+  },
+  "feature_cases": ["V4-bg-1", "V6-motion-101", "V6-motion-105"],
+  "batch_size": 4,
+  "minimum_free_bytes": 2684354560,
+  "max_new_feature_bytes": 67108864,
+  "training_status": "blocked_no_new_verified_recordings_or_instance_references",
+  "external_sources": {
+    "BoxingWeb": {
+      "repository": "https://github.com/gouba2333/BoxingWeb",
+      "download": "https://cloud.tsinghua.edu.cn/d/c435311fecda4566ae76/",
+      "archive_bytes": 5190972710,
+      "license_verified": false,
+      "admitted": false
+    },
+    "BoxingVI_remaining": {
+      "repository": "https://github.com/Bikudebug/BoxingVI",
+      "download": "https://drive.google.com/drive/folders/1Vyl8twJQ1qkqEPwhvfsrJsJ8nLQ92uoy",
+      "published_claim_recordings": 20,
+      "visible_annotation_recordings": 10,
+      "license_verified": false,
+      "admitted": false
+    }
+  }
+}
