@@ -1,0 +1,21 @@
+{
+  "version": "person-matte-targeted-ocr-1.0",
+  "recordings": ["V4", "V6"],
+  "cases": ["V4-bg-1", "V6-motion-101", "V6-motion-105"],
+  "sampling": "eight_native_consecutive_frames_at_each_of_four_uniform_context_positions",
+  "segmentation_model": "weights/pose_landmarker_full.task",
+  "segmentation_threshold": 0.5,
+  "matte_dilation_source_pixels": 5,
+  "ocr": "local_tesseract_psm11_all_nonempty_words_no_confidence_filter_2px_margin",
+  "background_rgb": [128, 128, 128],
+  "gate": {
+    "minimum_mean_valid_joint_disc_retention": 0.95,
+    "minimum_mean_motion_retention_in_valid_joint_discs": 0.8,
+    "no_visible_source_text_logos_or_background_identifiers": true,
+    "must_not_interpret_geometric_joint_retention_as_landmark_accuracy": true,
+    "failure_action": "no_video_features_or_video_fusion_training"
+  },
+  "no_inpainting": true,
+  "no_original_pose_replacement": true,
+  "purpose": "training_source_only_preprocessing_gate_not_source_invariance_proof"
+}

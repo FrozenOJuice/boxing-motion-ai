@@ -1,0 +1,46 @@
+{
+  "version": "person-matte-targeted-ocr-results-1.0",
+  "root": "reports/boxingvi/person-preserving-rgb-v1-native-2",
+  "protocol_sha256": "889d7938680eecd4e802d4461f905b403721206f84e9965c7a056f6cc3d6ef02",
+  "measurements_sha256": "3996460a6c23f88f5175c72a4ad2b619af5d8e31bd03181f82c88e129a162eff",
+  "gate_sha256": "988eb6e916299fe903add259ff000cb9dfc123df221989a7771ba4ed933bb28b",
+  "passed": false,
+  "summary": {
+    "V4-bg-1": {
+      "frames": 32,
+      "elapsed_seconds": 92.83000254107174,
+      "valid_joint_disc_retention": 0.8923367672013697,
+      "motion_disc_retention": 0.8559641557534435,
+      "source_sha256": "77a0d52869d46f89c3e286010eba63b48050a6a4cfa89f5fb60d2af0a040234d",
+      "segmentation_seconds_mean": 0.046968428450782085,
+      "ocr_seconds_mean": 0.9374923945761111,
+      "unavailable_segmentations": 0
+    },
+    "V6-motion-101": {
+      "frames": 32,
+      "elapsed_seconds": 43.659392582951114,
+      "valid_joint_disc_retention": 0.3092095178075659,
+      "motion_disc_retention": 0.059906892071429386,
+      "source_sha256": "4bc85322b8882e743d1651441a472279fbdac24d24f465c4e76886036dfb4961",
+      "segmentation_seconds_mean": 0.05100998433044879,
+      "ocr_seconds_mean": 0.6667030469398014,
+      "unavailable_segmentations": 0
+    },
+    "V6-motion-105": {
+      "frames": 32,
+      "elapsed_seconds": 31.05748791701626,
+      "valid_joint_disc_retention": 0.30609056765887094,
+      "motion_disc_retention": 0.15247070314015168,
+      "source_sha256": "4bc85322b8882e743d1651441a472279fbdac24d24f465c4e76886036dfb4961",
+      "segmentation_seconds_mean": 0.030796028615441173,
+      "ocr_seconds_mean": 0.5049045156483771,
+      "unavailable_segmentations": 0
+    }
+  },
+  "preview_sha256": {
+    "reports/boxingvi/person-preserving-rgb-v1-native-2/V4-bg-1-comparison.jpg": "40db58535b4c41f49bf2290c1431e25b7cd9ef18bbb857168c854da65a8bdf98",
+    "reports/boxingvi/person-preserving-rgb-v1-native-2/V6-motion-101-comparison.jpg": "851b0b3e458324e1d0cefa85bbfe5f5cd1aa821f6a16998c78579fcfbbc9c5de",
+    "reports/boxingvi/person-preserving-rgb-v1-native-2/V6-motion-105-comparison.jpg": "cdc021c898d50a5edf1f2c1455a612c64bc7a9feada6a365ca30528d4599ae90"
+  },
+  "ocr_failure_examples_sha256": "77feb4ebaba54a5c9d5a2cf6510827db7e66163d9e27b3c4816b39fb4b6129e6"
+}
